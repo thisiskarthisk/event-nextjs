@@ -1,0 +1,286 @@
+-- ======================
+-- users
+-- ======================
+CREATE TABLE IF NOT EXISTS users (
+  id            BIGSERIAL PRIMARY KEY,
+  user_type     CHARACTER VARYING (10) NOT NULL DEFAULT 'employee',
+  employee_id   CHARACTER VARYING (50),
+  first_name    CHARACTER VARYING (255) NOT NULL,
+  last_name     CHARACTER VARYING (255),
+  email         CHARACTER VARYING (320) NOT NULL,
+  mobile_no     CHARACTER VARYING (15),
+  password      TEXT NOT NULL,
+  active        BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by    BIGINT,
+  updated_at    TIMESTAMPTZ DEFAULT NULL,
+  updated_by    BIGINT DEFAULT NULL,
+
+  CONSTRAINT user_types CHECK (user_type IN ('admin', 'employee')),
+
+  CONSTRAINT unique_employee_id UNIQUE (employee_id),
+  CONSTRAINT unique_email UNIQUE (email),
+  CONSTRAINT unique_mobile_no UNIQUE (mobile_no)
+);
+
+COMMENT ON TABLE users IS 'Application users / employees';
+COMMENT ON COLUMN users.employee_id IS 'Company-specific employee identifier (string to allow alphanumeric ids)';
+
+-- ======================
+-- roles
+-- ======================
+CREATE TABLE IF NOT EXISTS roles (
+  id            BIGSERIAL PRIMARY KEY,
+  name          CHARACTER VARYING (255) NOT NULL,
+  reporting_to  BIGINT,  -- stores parent role id (no FK enforced)
+  note          TEXT,
+  active        BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by    BIGINT,
+  updated_at    TIMESTAMPTZ DEFAULT NULL,
+  updated_by    BIGINT DEFAULT NULL,
+
+  CONSTRAINT unique_role_name UNIQUE (name)
+);
+
+COMMENT ON TABLE roles IS 'Reference table: organizational roles. reporting_to stores the parent role id (self-relation).';
+COMMENT ON COLUMN roles.reporting_to IS 'Bigint referencing roles.id (no FK enforced)';
+
+-- ======================
+-- role_users
+-- ======================
+CREATE TABLE IF NOT EXISTS role_users (
+  id            BIGSERIAL PRIMARY KEY,
+  role_id       BIGINT NOT NULL, -- references roles.id logically (no FK)
+  user_id       BIGINT NOT NULL, -- references users.id logically (no FK)
+  active        BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by    BIGINT,
+  updated_at    TIMESTAMPTZ DEFAULT NULL,
+  updated_by    BIGINT DEFAULT NULL,
+
+  CONSTRAINT unique_user_role UNIQUE (role_id, user_id)
+);
+
+-- index to speed up lookups by user / role
+CREATE INDEX IF NOT EXISTS idx_role_users_user_id ON role_users(user_id);
+CREATE INDEX IF NOT EXISTS idx_role_users_role_id ON role_users(role_id);
+
+-- ======================
+-- role_objectives
+-- ======================
+CREATE TABLE IF NOT EXISTS role_objectives (
+  id            BIGSERIAL PRIMARY KEY,
+  role_id       BIGINT NOT NULL, -- logically references roles.id (no FK)
+  name          CHARACTER VARYING (255) NOT NULL,
+  description   TEXT,
+  active        BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by    BIGINT,
+  updated_at    TIMESTAMPTZ DEFAULT NULL,
+  updated_by    BIGINT DEFAULT NULL,
+
+  CONSTRAINT unique_objective_name UNIQUE (role_id, name)
+);
+
+COMMENT ON TABLE role_objectives IS 'Reference table: objectives associated with roles';
+COMMENT ON COLUMN role_objectives.role_id IS 'Bigint referencing roles.id (no FK enforced)';
+
+CREATE INDEX IF NOT EXISTS idx_role_objectives_role_id ON role_objectives(role_id);
+
+-- ======================
+-- role_sheets
+-- ======================
+CREATE TABLE IF NOT EXISTS role_sheets (
+  id                  BIGSERIAL PRIMARY KEY,
+  role_objective_id   BIGINT NOT NULL, -- logically references role_objectives.id (no FK)
+  title               CHARACTER VARYING (255) NOT NULL,
+  description         TEXT,
+  active              BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by          BIGINT,
+  updated_at          TIMESTAMPTZ DEFAULT NULL,
+  updated_by          BIGINT DEFAULT NULL,
+
+  CONSTRAINT unique_role_sheet_title UNIQUE (role_objective_id, title)
+);
+
+COMMENT ON TABLE role_sheets IS 'Reference table: sheets/forms tied to a role objective (i.e., containers for KPIs)';
+COMMENT ON COLUMN role_sheets.role_objective_id IS 'Bigint referencing role_objectives.id (no FK enforced)';
+
+CREATE INDEX IF NOT EXISTS idx_role_sheets_role_objective_id ON role_sheets(role_objective_id);
+
+-- ======================
+-- kpis
+-- ======================
+CREATE TABLE IF NOT EXISTS kpis (
+  id              BIGSERIAL PRIMARY KEY,
+  role_sheet_id   BIGINT NOT NULL, -- logically references role_sheets.id (no FK)
+  name            CHARACTER VARYING (255) NOT NULL,
+  measurement     CHARACTER VARYING (255) NOT NULL,   -- e.g., "units", "%", "hours"
+  op_definition   TEXT NOT NULL,   -- operational definition for measurement
+  frequency       CHARACTER VARYING (20) NOT NULL,   -- e.g., 'daily', 'weekly', 'monthly'
+  chart_type      CHARACTER VARYING (20) NOT NULL,   -- versioning / visualization config / other metadata (freeform)
+  notes           TEXT,
+  active          BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by      BIGINT,
+  updated_at      TIMESTAMPTZ DEFAULT NULL,
+  updated_by      BIGINT DEFAULT NULL,
+
+  CONSTRAINT frequency_types CHECK (frequency IN ('daily', 'weekly', 'monthly')),
+  CONSTRAINT chart_types CHECK (chart_type IN ('bar', 'line', 'pie', 'trend', 'control')),
+
+  CONSTRAINT unique_kpi_name UNIQUE (role_sheet_id, name)
+);
+
+COMMENT ON TABLE kpis IS 'Reference table: KPI definitions attached to a role_sheet';
+COMMENT ON COLUMN kpis.role_sheet_id IS 'Bigint referencing role_sheets.id (no FK enforced)';
+COMMENT ON COLUMN kpis.chart_type IS 'Freeform column for visualization / config / small metadata (use JSON in future if needed)';
+
+CREATE INDEX IF NOT EXISTS idx_kpis_role_sheet_id ON kpis(role_sheet_id);
+
+-- ======================
+-- kpi_responses (transactional)
+-- ======================
+CREATE TABLE IF NOT EXISTS kpi_responses (
+  id            BIGSERIAL PRIMARY KEY,
+  kpi_id        BIGINT NOT NULL, -- logically references kpis.id (no FK)
+  user_id       BIGINT NOT NULL, -- logically references users.id (no FK)
+  period_date   DATE NOT NULL,   -- store a date representing the period; for monthly imports store first day of month (e.g., 2025-01-01)
+  ucl           NUMERIC(18,6) DEFAULT NULL,
+  lcl           NUMERIC(18,6) DEFAULT NULL,
+  comments      TEXT,
+  active        BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by    BIGINT,
+  updated_at    TIMESTAMPTZ DEFAULT NULL,
+  updated_by    BIGINT DEFAULT NULL
+);
+
+COMMENT ON TABLE kpi_responses IS 'KPI response container for a user+KPI+period. period_date is used to represent the reporting period (monthly imports should use the first day of month).';
+COMMENT ON COLUMN kpi_responses.period_date IS 'For month-based bulk imports use the first day of the month (01-MONTH-YEAR). For daily/weekly records, use the actual date.';
+
+CREATE INDEX IF NOT EXISTS idx_kpi_responses_kpi_id ON kpi_responses(kpi_id);
+CREATE INDEX IF NOT EXISTS idx_kpi_responses_user_id ON kpi_responses(user_id);
+CREATE INDEX IF NOT EXISTS idx_kpi_responses_period_date ON kpi_responses(period_date);
+
+-- ======================
+-- kpi_response_chart_data
+-- ======================
+CREATE TABLE IF NOT EXISTS kpi_response_chart_data (
+  id                BIGSERIAL PRIMARY KEY,
+  kpi_response_id   BIGINT NOT NULL, -- logically references kpi_responses.id (no FK)
+  rca_id            BIGINT,          -- optional reference to root_cause_analysis.id (no FK)
+  gap_analysis_id   BIGINT,          -- optional reference to gap_analysis.id (no FK)
+  label             CHARACTER VARYING (255) NOT NULL,
+  value             NUMERIC(18,6),
+  meta              TEXT,            -- freeform metadata (JSON string if needed)
+  active            BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by        BIGINT,
+  updated_at        TIMESTAMPTZ DEFAULT NULL,
+  updated_by        BIGINT DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_krcd_kpi_response_id ON kpi_response_chart_data(kpi_response_id);
+CREATE INDEX IF NOT EXISTS idx_krcd_rca_id ON kpi_response_chart_data(rca_id);
+CREATE INDEX IF NOT EXISTS idx_krcd_gap_analysis_id ON kpi_response_chart_data(gap_analysis_id);
+
+-- ======================
+-- root_cause_analysis
+-- ======================
+CREATE TABLE IF NOT EXISTS root_cause_analysis (
+  id                      BIGSERIAL PRIMARY KEY,
+  rca_no                  CHARACTER VARYING (255) NOT NULL,  -- e.g., RCA/2025/0001
+  reported_by             BIGINT NOT NULL,       -- user id who reported
+  department              CHARACTER VARYING (255),
+  date_of_report          DATE,
+  date_of_occurrence      DATE,
+  impact                  TEXT,
+  problem_desc            TEXT,
+  immediate_action_taken  TEXT,
+  gap_analysis_id         BIGINT,          -- optional reference to gap_analysis.id (no FK)
+  active                  BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by              BIGINT,
+  updated_at              TIMESTAMPTZ DEFAULT NULL,
+  updated_by              BIGINT DEFAULT NULL,
+
+  CONSTRAINT unique_rca_no UNIQUE (rca_no)
+);
+
+COMMENT ON TABLE root_cause_analysis IS 'Transactional: RCA records. rca_no should follow format RCA/{YEAR}/{SL_NO}';
+CREATE INDEX IF NOT EXISTS idx_rca_reported_by ON root_cause_analysis(reported_by);
+CREATE INDEX IF NOT EXISTS idx_rca_date_of_occurrence ON root_cause_analysis(date_of_occurrence);
+CREATE INDEX IF NOT EXISTS idx_rca_gap_analysis_id ON root_cause_analysis(gap_analysis_id);
+
+-- ======================
+-- rca_whys
+-- ======================
+CREATE TABLE IF NOT EXISTS rca_whys (
+  id                 BIGSERIAL PRIMARY KEY,
+  rca_id      BIGINT NOT NULL, -- logically references root_cause_analysis.id (no FK)
+  question           TEXT,
+  answer             TEXT,
+  sequence_no        INTEGER,         -- ordering of the why steps
+  active             BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by         BIGINT,
+  updated_at         TIMESTAMPTZ DEFAULT NULL,
+  updated_by         BIGINT DEFAULT NULL,
+
+  CONSTRAINT unique_question UNIQUE (rca_id, question)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rca_whys_rca_id ON rca_whys(rca_id);
+CREATE INDEX IF NOT EXISTS idx_rca_whys_sequence_no ON rca_whys(sequence_no);
+
+-- ======================================================
+-- Sample additional comments (for clarity)
+-- ======================================================
+COMMENT ON COLUMN kpi_response_chart_data.rca_id IS 'Optional link to an RCA (root_cause_analysis.id) when a data point is tied to an RCA event.';
+COMMENT ON COLUMN kpi_response_chart_data.value IS 'Numeric value for chart point; precision set to NUMERIC(18,6) (adjust if needed).';
+
+-- ======================
+-- gap_analysis
+-- ======================
+CREATE TABLE IF NOT EXISTS gap_analysis (
+  id                BIGSERIAL PRIMARY KEY,
+  capa_no           TEXT NOT NULL,  -- e.g., CAPA/2025/0001
+
+  CONSTRAINT unique_capa_no UNIQUE (capa_no)
+);
+
+COMMENT ON TABLE gap_analysis IS 'Transactional: CAPA records. capa_no should follow format CAPA/{YEAR}/{SL_NO}';
+
+-- ======================
+-- cp_actions
+-- ======================
+CREATE TABLE IF NOT EXISTS cp_actions (
+  id                            BIGSERIAL PRIMARY KEY,
+  gap_analysis_id               BIGINT NOT NULL, -- logically references root_cause_analysis.id (no FK)
+  date                          DATE NOT NULL,
+  reason                        TEXT NOT NULL,
+  cor_action_desc               TEXT,
+  cor_action_target_date        DATE,
+  cor_action_status             CHARACTER VARYING(20),
+  cor_action_responsibility     CHARACTER VARYING(255),
+  prev_action_desc              TEXT,
+  prev_action_target_date       DATE,
+  prev_action_status            CHARACTER VARYING(20),
+  prev_action_responsibility    CHARACTER VARYING(255),
+
+  CONSTRAINT cor_action_status_types CHECK (cor_action_status IN ('planned', 'in-progress', 'implemented', 'cancelled')),
+  CONSTRAINT prev_action_status_types CHECK (prev_action_status IN ('planned', 'in-progress', 'implemented', 'cancelled')),
+
+  CONSTRAINT unique_reason UNIQUE (gap_analysis_id, reason)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cp_actions_gap_analysis_id ON cp_actions(gap_analysis_id);
+
+COMMENT ON TABLE cp_actions IS 'Transactional: RCA records. capa_no should follow format RCA/{YEAR}/{SL_NO}';
+
+-- ======================================================
+-- End of schema
+-- ======================================================

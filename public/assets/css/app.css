@@ -1,0 +1,111 @@
+.mdi {
+  font-size: 1.2em;
+}
+
+.nav-link:has(.mdi) {
+  display: flex;
+  align-items: center;
+}
+
+*.hide {
+  display: none !important;
+}
+
+.loader-overlay {
+  --loader-width: 15rem;
+  --gear-color: #000;
+  --gear-bg-color: #fff;
+    top: 0;
+    left: 0;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--gear-bg-color);
+    z-index: 1100;
+}
+
+.loader {
+  width: calc(1.5 * var(--loader-width));
+  height: var(--loader-width);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loader::before {
+  content: '';  
+  left: 0;
+  top: 0;
+  position: absolute;
+  width: calc(0.9 * var(--loader-width));
+  height: calc(0.9 * var(--loader-width));
+  border-radius: 50%;
+  background-color: var(--gear-color);
+  background-image:
+    radial-gradient(circle calc(0.2 * var(--loader-width)) at calc(0.45 * var(--loader-width)) calc(0.45 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at calc(0.45 * var(--loader-width)) 0px, var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at 0px calc(0.45 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at calc(0.9 * var(--loader-width)) calc(0.45 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at calc(0.45 * var(--loader-width)) calc(0.9 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at calc(0.75 * var(--loader-width)) calc(0.125 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at calc(0.75 * var(--loader-width)) calc(0.125 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at calc(0.75 * var(--loader-width)) calc(0.75 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at calc(0.125 * var(--loader-width)) calc(0.75 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.1 * var(--loader-width)) at calc(0.125 * var(--loader-width)) calc(0.125 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0);
+  background-repeat: no-repeat;
+  box-sizing: border-box;
+  animation: rotationBack 2s linear infinite;
+}
+
+.loader::after {
+  content: '';  
+  left: calc(0.875 * var(--loader-width));
+  top: calc(0.375 * var(--loader-width));
+  position: absolute;
+  width: calc(0.6 * var(--loader-width));
+  height: calc(0.6 * var(--loader-width));
+  border-radius: 50%;
+  background-color: var(--gear-color);
+  background-image:
+    radial-gradient(circle calc(0.125 * var(--loader-width)) at calc(0.3 * var(--loader-width)) calc(0.3 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at calc(0.3 * var(--loader-width)) 0px, var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at 0px calc(0.3 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at calc(0.6 * var(--loader-width)) calc(0.3 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at calc(0.3 * var(--loader-width)) calc(0.6 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at calc(0.5 * var(--loader-width)) calc(0.075 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at calc(0.5 * var(--loader-width)) calc(0.075 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at calc(0.5 * var(--loader-width)) calc(0.5 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at calc(0.075 * var(--loader-width)) calc(0.5 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0),
+    radial-gradient(circle calc(0.0625 * var(--loader-width)) at calc(0.075 * var(--loader-width)) calc(0.075 * var(--loader-width)), var(--gear-bg-color) 100%, transparent 0);
+  background-repeat: no-repeat;
+  box-sizing: border-box;
+  animation: rotationBack 3s linear infinite reverse;
+}
+
+@keyframes rotationBack {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+.login-page .app-footer {
+  position: absolute;
+  bottom: 0.5rem;
+  width: 100%;
+  text-align: center;
+  background: transparent;
+  border: 0;
+}
+
+@media (max-height: 600px) {
+  .login-page .app-footer {
+    position: static;
+  }
+}
