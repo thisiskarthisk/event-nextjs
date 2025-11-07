@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
+    "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "drizzle-orm": "^0.44.7",
     "next": "15.5.4",
@@ -20,8 +21,7 @@
     "react-dom": "19.1.0",
     "sweetalert2": "^11.26.3",
     "sweetalert2-react-content": "^5.1.0",
-    "swr": "^2.3.6",
-    "uuid": "^13.0.0"
+    "swr": "^2.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

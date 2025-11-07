@@ -37,17 +37,21 @@ export default function AuthenticatedPage({ children }) {
       {
         status == 'authenticated' &&
         <div className="app-wrapper">
-          <AppBar />
+          <AppBar pageTitle={pageTitle} />
           <AppSidebar />
   
           <main className="app-main">
-          <AppBreadCrumb pageTitle={pageTitle} showBreadCrumb={isBreadCrumpVisible} />
-  
-          <div className="app-content">
-            <div className="container-fluid">
-            {children}
+            <div className="app-content-header">
+              <div className="container-fluid">
+                {/* <AppBreadCrumb pageTitle={pageTitle} showBreadCrumb={isBreadCrumpVisible} /> */}
+              </div>
             </div>
-          </div>
+    
+            <div className="app-content">
+              <div className="container-fluid">
+              {children}
+              </div>
+            </div>
           </main>
   
           <AppFooter />
