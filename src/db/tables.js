@@ -3,7 +3,7 @@ export default {
 
   PublicFields: {
     'users': [
-      'id', 'employee_id', 'first_name', 'last_name', 'email', 'mobile_no'
+      'id', 'user_type', 'employee_id', 'first_name', 'last_name', 'email', 'mobile_no'
     ],
   },
 };

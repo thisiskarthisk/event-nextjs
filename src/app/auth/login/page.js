@@ -9,7 +9,7 @@ import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export default function LoginPage() {
-  const { setPageType, setPageTitle, toggleProgressBar, toast } = useAppLayoutContext();
+  const { setPageTitle, toggleProgressBar, toast } = useAppLayoutContext();
 
   const [ isPasswordVisible, togglePasswordField ] = useState(false);
 
@@ -58,8 +58,6 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    setPageType('auth');
-
     setPageTitle('Login');
 
     toggleProgressBar(false);

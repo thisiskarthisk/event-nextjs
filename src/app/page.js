@@ -6,12 +6,10 @@ import { useI18n } from "@/components/i18nProvider";
 import { useEffect } from "react";
 
 export default function Home() {
-  const { setPageTitle, setPageType, toggleProgressBar } = useAppLayoutContext();
+  const { setPageTitle, toggleProgressBar } = useAppLayoutContext();
   const { t, locale } = useI18n();
 
   useEffect(() => {
-    setPageType('dashboard');
-
     setPageTitle(t('dashboard'));
 
     toggleProgressBar(false);
