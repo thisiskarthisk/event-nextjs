@@ -11,6 +11,8 @@ import { SessionProvider } from 'next-auth/react';
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 
+import { ToastContainer, toast as toastify } from 'react-toastify';
+
 const AppLayoutContext = createContext({
   setPageTitle: (title) => {},
   toggleBreadCrumb: (show) => {},
@@ -18,6 +20,9 @@ const AppLayoutContext = createContext({
   toggleProgressBar: (show) => {},
   toast: () => {},
   modal: () => {},
+  closeModal: () => {},
+  appBarMenuItems: [],
+  setAppBarMenuItems: (items) => {},
 });
 
 const SwalToast = Swal.mixin({
@@ -42,6 +47,8 @@ export default function AppLayout({ children }) {
 
   const [ isLoading, toggleProgressBar ] = useState(true);
 
+  const [ appBarMenuItems, setAppBarMenuItems ] = useState([]);
+
   const setPageTitle = (title) => {
     title = (title || '');
 
@@ -50,11 +57,24 @@ export default function AppLayout({ children }) {
   };
 
   const toast = (type, message, time = DEFAULT_TOAST_TIME) => {
-    SwalToast.fire({
+    /* SwalToast.fire({
       icon: type,
       title: message,
       timer: time
+    }); */
+
+    toastify(message, {
+      type,
+      position: 'top-right',
+      hideProgressBar: false,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: false,
     });
+  };
+
+  const closeModal = () => {
+    SwalModal.close();
   };
 
   const modal = ({title, body, okBtn = {label: 'Ok', onClick: () => {}}, cancelBtn = null, closeOnEsc = false}) => {
@@ -62,13 +82,14 @@ export default function AppLayout({ children }) {
       title: title,
       html: body,
       focusConfirm: false,
+      showCloseButton: true,
       allowOutsideClick: closeOnEsc,
       allowEscapeKey: closeOnEsc,
       preConfirm: async (value) => {
         if (okBtn && okBtn.onClick) {
           await okBtn.onClick();
 
-          SwalModal.close();
+          // SwalModal.close();
 
           return false;
         }
@@ -79,7 +100,7 @@ export default function AppLayout({ children }) {
         if (cancelBtn && cancelBtn.onClick) {
           await cancelBtn.onClick();
 
-          SwalModal.close();
+          // SwalModal.close();
 
           return false;
         }
@@ -107,7 +128,7 @@ export default function AppLayout({ children }) {
 
     if (pageType == 'auth') {
       newBodyClass = 'login-page bg-body-secondary app-loaded';
-    } else if (pageType == 'dashboard') {
+    } else if (pageType == 'organizationChart') {
       newBodyClass = 'layout-fixed sidebar-expand-lg sidebar-open bg-body-tertiary';
     }
 
@@ -116,7 +137,7 @@ export default function AppLayout({ children }) {
 
   return (
     <SessionProvider basePath="/api/v1/auth">
-      <AppLayoutContext.Provider value={{ setPageTitle, toggleBreadCrumb, setPageType, toggleProgressBar, toast, modal }}>
+      <AppLayoutContext.Provider value={{ setPageTitle, toggleBreadCrumb, setPageType, toggleProgressBar, toast, modal, appBarMenuItems, setAppBarMenuItems, closeModal }}>
         <body className={bodyClass}>
           {
             isLoading &&
@@ -136,7 +157,7 @@ export default function AppLayout({ children }) {
             </>
           }
           {
-            pageType == 'dashboard' &&
+            pageType == 'organizationChart' &&
             <div className="app-wrapper">
               <AppBar />
               <AppSidebar />
@@ -154,6 +175,8 @@ export default function AppLayout({ children }) {
               <AppFooter />
             </div>
           }
+
+          <ToastContainer />
         </body>
       </AppLayoutContext.Provider>
     </SessionProvider>

@@ -109,3 +109,11 @@
     position: static;
   }
 }
+
+.text-left {
+  text-align: left !important;
+}
+
+.flex-column {
+  display: flex;
+}

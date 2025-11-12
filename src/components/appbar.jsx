@@ -5,10 +5,11 @@ import AppIcon from "./icon";
 import { useI18n } from "./i18nProvider";
 import { useAppLayoutContext } from "./appLayout";
 import { signOut } from "next-auth/react";
+import { useState } from "react";
 
 export default function AppBar() {
   const { locale, changeLocale, t } = useI18n();
-  const { modal } = useAppLayoutContext();
+  const { modal, appBarMenuItems } = useAppLayoutContext();
 
   const onLangChosen = (e, lang) => {
     e.preventDefault();
@@ -50,6 +51,16 @@ export default function AppBar() {
         </ul>
 
         <ul className="navbar-nav ms-auto">
+          {
+            appBarMenuItems.map((item, idx) => (
+              <li key={idx} className="nav-item" onClick={item.onClick}>
+                <a href="#" className={"nav-link " + (item.className || '')} title={item.tooltip}>
+                  <AppIcon ic={item.icon} />
+                </a>
+              </li>
+            ))
+          }
+
           <li className="nav-item dropdown">
             <a href="#" className="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
               <span className="d-none d-md-inline">

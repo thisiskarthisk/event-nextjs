@@ -11,17 +11,22 @@
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "bcrypt": "^6.0.0",
+    "csv-parser": "^3.2.0",
     "drizzle-orm": "^0.44.7",
+    "formidable": "^3.5.4",
     "next": "15.5.4",
     "next-auth": "^4.24.13",
     "nodemailer": "^7.0.10",
     "pg": "^8.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-organizational-chart": "^2.2.1",
+    "react-toastify": "^11.0.5",
     "sweetalert2": "^11.26.3",
     "sweetalert2-react-content": "^5.1.0",
     "swr": "^2.3.6",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
