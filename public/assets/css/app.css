@@ -1,5 +1,5 @@
 .mdi {
-  font-size: 1.2em;
+  /* font-size: 1.2em; */
 }
 
 .nav-link:has(.mdi) {
@@ -108,4 +108,59 @@
   .login-page .app-footer {
     position: static;
   }
+}
+
+.text-left {
+  text-align: left !important;
+}
+
+.flex-column {
+  display: flex;
+}
+*.float-right {
+  float: right !important;
+}
+
+th.is-orderable {
+  position: relative;
+  cursor: pointer;
+}
+
+th.is-orderable::before,
+th.is-orderable::after {
+  font: normal normal normal 24px / 1 "Material Design Icons";
+  font-size: inherit;
+  text-rendering: auto;
+  line-height: inherit;
+  -webkit-font-smoothing: antialiased;
+  /* font-size: 0.7em; */
+  line-height: 1;
+  text-rendering: auto;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 1.5em;
+  opacity: 0.5;
+}
+
+th.is-orderable::before {
+  content: "\F19B2";
+}
+
+th.is-orderable::after {
+  content: "\F19B3";
+  right: 0.7em;
+}
+
+th.is-orderable.is-ordered-asc::before, th.is-orderable.is-ordered-desc::after {
+  opacity: 1;
+}
+
+*.inline-form-control {
+  display: inline-block !important;
+  width: unset !important;
+}
+
+.td-action {
+  text-align: center;
 }

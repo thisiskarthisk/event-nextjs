@@ -3,8 +3,6 @@ import { sql } from "drizzle-orm";
 import bcrypt from 'bcrypt';
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { mapObject } from "@/helper/utils";
-import { v4 as uuidv4 } from 'uuid';
 
 const handler = NextAuth({
   providers: [
