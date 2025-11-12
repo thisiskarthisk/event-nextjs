@@ -323,7 +323,7 @@ function UploadOrgChartWidget({ onChange, error = "" }) {
 
 /* -------------------- Main Component -------------------- */
 export default function OrganizationChartPage() {
-  const { setPageTitle, setPageType, toggleProgressBar, setAppBarMenuItems, modal, closeModal, toast } =
+  const { setPageTitle, toggleProgressBar, setAppBarMenuItems, modal, closeModal, toast } =
     useAppLayoutContext();
   const { t } = useI18n?.() ?? {};
   const [roles, setRoles] = useState([]);
@@ -333,7 +333,6 @@ export default function OrganizationChartPage() {
   const toggleExpand = (id) => setExpandedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
 
   useEffect(() => {
-    setPageType("organizationChart");
     setPageTitle(t ? t("organizationChart") : "Organization Chart");
     toggleProgressBar(false);
     setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Organization Chart", className: "text-primary", onClick: showUploadDialog }]);

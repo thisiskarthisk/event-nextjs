@@ -46,14 +46,12 @@ export default function AppSidebar() {
                 <p>{ t('Manage Users') }</p>
               </Link>
             </li>
-            {roles.map((role) => (
-              <li className="nav-item" key={role.id}>
-                <Link href={`/roles/${role.id}`} className="nav-link">
-                  <AppIcon ic="chart-line" className="nav-icon" />
-                  <p>{ t('Role Sheet') }</p>
-                </Link>
-              </li>
-            ))}
+            <li className="nav-item">
+              <Link href="/roles" className="nav-link">
+                <AppIcon ic="chart-line" className="nav-icon" />
+                <p>{ t('Role Sheet') }</p>
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>
