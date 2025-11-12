@@ -7,7 +7,7 @@ import { useAppLayoutContext } from "./appLayout";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 
-export default function AppBar() {
+export default function AppBar({pageTitle}) {
   const { locale, changeLocale, t } = useI18n();
   const { modal, appBarMenuItems } = useAppLayoutContext();
 
@@ -48,6 +48,15 @@ export default function AppBar() {
               <AppIcon ic="menu" />
             </a>
           </li>
+
+          {
+            pageTitle &&
+              <li className="nav-item">
+                <span className="nav-link text-inherit">
+                  {pageTitle}
+                </span>
+              </li>
+          }
         </ul>
 
         <ul className="navbar-nav ms-auto">
