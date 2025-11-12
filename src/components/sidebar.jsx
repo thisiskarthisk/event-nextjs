@@ -5,8 +5,11 @@ import { useI18n } from "./i18nProvider";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { usePathname } from "next/navigation";
 
 export default function AppSidebar() {
+  const pathName = usePathname();
+
   const { t } = useI18n();
   const [roles, setRoles] = useState([]);
 
@@ -31,9 +34,16 @@ export default function AppSidebar() {
         <nav className="mt-2">
           <ul className="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="navigation" aria-label="Main navigation" data-accordion="false" id="navigation">
             <li className="nav-item">
-              <Link href="/" className="nav-link active">
+              <Link href="/" className={"nav-link " + (pathName == '/' ? 'active' : '')}>
                 <AppIcon ic="speedometer" className="nav-icon" />
                 <p>{ t('dashboard') }</p>
+              </Link>
+            </li>
+
+            <li className="nav-item">
+              <Link href="/admin/users" className={"nav-link " + (pathName == '/admin/users' ? 'active' : '')}>
+                <AppIcon ic="account-group" className="nav-icon" />
+                <p>{ t('Manage Users') }</p>
               </Link>
             </li>
             {roles.map((role) => (

@@ -6,7 +6,7 @@ import { useI18n } from "./i18nProvider";
 import { useAppLayoutContext } from "./appLayout";
 import { signOut } from "next-auth/react";
 
-export default function AppBar() {
+export default function AppBar({pageTitle}) {
   const { locale, changeLocale, t } = useI18n();
   const { modal } = useAppLayoutContext();
 
@@ -47,6 +47,15 @@ export default function AppBar() {
               <AppIcon ic="menu" />
             </a>
           </li>
+
+          {
+            pageTitle &&
+              <li className="nav-item">
+                <span className="nav-link text-inherit">
+                  {pageTitle}
+                </span>
+              </li>
+          }
         </ul>
 
         <ul className="navbar-nav ms-auto">
