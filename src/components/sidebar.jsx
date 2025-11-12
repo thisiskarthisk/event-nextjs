@@ -21,7 +21,21 @@ export default function AppSidebar() {
             <li className="nav-item">
               <Link href="/" className="nav-link active">
                 <AppIcon ic="speedometer" className="nav-icon" />
-                <p>{ t('dashboard') }</p>
+                <p>{t('dashboard')}</p>
+              </Link>
+            </li>
+
+            <li className="nav-item">
+              <Link href="/capa" className="nav-link">
+                <AppIcon ic="shield-sun" className="nav-icon" />
+                <p>{t('CAPA')}</p>
+              </Link>
+            </li>
+
+            <li className="nav-item">
+              <Link href="/rca" className="nav-link">
+                <AppIcon ic="chart-multiline" className="nav-icon" />
+                <p>{t('RCA')}</p>
               </Link>
             </li>
           </ul>
