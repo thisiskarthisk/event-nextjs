@@ -25,20 +25,21 @@ const countObjectiveKpis = (objective) =>
   (objective.roles || []).reduce((sum, r) => sum + countKpis(r), 0);
 
 export default function RoleSheetView() {
-  const { setPageType, toggleProgressBar } = useAppLayoutContext();
+  const { toggleProgressBar, setPageTitle } = useAppLayoutContext();
   const { locale } = useI18n();
   const { role_id, rs_id } = useParams();
   const router = useRouter();
   const [roleSheetData, setRoleSheetData] = useState([]);
 
   useEffect(() => {
-    setPageType("dashboard");
     toggleProgressBar(false);
 
     if (!role_id || !rs_id) return;
 
     const fetchData = async () => {
       try {
+        setPageTitle('Role Sheet View');
+
         const res = await fetch(`/api/v1/roles/${role_id}/rs/${rs_id}`);
         const data = await res.json();
 

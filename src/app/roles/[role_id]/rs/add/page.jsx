@@ -9,7 +9,7 @@ import { FREQUENCY_TYPES, CHART_TYPES } from "@/constants";
 import AppIcon from "@/components/icon";
 
 export default function AddRoleSheetPage() {
-  const { setPageType, toggleProgressBar, toast } = useAppLayoutContext();
+  const { toggleProgressBar, toast, setPageTitle } = useAppLayoutContext();
   const { locale } = useI18n();
   const router = useRouter();
   const { role_id, rs_id } = useParams();
@@ -37,7 +37,6 @@ export default function AddRoleSheetPage() {
 
   /* Load role sheet data if rs_id exists (Edit Mode) */
   useEffect(() => {
-    setPageType("dashboard");
 
     if (!role_id) return;
     if (!rs_id) {
@@ -46,7 +45,10 @@ export default function AddRoleSheetPage() {
     }
 
     const fetchData = async () => {
+
       toggleProgressBar(true);
+      setPageTitle('Role Sheet Edit');
+      
       try {
         const res = await fetch(`/api/v1/roles/${role_id}/rs/${rs_id}`);
         const json = await res.json();

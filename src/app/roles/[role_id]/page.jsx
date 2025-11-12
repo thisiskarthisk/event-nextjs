@@ -8,10 +8,11 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
+import DataTable from "@/components/DataTable";
 
 
 export default function RoleSheet() {
-  const { setPageType, toggleProgressBar, toast, modal } = useAppLayoutContext();
+  const { toggleProgressBar, toast, modal, setPageTitle } = useAppLayoutContext();
   const { locale } = useI18n();
   const { role_id } = useParams();
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function RoleSheet() {
   const [csvFile, setCsvFile] = useState(null);
 
   useEffect(() => {
-    setPageType('dashboard');
+    setPageTitle('Role Sheet');
     toggleProgressBar(false);
 
     if (!role_id) return;
@@ -318,6 +319,21 @@ export default function RoleSheet() {
       },
     });
   };
+
+  const renderActions = (rowData) => (
+    <>
+      <button className="btn btn-md me-2" onClick={() => handleView(rowData.id)}>
+        <AppIcon ic="eye" className="text-info" />
+      </button>
+      <button className="btn btn-md me-2" onClick={() => handleEdit(rowData.id)}>
+        <AppIcon ic="pencil" className="text-primary" />
+      </button>
+      <button className="btn btn-md" onClick={() => handleDelete(rowData.id)}>
+        <AppIcon ic="delete" className="text-danger" />
+      </button>
+    </>
+  );
+  
   
   return (
     <AuthenticatedPage>
@@ -334,52 +350,16 @@ export default function RoleSheet() {
               </button>
             </div>
             <div className="card-body">
-              <table
-                id="roleTable"
-                className="table table-bordered table-striped"
-              >
-                <thead className="table-light">
-                  <tr>
-                    <th style={{ width: "70%" }}>Objective</th>
-                    <th style={{ width: "30%", textAlign: "center" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {objectives.length > 0 ? (
-                    objectives.map((obj) => (
-                      <tr key={obj.id}>
-                        <td>{obj.name}</td>
-                        <td className="text-center">
-                          <button
-                            className="btn btn-md me-2"
-                            onClick={() => handleView(obj.id)}
-                          >
-                            <AppIcon ic="eye" className="text-info"/>
-                          </button>
-                          <button
-                            className="btn btn-md me-2"
-                            onClick={() => handleEdit(obj.id)}
-                          >
-                            <AppIcon ic="pencil" className="text-primary"/>
-                          </button>
-                          <button
-                            className="btn btn-md"
-                            onClick={() => handleDelete(obj.id)}
-                          >
-                            <AppIcon ic="delete" className="text-danger"/>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="2" className="text-center text-muted">
-                        No objectives found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <DataTable
+                apiPath={`/roles/${role_id}`}
+                dataKeyFromResponse="roles"
+                columns={[
+                  { column: "name", label: "Objective" },
+                ]}
+                paginationType="client"
+                actionColumnFn={renderActions}
+              />
+
             </div>
           </div>
         </div>
