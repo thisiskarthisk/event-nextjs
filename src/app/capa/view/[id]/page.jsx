@@ -11,15 +11,13 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 export default function CapaAnalysis({ params }) {
-    const { setPageTitle, setPageType, toggleProgressBar } = useAppLayoutContext();
+    const { setPageTitle, toggleProgressBar } = useAppLayoutContext();
     const { t, locale } = useI18n();
     const { id } = use(params);
     const [data, setData] = useState([]);
     const router = useRouter();
 
     useEffect(() => {
-        setPageType('dashboard');
-
         setPageTitle(t('MP/CP GAP Analysis'));
 
         toggleProgressBar(false);
