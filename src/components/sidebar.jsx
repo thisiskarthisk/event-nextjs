@@ -13,15 +13,6 @@ export default function AppSidebar() {
   const { t } = useI18n();
   const [roles, setRoles] = useState([]);
 
-  useEffect(() => {
-    fetch("/api/v1/roles")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setRoles(data.data.users || []);
-      })
-      .catch(console.error);
-  }, []);
-
   return (
     <aside className="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
       <div className="sidebar-brand">
