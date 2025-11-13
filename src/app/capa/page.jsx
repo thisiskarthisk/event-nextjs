@@ -5,11 +5,47 @@ import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
 import { useEffect, useState } from "react";
 import AppIcon from "../../components/icon";
+import DataTable from "@/components/DataTable";
+import { useRouter } from "next/navigation";
 
 export default function Capa() {
-    const { setPageTitle, setPageType, toggleProgressBar } = useAppLayoutContext();
+    const { setPageTitle, modal, toast, closeModal, toggleProgressBar } = useAppLayoutContext();
     const { t, locale } = useI18n();
+    const router = useRouter();
     const [data, setData] = useState([]);
+
+    const columns = [
+        { 'column': 'capa_no', 'label': 'CAPA No' },
+    ];
+
+    /** Add New CAPA */
+    const handleAddNewCAPA = () => {
+        router.push(`/capa/new`);
+    };
+
+    /** View CAPA */
+    const handleView = (id) => {
+        router.push(`/capa/view/${id}`);
+    };
+
+    /** Edit CAPA */
+    const handleEdit = (id) => {
+        router.push(`/capa/edit/${id}`);
+    };
+
+    const renderActions = (rowData) => (
+        <>
+            <button className="btn btn-md me-2" onClick={() => handleView(rowData.ga_id)}>
+                <AppIcon ic="eye" className="text-info" />
+            </button>
+            <button className="btn btn-md me-2" onClick={() => handleEdit(rowData.ga_id)}>
+                <AppIcon ic="pencil" className="text-primary" />
+            </button>
+            <button className="btn btn-md" onClick={() => handleDelete(rowData.ga_id)}>
+                <AppIcon ic="delete" className="text-danger" />
+            </button>
+        </>
+    );
 
     const fetchCAPAList = () => {
         fetch("/api/v1/capa/list")
@@ -25,8 +61,6 @@ export default function Capa() {
     }
 
     useEffect(() => {
-        setPageType('dashboard');
-
         setPageTitle(t('CAPA'));
 
         toggleProgressBar(false);
@@ -34,76 +68,66 @@ export default function Capa() {
         fetchCAPAList();
     }, [locale]);
 
+    /** Delete CAPA */
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure want to delete this record?")) return;
+        modal({
+            title: "Are you sure?",
+            body: "<p>This action will permanently delete the CAPA.</p>",
+            okBtn: {
+                label: "Yes, Delete",
+                onClick: async () => {
+                    try {
+                        const res = await fetch(`/api/v1/capa/delete/${id}`, {
+                            method: "DELETE",
+                        });
 
-        try {
-            const response = await fetch(`/api/v1/capa/delete/${id}`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: {},
-            });
+                        const data = await res.json();
+                        if (!data.success) throw new Error(data.message || "Failed to delete");
 
-            const result = await response.json();
-            console.log(result);
+                        // Update UI after successful delete
+                        setData((prev) =>
+                            prev.filter((obj) => obj.id !== id)
+                        );
 
-            if (result.success) {
-                alert(result.message || "Deleted successfully!");
-                fetchCAPAList();
-            } else {
-                alert(result.message || "Failed to delete CAPA");
-            }
-        } catch (err) {
-            console.error("Error:", err);
-            alert("Something went wrong.");
-        }
+                        closeModal();
+                        toast('success', data.message || 'CAPA deleted successfully!');
+                    } catch (err) {
+                        console.error("Delete error:", err);
+                        toast('error', 'Error deleting role sheet');
+                    }
+                },
+            },
+            cancelBtn: {
+                label: "Cancel",
+                onClick: () => {
+                    console.log("Delete canceled");
+                },
+            },
+            closeOnEsc: true,
+        });
     };
 
     return (
         <AuthenticatedPage>
-            <div className="card p-3">
-                <div className="mr-auto">
-                    <a className="btn btn-primary" href="/capa/new">
-                        Add New CAPA
-                    </a>
+            <div className="row">
+                <div className="col-12">
+                    <div className="card">
+                        <div className="card-body">
+                            <div className="card-header d-flex justify-content-between align-items-center">
+                                <h5 className="mb-0">CAPA</h5>
+                                <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewCAPA}>
+                                    <AppIcon ic="plus" className="text-info" /> Add New CAPA
+                                </button>
+                            </div>
+                            <DataTable
+                                apiPath="/capa/list"
+                                dataKeyFromResponse="gap_analysis"
+                                columns={columns}
+                                actionColumnFn={renderActions}
+                                paginationType="client" />
+                        </div>
+                    </div>
                 </div>
-
-                <table className="mt-3">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="px-4 py-2 border text-center">CAPA No</th>
-                            <th className="px-4 py-2 border text-center">Actions</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {data.length > 0 ? (
-                            data.map((row) => (
-                                <tr key={row.ga_id} className="text-center hover:bg-gray-50">
-                                    <td className="px-4 py-2 border">{row.capa_no}</td>
-                                    <td className="px-4 py-2 border">
-                                        <a className="btn btn-sm btn-outline-info" href={`/capa/view/${row.ga_id}`}>
-                                            <AppIcon ic="eye-outline" className="nav-icon" />
-                                        </a> &nbsp;
-                                        <a className="btn btn-sm btn-outline-primary" href={`/capa/edit/${row.ga_id}`}>
-                                            <AppIcon ic="square-edit-outline" className="nav-icon" />
-                                        </a> &nbsp;
-                                        <a className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(row.ga_id)}>
-                                            <AppIcon ic="trash-can-outline" className="nav-icon" />
-                                        </a>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="2" className="px-4 py-2 text-center text-gray-500">
-                                    No data available
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-
             </div>
         </AuthenticatedPage>
     );

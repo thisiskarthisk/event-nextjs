@@ -43,7 +43,7 @@ export async function DELETE(req, context) {
 
         return JsonResponse.success(
             { rca_why_id: rcaWhysId },
-            "The RCA record has been deleted successfully."
+            "The RCA question has been deleted successfully."
         );
 
     } catch (error) {

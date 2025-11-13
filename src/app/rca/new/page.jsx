@@ -7,7 +7,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function RcaForm({ params }) {
-    const { setPageTitle, setPageType, toggleProgressBar } = useAppLayoutContext();
+    const { setPageTitle, modal, closeModal, toast, toggleProgressBar } = useAppLayoutContext();
     const { t, locale } = useI18n();
     const router = useRouter();
     const { id } = use(params);
@@ -46,48 +46,48 @@ export default function RcaForm({ params }) {
     }
 
     useEffect(() => {
-        setPageType('dashboard');
-
         setPageTitle(id ? t('RCA Details') : t('RCA New'));
 
         toggleProgressBar(false);
 
         getCapaDetails();
 
-        fetch(`/api/v1/rca/${id}`)
-            .then((res) => res.json())
-            .then((response) => {
-                if (response.success) {
-                    const root_cause_analysis = response.data.root_cause_analysis;
-                    const rca_whys = response.data.rca_whys;
+        if (id) {
+            fetch(`/api/v1/rca/${id}`)
+                .then((res) => res.json())
+                .then((response) => {
+                    if (response.success) {
+                        const root_cause_analysis = response.data.root_cause_analysis;
+                        const rca_whys = response.data.rca_whys;
 
-                    const rca_whys_data = rca_whys.map(a => ({
-                        id: a.id,
-                        question: a.question || '',
-                        response: a.answer || '',
-                        isExist: true
-                    }));
+                        const rca_whys_data = rca_whys.map(a => ({
+                            id: a.id,
+                            question: a.question || '',
+                            response: a.answer || '',
+                            isExist: true
+                        }));
 
-                    setForm({
-                        ...initialForm,
-                        id: root_cause_analysis.id || '',
-                        rca_no: root_cause_analysis.rca_no || '',
-                        gap_analysis_id: root_cause_analysis.gap_analysis_id || '',
-                        department: root_cause_analysis.department || '',
-                        date_of_report: root_cause_analysis.date_of_report || '',
-                        reported_by: root_cause_analysis.reported_by || '',
-                        date_of_occurrence: root_cause_analysis.date_of_occurrence || '',
-                        impact: root_cause_analysis.impact || '',
-                        problem_description: root_cause_analysis.problem_desc || '',
-                        immediate_action_taken: root_cause_analysis.immediate_action_taken || '',
-                        rca_whys: rca_whys_data || []
-                    });
+                        setForm({
+                            ...initialForm,
+                            id: root_cause_analysis.id || '',
+                            rca_no: root_cause_analysis.rca_no || '',
+                            gap_analysis_id: root_cause_analysis.gap_analysis_id || '',
+                            department: root_cause_analysis.department || '',
+                            date_of_report: root_cause_analysis.date_of_report || '',
+                            reported_by: root_cause_analysis.reported_by || '',
+                            date_of_occurrence: root_cause_analysis.date_of_occurrence || '',
+                            impact: root_cause_analysis.impact || '',
+                            problem_description: root_cause_analysis.problem_desc || '',
+                            immediate_action_taken: root_cause_analysis.immediate_action_taken || '',
+                            rca_whys: rca_whys_data || []
+                        });
 
-                } else {
-                    console.error("Error fetching data:", response.message);
-                }
-            })
-            .catch((err) => console.error("API Error:", err));
+                    } else {
+                        console.error("Error fetching data:", response.message);
+                    }
+                })
+                .catch((err) => console.error("API Error:", err));
+        }
 
     }, [locale, id]);
 
@@ -111,35 +111,46 @@ export default function RcaForm({ params }) {
     };
 
     const removeWhy = async (index, rca_why_id) => {
-        if (!window.confirm("Are you sure want to delete this record?")) return;
-        if (rca_why_id) {
-            try {
-                const response = await fetch(`/api/v1/rca/${rca_why_id}`, {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: {},
-                });
+        modal({
+            title: "Are you sure?",
+            body: "<p>This action will permanently delete the question.</p>",
+            okBtn: {
+                label: "Yes, Delete",
+                onClick: async () => {
+                    if (rca_why_id) {
+                        try {
+                            const res = await fetch(`/api/v1/rca/${rca_why_id}`, {
+                                method: "DELETE",
+                            });
 
-                const result = await response.json();
-                console.log(result);
+                            const data = await res.json();
+                            if (!data.success) throw new Error(data.message || "Failed to delete");
 
-                if (result.success) {
-                    alert(result.message || "Deleted successfully!");
+                            const newWhys = form.rca_whys.filter((_, i) => i !== index);
+                            setForm({ ...form, rca_whys: newWhys });
 
-                    const newWhys = form.rca_whys.filter((_, i) => i !== index);
-                    setForm({ ...form, rca_whys: newWhys });
-                } else {
-                    alert(result.message || "Failed to delete RCA");
-                }
-            } catch (err) {
-                console.error("Error:", err);
-                alert("Something went wrong.");
-            }
-        } else {
-            const newWhys = form.rca_whys.filter((_, i) => i !== index);
-            setForm({ ...form, rca_whys: newWhys });
-        }
+                            closeModal();
+                            toast('success', data.message || 'RCA question deleted successfully!');
+                        } catch (err) {
+                            console.error("Delete error:", err);
+                            toast('error', 'Error deleting rca question');
+                        }
+                    } else {
+                        const newWhys = form.rca_whys.filter((_, i) => i !== index);
+                        setForm({ ...form, rca_whys: newWhys });
+                    }
+                },
+            },
+            cancelBtn: {
+                label: "Cancel",
+                onClick: () => {
+                    console.log("Delete canceled");
+                },
+            },
+            closeOnEsc: true,
+        });
     };
+
 
     const handleCapaSelect = (e) => {
         const value = e.target.value;
@@ -160,13 +171,12 @@ export default function RcaForm({ params }) {
             });
 
             const result = await response.json();
-            console.log(result);
 
             if (result.success) {
-                alert(result.message || 'Saved successfully!');
+                toast('success', result.message || 'RCA saved successfully!');
                 router.push("/rca");
             } else {
-                alert(result.message || "Failed to save RCA");
+                toast('error', result.message || "Failed to save RCA");
 
                 if (result.data.errors) {
                     const rcaWhyErrorMap = [];
@@ -188,7 +198,7 @@ export default function RcaForm({ params }) {
             }
         } catch (err) {
             console.error("Error:", err);
-            alert("Something went wrong.");
+            toast('error', 'Failed to save RCA');
         }
     };
 

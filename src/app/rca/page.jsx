@@ -7,21 +7,47 @@ import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import AppIcon from "../../components/icon";
 import { useRouter } from "next/navigation";
+import DataTable from "@/components/DataTable";
 
 export default function Rca() {
-    const { setPageTitle, setPageType, toggleProgressBar } = useAppLayoutContext();
+    const { setPageTitle, modal, toast, closeModal, toggleProgressBar } = useAppLayoutContext();
     const { t, locale } = useI18n();
     const [data, setData] = useState([]);
-    const [showImportModal, setShowImportModal] = useState(false);
-    const [csvFile, setCsvFile] = useState(null);
     const router = useRouter();
+
+    const columns = [
+        { 'column': 'rca_no', 'label': 'RCA No' },
+        { 'column': 'department', 'label': 'Department' },
+        { 'column': 'date_of_report', 'label': 'Date of Report' },
+    ];
+
+    /** Add New RCA */
+    const handleAddNewCAPA = () => {
+        router.push(`/rca/new`);
+    };
+
+    /** Edit RCA */
+    const handleEdit = (id) => {
+        router.push(`/rca/edit/${id}`);
+    };
+
+    const renderActions = (rowData) => (
+        <>
+            <button className="btn btn-md me-2" onClick={() => handleEdit(rowData.id)}>
+                <AppIcon ic="pencil" className="text-primary" />
+            </button>
+            <button className="btn btn-md" onClick={() => handleDelete(rowData.id)}>
+                <AppIcon ic="delete" className="text-danger" />
+            </button>
+        </>
+    );
 
     const fetchRCAList = () => {
         fetch("/api/v1/rca/list")
             .then((res) => res.json())
             .then((json) => {
                 if (json.success) {
-                    setData(json.data.root_cause_analysis);
+                    setData(json.data.root_cause_analysis || []);
                 } else {
                     console.error("Error fetching data:", json.message);
                 }
@@ -30,14 +56,158 @@ export default function Rca() {
     }
 
     useEffect(() => {
-        setPageType('dashboard');
-
         setPageTitle(t('RCA'));
 
         toggleProgressBar(false);
 
         fetchRCAList();
     }, [locale]);
+
+    const handleOpenCsvModal = () => {
+        /** Store reference to download function */
+        const downloadFn = () => {
+            handleDownloadTemplate();
+        };
+
+        /** Make it globally accessible */
+        window._tempDownloadFn = downloadFn;
+
+        modal({
+            title: "Upload RCA (CSV)",
+            body: `
+            <button 
+              type="button"
+              onclick="window._tempDownloadFn && window._tempDownloadFn(); return false;"
+              class="btn btn-outline-secondary mt-2 w-100"
+            >
+              Download Sample Template
+            </button>
+    
+    
+            <div class="mb-3 mt-3">
+              <label class="form-label">Select CSV File</label>
+              <input type="file" id="csvFileInput" accept=".csv" class="form-control" />
+            </div>
+          `,
+            okBtn: {
+                label: "Upload",
+                onClick: async () => {
+                    const fileInput = document.getElementById("csvFileInput");
+                    if (!fileInput || !fileInput.files.length) {
+                        toast("error", "Select a CSV file first");
+                        return false;
+                    }
+                    const file = fileInput.files[0];
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: false,
+                        complete: async (results) => {
+                            const rows = results.data;
+
+                            const grouped = [];
+                            let current = null;
+
+                            const clean = (v) => (v ? v.toString().trim() : "");
+
+                            const isEmptyRow = (row) =>
+                                Object.values(row).every((v) => !v || clean(v) === "");
+
+                            rows.forEach((row) => {
+                                if (isEmptyRow(row)) {
+                                    if (current) {
+                                        grouped.push(current);
+                                        current = null;
+                                    }
+                                    return;
+                                }
+
+                                const hasMainFields =
+                                    clean(row["Department"]) &&
+                                    clean(row["Reported By"]) &&
+                                    clean(row["Problem Description"]);
+
+                                if (hasMainFields) {
+                                    if (current) grouped.push(current);
+                                    current = {
+                                        rca_no: "",
+                                        department: clean(row["Department"]),
+                                        reported_by: clean(row["Reported By"]),
+                                        date_of_report: clean(row["Date of Report"]),
+                                        date_of_occurrence: clean(row["Date of Occurrence"]),
+                                        impact: clean(row["Impact"]),
+                                        problem_description: clean(row["Problem Description"]),
+                                        immediate_action_taken: clean(row["Immediate Action Taken"]),
+                                        rca_whys: [],
+                                    };
+                                }
+
+                                if (current) {
+                                    current.rca_whys.push({
+                                        question: clean(row["Question"]),
+                                        response: clean(row["Answer"]),
+                                    });
+                                }
+                            });
+
+                            // Push the last RCA group if any
+                            if (current && current.rca_whys.length > 0) grouped.push(current);
+
+                            if (grouped && grouped.length > 0) {
+                                let lastIndex = 0;
+
+                                // ✅ Collect all questions from all groups
+                                const allQuestions = grouped.flatMap(group =>
+                                    group.rca_whys.map(q => q.question?.trim().toLowerCase()).filter(Boolean)
+                                );
+
+                                // ✅ Find duplicates
+                                const duplicates = allQuestions.filter((q, i) => allQuestions.indexOf(q) !== i);
+                                const uniqueDuplicates = [...new Set(duplicates)];
+
+                                // ✅ If duplicates exist, stop here
+                                if (uniqueDuplicates.length > 0) {
+                                    alert(`⚠️ Duplicate questions found in CSV:\n\n${uniqueDuplicates.join("\n")}\n\nPlease remove duplicates and try again.`);
+                                    return;
+                                }
+
+                                for (const [index, group] of grouped.entries()) {
+                                    lastIndex = index;
+                                    try {
+                                        const response = await fetch("/api/v1/rca/import", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify(group),
+                                        });
+
+                                        const result = await response.json();
+                                        if (!result.success) throw new Error(result.message || "Upload failed");
+
+                                        closeModal();
+                                        toast("success", "RCA data uploaded successfully!");
+                                        fetchRCAList();
+
+                                        // Cleanup
+                                        delete window._tempDownloadFn;
+
+                                    } catch (err) {
+                                        console.error("Upload error:", err);
+                                        toast("error", "Failed to upload KPI CSV");
+                                    }
+                                }
+                            }
+                        },
+                    });
+                },
+            },
+            cancelBtn: {
+                label: "Cancel",
+                onClick: () => {
+                    // Cleanup on cancel
+                    delete window._tempDownloadFn;
+                }
+            },
+        });
+    };
 
     // ✅ Handle Download Template
     const handleDownloadTemplate = () => {
@@ -77,267 +247,69 @@ export default function Rca() {
         URL.revokeObjectURL(url);
     };
 
-    const handleCsvUpload = async () => {
-        if (!csvFile) return alert("Please select a CSV file first.");
-
-        Papa.parse(csvFile, {
-            header: true,
-            skipEmptyLines: false, // detect blank rows
-            complete: async (results) => {
-                const rows = results.data;
-
-                const grouped = [];
-                let current = null;
-
-                const clean = (v) => (v ? v.toString().trim() : "");
-
-                const isEmptyRow = (row) =>
-                    Object.values(row).every((v) => !v || clean(v) === "");
-
-                rows.forEach((row) => {
-                    if (isEmptyRow(row)) {
-                        if (current) {
-                            grouped.push(current);
-                            current = null;
-                        }
-                        return;
-                    }
-
-                    const hasMainFields =
-                        clean(row["Department"]) &&
-                        clean(row["Reported By"]) &&
-                        clean(row["Problem Description"]);
-
-                    if (hasMainFields) {
-                        if (current) grouped.push(current);
-                        current = {
-                            rca_no: "",
-                            department: clean(row["Department"]),
-                            reported_by: clean(row["Reported By"]),
-                            date_of_report: clean(row["Date of Report"]),
-                            date_of_occurrence: clean(row["Date of Occurrence"]),
-                            impact: clean(row["Impact"]),
-                            problem_description: clean(row["Problem Description"]),
-                            immediate_action_taken: clean(row["Immediate Action Taken"]),
-                            rca_whys: [],
-                        };
-                    }
-
-                    if (current) {
-                        current.rca_whys.push({
-                            question: clean(row["Question"]),
-                            response: clean(row["Answer"]),
-                        });
-                    }
-                });
-
-                // Push the last RCA group if any
-                if (current && current.rca_whys.length > 0) grouped.push(current);
-
-                if (grouped && grouped.length > 0) {
-                    let lastIndex = 0;
-                    let importFailed = false;
-
-                    // ✅ Collect all questions from all groups
-                    const allQuestions = grouped.flatMap(group =>
-                        group.rca_whys.map(q => q.question?.trim().toLowerCase()).filter(Boolean)
-                    );
-
-                    // ✅ Find duplicates
-                    const duplicates = allQuestions.filter((q, i) => allQuestions.indexOf(q) !== i);
-                    const uniqueDuplicates = [...new Set(duplicates)];
-
-                    // ✅ If duplicates exist, stop here
-                    if (uniqueDuplicates.length > 0) {
-                        alert(`⚠️ Duplicate questions found in CSV:\n\n${uniqueDuplicates.join("\n")}\n\nPlease remove duplicates and try again.`);
-                        return;
-                    }
-
-                    for (const [index, group] of grouped.entries()) {
-                        lastIndex = index;
-                        try {
-                            const response = await fetch("/api/v1/rca/import", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify(group),
-                            });
-
-                            const result = await response.json();
-
-                            if (result.success) {
-                                console.log(`✅ Record ${index + 1} saved successfully`);
-                            } else {
-                                alert(result.message || `❌ Failed to save RCA record #${index + 1}`);
-                                importFailed = true;
-                                break;
-                            }
-                        } catch (err) {
-                            console.error("Error:", err);
-                            alert(`Something went wrong on record #${index + 1}`);
-                            importFailed = true;
-                            break;
-                        }
-                    }
-
-                    if (!importFailed) {
-                        alert(`✅ Successfully imported all ${grouped.length} RCA records.`);
-                        setShowImportModal(false);
-                        setCsvFile(null);
-                        fetchRCAList();
-                    } else {
-                        alert(`⚠️ Import stopped at record #${lastIndex + 1} due to an error.`);
-                    }
-                }
-            },
-        });
-    };
-
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure want to delete this record?")) return;
+        modal({
+            title: "Are you sure?",
+            body: "<p>This action will permanently delete the RCA.</p>",
+            okBtn: {
+                label: "Yes, Delete",
+                onClick: async () => {
+                    try {
+                        const res = await fetch(`/api/v1/rca/delete/${id}`, {
+                            method: "DELETE",
+                        });
 
-        try {
-            const response = await fetch(`/api/v1/rca/delete/${id}`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: {},
-            });
+                        const data = await res.json();
+                        if (!data.success) throw new Error(data.message || "Failed to delete");
 
-            const result = await response.json();
+                        // Update UI after successful delete
+                        setData((prev) =>
+                            prev.filter((obj) => obj.id !== id)
+                        );
 
-            if (result.success) {
-                alert(result.message || "Deleted successfully!");
-                fetchRCAList();
-            } else {
-                alert(result.message || "Failed to delete RCA");
-            }
-        } catch (err) {
-            console.error("Error:", err);
-            alert("Something went wrong.");
-        }
+                        closeModal();
+                        toast('success', data.message || 'RCA deleted successfully!');
+                    } catch (err) {
+                        console.error("Delete error:", err);
+                        toast('error', 'Error deleting role sheet');
+                    }
+                },
+            },
+            cancelBtn: {
+                label: "Cancel",
+                onClick: () => {
+                    console.log("Delete canceled");
+                },
+            },
+            closeOnEsc: true,
+        });
     };
 
     return (
         <AuthenticatedPage>
-            <div className="card p-3">
-                <div className="mr-auto">
-                    <a className="btn btn-primary  me-2" href="/rca/new">
-                        Add New RCA
-                    </a>
-                    <button
-                        className="btn btn-warning"
-                        onClick={() => setShowImportModal(true)}
-                    >
-                        <i className="bi bi-upload me-1"></i> Import RCA Data
-                    </button>
-                </div>
 
-                <table className="mt-3">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="px-4 py-2 border text-center">RCA No</th>
-                            <th className="px-4 py-2 border text-center">Department</th>
-                            <th className="px-4 py-2 border text-center">Date of Report</th>
-                            <th className="px-4 py-2 border text-center">Actions</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {data.length > 0 ? (
-                            data.map((row) => (
-                                <tr key={row.id} className="text-center hover:bg-gray-50">
-                                    <td className="px-4 py-2 border">{row.rca_no}</td>
-                                    <td className="px-4 py-2 border">{row.department}</td>
-                                    <td className="px-4 py-2 border">{row.date_of_report}</td>
-                                    <td className="px-4 py-2 border">
-                                        <a className="btn btn-sm btn-outline-primary" href={`/rca/edit/${row.id}`}>
-                                            <AppIcon ic="square-edit-outline" className="nav-icon" />
-                                        </a> &nbsp;
-                                        <a className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(row.id)}>
-                                            <AppIcon ic="trash-can-outline" className="nav-icon" />
-                                        </a>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="4" className="px-4 py-2 text-center text-gray-500">
-                                    No data available
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-
-                {/* ✅ Import Modal */}
-                {showImportModal && (
-                    <div
-                        className="modal fade show"
-                        style={{
-                            display: "block",
-                            backgroundColor: "rgba(0,0,0,0.5)",
-                        }}
-                    >
-                        <div className="modal-dialog modal-dialog-centered">
-                            <div className="modal-content">
-                                {/* Header */}
-                                <div className="modal-header">
-                                    <h5 className="modal-title">Import RCA Data</h5>
-                                    <button
-                                        className="btn btn-link text-decoration-none"
-                                        onClick={handleDownloadTemplate}
-                                    >
-                                        <i className="bi bi-download me-1"></i> Download Template
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="btn-close"
-                                        onClick={() => {
-                                            setShowImportModal(false);
-                                            setCsvFile(null);
-                                        }}
-                                    ></button>
-                                </div>
-
-                                {/* Body */}
-                                <div className="modal-body">
-                                    <div className="mb-3">
-                                        <label className="form-label">Select RCA CSV File</label>
-                                        <input
-                                            type="file"
-                                            accept=".csv"
-                                            className="form-control"
-                                            onChange={(e) => setCsvFile(e.target.files[0])}
-                                        />
-                                        {csvFile && (
-                                            <p className="text-muted mt-2">Selected: {csvFile.name}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Footer */}
-                                <div className="modal-footer">
-                                    <button
-                                        className="btn btn-secondary"
-                                        onClick={() => {
-                                            setShowImportModal(false);
-                                            setCsvFile(null);
-                                        }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="btn btn-primary"
-                                        onClick={handleCsvUpload}
-                                        disabled={!csvFile}
-                                    >
-                                        Upload
-                                    </button>
-                                </div>
+            <div className="row">
+                <div className="col-12">
+                    <div className="card">
+                        <div className="card-body">
+                            <div className="card-header d-flex justify-content-between align-items-center">
+                                <h5 className="mb-0">RCA</h5>
+                                <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewCAPA}>
+                                    <AppIcon ic="plus" className="text-info" /> Add New RCA
+                                </button>
+                                <button className="btn btn-outline-success " onClick={handleOpenCsvModal}>
+                                    <AppIcon ic="upload" className="text-success" /> Upload RCA File (CSV)
+                                </button>
                             </div>
+                            <DataTable
+                                apiPath="/rca/list"
+                                dataKeyFromResponse="root_cause_analysis"
+                                columns={columns}
+                                actionColumnFn={renderActions}
+                                paginationType="client" />
                         </div>
                     </div>
-                )}
-
+                </div>
             </div>
         </AuthenticatedPage>
     );
