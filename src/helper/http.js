@@ -54,5 +54,6 @@ export async function swrFetcher([url, params = {}]) {
   return await HttpClient({
     url,
     method: 'GET',
+    params: (params || {}),
   });
 }
