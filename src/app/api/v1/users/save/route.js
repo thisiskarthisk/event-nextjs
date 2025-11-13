@@ -35,7 +35,7 @@ export async function POST(req) {
     return JsonResponse.success({
       'insertedRow': insertedRow,
     }, 'The User has been created successfully.');
-  } catch(error) {
+  } catch (error) {
     console.error('[api/users/save] Error:', error);
 
     let message = 'Error occurred when trying to save User data.';

@@ -27,20 +27,34 @@ export default function AppSidebar() {
             <li className="nav-item">
               <Link href="/" className="nav-link active">
                 <AppIcon ic="family-tree" className="nav-icon" />
-                <p>{ t('organizationChart') }</p>
+                <p>{t('organizationChart')}</p>
               </Link>
             </li>
 
             <li className="nav-item">
               <Link href="/admin/users" className={"nav-link " + (pathName == '/admin/users' ? 'active' : '')}>
                 <AppIcon ic="account-group" className="nav-icon" />
-                <p>{ t('Manage Users') }</p>
+                <p>{t('Manage Users')}</p>
               </Link>
             </li>
             <li className="nav-item">
               <Link href="/roles" className="nav-link">
                 <AppIcon ic="chart-line" className="nav-icon" />
-                <p>{ t('Role Sheet') }</p>
+                <p>{t('Role Sheet')}</p>
+              </Link>
+            </li>
+
+            <li className="nav-item">
+              <Link href="/capa" className="nav-link">
+                <AppIcon ic="shield-sun" className="nav-icon" />
+                <p>{t('CAPA')}</p>
+              </Link>
+            </li>
+
+            <li className="nav-item">
+              <Link href="/rca" className="nav-link">
+                <AppIcon ic="chart-multiline" className="nav-icon" />
+                <p>{t('RCA')}</p>
               </Link>
             </li>
           </ul>
