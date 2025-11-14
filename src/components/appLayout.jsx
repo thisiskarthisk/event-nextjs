@@ -121,6 +121,7 @@ export default function AppLayout({ children }) {
     <SessionProvider basePath="/api/v1/auth">
       <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, appBarMenuItems, setAppBarMenuItems, closeModal }}>
         <body className={bodyClass}>
+        
           {
             isLoading &&
             <div className="loader-overlay">
@@ -128,6 +129,7 @@ export default function AppLayout({ children }) {
             </div>
           }
           {children}
+          <ToastContainer />
         </body>
       </AppLayoutContext.Provider>
     </SessionProvider>

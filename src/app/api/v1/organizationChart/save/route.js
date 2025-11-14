@@ -1,91 +1,12 @@
-// export const runtime = "nodejs";
-
-// import { NextResponse } from "next/server";
-// import { DB_Fetch, DB_Insert, Tables } from "@/db";
-// import { JsonResponse } from "@/helper/api";
-// import { sql } from "drizzle-orm";
-
-// /**
-//  * POST /api/v1/organizationChart/save
-//  * Add Role or User
-//  */
-// export async function POST(req) {
-//   try {
-//     const { type, name, role_id } = await req.json();
-
-//     if (!name) {
-//       return JsonResponse.error("Name is required", 400);
-//     }
-
-//     if (type === "role") {
-//       // 🟩 Create new role under a parent (reporting_to = role_id)
-//       const inserted = await DB_Fetch(sql`
-//         INSERT INTO ${sql.identifier(Tables.TBL_ROLES)} (name, reporting_to)
-//         VALUES (${name}, ${role_id || null})
-//         RETURNING id
-//       `);
-
-//       return JsonResponse.success(
-//         { id: inserted[0].id },
-//         "✅ Role added successfully"
-//       );
-//     }
-
-//     if (type === "user") {
-//       if (!role_id) {
-//         return JsonResponse.error("Role ID is required for adding user", 400);
-//       }
-
-//       // Check existing user
-//       const existing = await DB_Fetch(sql`
-//         SELECT id FROM ${sql.identifier(Tables.TBL_USERS)}
-//         WHERE LOWER(first_name) = LOWER(${name})
-//         LIMIT 1
-//       `);
-
-//       let userId;
-//       if (existing.length > 0) {
-//         userId = existing[0].id;
-//       } else {
-//         const newUser = await DB_Fetch(sql`
-//           INSERT INTO ${sql.identifier(Tables.TBL_USERS)}
-//             (employee_id, user_type, first_name, email, password)
-//           VALUES
-//             (GEN_RANDOM_UUID(), 'employee', ${name}, ${name.toLowerCase()} || '@company.com', 'password123')
-//           RETURNING id
-//         `);
-//         userId = newUser[0].id;
-//       }
-
-//       // Assign user to role
-//       await DB_Insert(sql`
-//         INSERT INTO ${sql.identifier(Tables.TBL_ROLE_USERS)} (role_id, user_id)
-//         VALUES (${role_id}, ${userId})
-//       `);
-
-//       return JsonResponse.success(
-//         { id: userId },
-//         "✅ User added successfully"
-//       );
-//     }
-
-//     return JsonResponse.error("Invalid request type", 400);
-//   } catch (error) {
-//     console.error("[api/v1/organizationChart/save] Error:", error);
-//     return JsonResponse.error("Server error: " + error.message, 500);
-//   }
-// }
-
-
 export const runtime = "nodejs";
 
-import { DB_Fetch } from "@/db";
+import { DB_Fetch, DB_Insert } from "@/db";
 import { JsonResponse } from "@/helper/api";
 import { sql } from "drizzle-orm";
 
 /**
  * POST /api/v1/organizationChart/save
- * Handles Add/Edit Role or User
+ * Handles Add/Edit Role or Add User (no inline edit)
  */
 export async function POST(req) {
   try {
@@ -93,17 +14,26 @@ export async function POST(req) {
 
     if (!type) return JsonResponse.error("Missing request type", 400);
 
-    // 🔒 Validate name for role/user
-    if (type !== "deleteRole" && type !== "deleteUser") {
-      if (!name || !name.trim()) return JsonResponse.error("Name is required", 400);
-    }
-
     /* =====================================================
-       ROLE ADD / EDIT
+      ADD ROLE
     ===================================================== */
     if (type === "addRole") {
-      const parentId = reporting_to || null;
+      if (!name || !name.trim()) {
+        return JsonResponse.error("Role name is required", 400);
+      }
 
+      // convert reporting_to safely
+      let parentId = null;
+
+      if (reporting_to !== undefined && reporting_to !== null && reporting_to !== "") {
+        const numericId = Number(reporting_to);
+        if (isNaN(numericId)) {
+          return JsonResponse.error("Invalid reporting_to value", 400);
+        }
+        parentId = numericId;
+      }
+
+      // IMPORTANT: Use DB_Fetch for RETURNING queries
       const inserted = await DB_Fetch(sql`
         INSERT INTO roles (name, reporting_to, active)
         VALUES (${name.trim()}, ${parentId}, TRUE)
@@ -112,87 +42,86 @@ export async function POST(req) {
 
       return JsonResponse.success(
         { id: inserted[0].id },
-        "✅ Role added successfully"
+        "Role added successfully"
       );
     }
 
+
+    /* =====================================================
+       EDIT ROLE
+    ===================================================== */
     if (type === "editRole") {
       if (!role_id) return JsonResponse.error("Missing role_id for editRole", 400);
 
-      await DB_Fetch(sql`
+      await DB_Insert(sql`
         UPDATE roles
         SET name = ${name.trim()}, updated_at = NOW()
-        WHERE id = ${role_id}
+        WHERE id = ${Number(role_id)}
       `);
 
-      return JsonResponse.success({}, "✅ Role updated successfully");
+      return JsonResponse.success({}, "Role updated successfully");
     }
 
     /* =====================================================
-       USER ADD / EDIT
+       ADD USER (existing user only, one role per user)
     ===================================================== */
-    if (type === "addUser" || type === "editUser") {
-      if (!role_id) return JsonResponse.error("Missing role_id for user", 400);
-      if (!name || !name.trim()) return JsonResponse.error("User name is required", 400);
+  if (type === "addUser") {
+    if (!role_id) return JsonResponse.error("Missing role_id", 400);
+    if (!user_id) return JsonResponse.error("Please select a user", 400);
 
-      let userId = user_id || null;
+    // ✅ Check if user exists
+    const userExists = await DB_Fetch(sql`
+      SELECT id FROM users WHERE id = ${Number(user_id)} AND active = TRUE LIMIT 1
+    `);
+    if (userExists.length === 0) {
+      return JsonResponse.error("Selected user not found or inactive", 404);
+    }
 
-      if (type === "editUser" && user_id) {
-        // Update user
-        await DB_Fetch(sql`
-          UPDATE users
-          SET first_name = ${name.trim()},
-              email = LOWER(${name.trim()}) || '@company.com',
-              updated_at = NOW()
-          WHERE id = ${user_id}
-        `);
-        userId = user_id;
-      } else {
-        // Add user
-        const existing = await DB_Fetch(sql`
-          SELECT id FROM users
-          WHERE LOWER(first_name) = LOWER(${name.trim()})
-          AND active = TRUE
-          LIMIT 1
-        `);
+    // ❌ Check if already assigned to another active role
+    const existingRole = await DB_Fetch(sql`
+      SELECT ru.role_id, r.name AS role_name
+      FROM role_users ru
+      JOIN roles r ON r.id = ru.role_id
+      WHERE ru.user_id = ${Number(user_id)} AND ru.active = TRUE
+      LIMIT 1
+    `);
 
-        if (existing.length > 0) {
-          userId = existing[0].id;
-        } else {
-          const newUser = await DB_Fetch(sql`
-            INSERT INTO users (employee_id, user_type, first_name, email, password, active)
-            VALUES (GEN_RANDOM_UUID(), 'employee', ${name.trim()}, LOWER(${name.trim()}) || '@company.com', 'password123', TRUE)
-            RETURNING id
-          `);
-          userId = newUser[0].id;
-        }
-      }
-
-      // Ensure role-user mapping
-      const existingRoleUser = await DB_Fetch(sql`
-        SELECT id FROM role_users
-        WHERE role_id = ${role_id} AND user_id = ${userId}
-        LIMIT 1
-      `);
-
-      if (existingRoleUser.length > 0) {
-        await DB_Fetch(sql`
-          UPDATE role_users
-          SET active = TRUE, updated_at = NOW()
-          WHERE id = ${existingRoleUser[0].id}
-        `);
-      } else {
-        await DB_Fetch(sql`
-          INSERT INTO role_users (role_id, user_id, active)
-          VALUES (${role_id}, ${userId}, TRUE)
-        `);
-      }
-
-      return JsonResponse.success(
-        { id: userId },
-        type === "editUser" ? "✅ User updated successfully" : "✅ User added successfully"
+    if (existingRole.length > 0) {
+      const assignedRole = existingRole[0];
+      return JsonResponse.error(
+        `User is already assigned to role "${assignedRole.role_name}". Please remove them from that role first.`,
+        409
       );
     }
+
+    // ✅ Check if this role-user combo exists but inactive
+    const inactiveMap = await DB_Fetch(sql`
+      SELECT id FROM role_users
+      WHERE role_id = ${Number(role_id)} AND user_id = ${Number(user_id)} AND active = FALSE
+      LIMIT 1
+    `);
+
+    if (inactiveMap.length > 0) {
+      // Reactivate existing mapping
+      await DB_Fetch(sql`
+        UPDATE role_users
+        SET active = TRUE, updated_at = NOW()
+        WHERE id = ${inactiveMap[0].id}
+      `);
+    } else {
+      // Fresh insert (no RETURNING to avoid errors)
+      await DB_Fetch(sql`
+        INSERT INTO role_users (role_id, user_id, active)
+        VALUES (${Number(role_id)}, ${Number(user_id)}, TRUE)
+      `);
+    }
+
+    return JsonResponse.success(
+      { id: user_id },
+      "User assigned to role successfully"
+    );
+  }
+
 
     return JsonResponse.error("Invalid request type", 400);
   } catch (error) {

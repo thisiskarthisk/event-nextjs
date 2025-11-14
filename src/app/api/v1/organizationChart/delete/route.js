@@ -34,7 +34,7 @@ export async function POST(req) {
         WHERE role_id = ${role_id}
       `);
 
-      return JsonResponse.success({}, "🗑️ Role deleted (soft delete)");
+      return JsonResponse.success({}, "Role deleted successfully");
     }
 
     /* =====================================================
@@ -62,7 +62,7 @@ export async function POST(req) {
         WHERE role_id = ${role_id} AND user_id = ${user_id}
       `);
 
-      return JsonResponse.success({}, "🗑️ User removed from role (soft delete)");
+      return JsonResponse.success({}, "User removed from role successfully");
     }
 
     return JsonResponse.error("Invalid delete request type", 400);
