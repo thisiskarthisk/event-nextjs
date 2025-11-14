@@ -560,7 +560,7 @@ function formatUploadErrors(data) {
   if (missingUsers.length > 0) {
     html += `<h6 style="margin-top:15px; font-weight:600;">User(s) not found in users table:</h6><dl style="margin-top:8px;">`;
     for (const m of missingUsers) {
-      html += `<dt style="margin-top:8px;font-weight:600;">Row: ${m.row}</dt><dd style="margin-left:12px;">User '${escapeHtml(m.user)}' does not exist in database</dd>`;
+      html += `<dt style="margin-top:8px;font-weight:600;">Row: ${m.row}</dt><dd style="margin-left:12px;">User '${escapeHtml(m.user)}' does not exist</dd>`;
     }
     html += `</dl><br>`;
 
@@ -572,13 +572,15 @@ function formatUploadErrors(data) {
 
   // Duplicate Users
   if (duplicateUsers.length > 0) {
-    html += `<h6 style="margin-top:15px; font-weight:600;">User assigned to multiple roles:</h6><dl style="margin-top:8px;">`;
-    for (const d of duplicateUsers) {
-      html += `<dt style="margin-top:8px;font-weight:600;">Row: ${d.row}</dt>`;
-      html += `<dd style="margin-left:12px;">${escapeHtml(d.user)}</dd>`;
-      html += `<dd style="margin-left:12px;">Role(s): ${escapeHtml(d.roles.join(", "))}</dd>`;
-    }
-    html += `</dl><br>`;
+      html += `<h6 style="margin-top:15px; font-weight:600;">User assigned to multiple roles:</h6><dl style="margin-top:8px;">`;
+      for (const d of duplicateUsers) {
+        html += `<dt style="margin-top:8px;font-weight:600;">Row: ${d.row}</dt>`;
+        html += `<dd style="margin-left:12px;">User: ${escapeHtml(d.user)}</dd>`;
+        const escapedRoles = d.roles.map(role => escapeHtml(role));
+        const rolesString = escapedRoles.join(" , <br>"); 
+        html += `<dd style="margin-left:12px;">Role(s): ${rolesString}</dd>`;
+      }
+      html += `</dl><br>`;
   }
 
   return html;

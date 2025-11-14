@@ -7,7 +7,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CAPAForm({ params }) {
-    const { setPageTitle, setPageType, toggleProgressBar } = useAppLayoutContext();
+    const { setPageTitle,toggleProgressBar } = useAppLayoutContext();
     const { t, locale } = useI18n();
     const router = useRouter();
     const { id } = use(params);
@@ -40,7 +40,6 @@ export default function CAPAForm({ params }) {
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
-        setPageType('dashboard');
 
         setPageTitle(id ? t('CAPA Details') : t('CAPA New'));
 
