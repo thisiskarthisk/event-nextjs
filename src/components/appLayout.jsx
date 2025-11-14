@@ -11,14 +11,14 @@ import { ToastContainer, toast as toastify } from 'react-toastify';
 
 const AppLayoutContext = createContext({
   pageTitle: '',
-  setPageTitle: (title) => {},
-  setBodyClass: (className) => {},
-  toggleProgressBar: (show) => {},
-  toast: () => {},
-  modal: () => {},
-  closeModal: () => {},
+  setPageTitle: (title) => { },
+  setBodyClass: (className) => { },
+  toggleProgressBar: (show) => { },
+  toast: () => { },
+  modal: () => { },
+  closeModal: () => { },
   appBarMenuItems: [],
-  setAppBarMenuItems: (items) => {},
+  setAppBarMenuItems: (items) => { },
 });
 
 const SwalToast = Swal.mixin({
@@ -36,12 +36,12 @@ const SwalToast = Swal.mixin({
 const SwalModal = withReactContent(Swal);
 
 export default function AppLayout({ children }) {
-  const [ title, setTitle ] = useState('');
-  const [ bodyClass, setBodyClass ] = useState('');
+  const [title, setTitle] = useState('');
+  const [bodyClass, setBodyClass] = useState('');
 
-  const [ isLoading, toggleProgressBar ] = useState(true);
+  const [isLoading, toggleProgressBar] = useState(true);
 
-  const [ appBarMenuItems, setAppBarMenuItems ] = useState([]);
+  const [appBarMenuItems, setAppBarMenuItems] = useState([]);
 
   const setPageTitle = (title) => {
     title = (title || '');
@@ -71,7 +71,7 @@ export default function AppLayout({ children }) {
     SwalModal.close();
   };
 
-  const modal = ({title, body, okBtn = {label: 'Ok', onClick: () => {}}, cancelBtn = null, closeOnEsc = false}) => {
+  const modal = ({ title, body, okBtn = { label: 'Ok', onClick: () => { } }, cancelBtn = null, closeOnEsc = false }) => {
     let options = {
       title: title,
       html: body,

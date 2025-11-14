@@ -7,35 +7,68 @@ import AppIcon from "@/components/icon";
 import DataTable from "@/components/DataTable";
 
 import { useParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 
-export default function RoleSheet() {
+import { useSession } from "next-auth/react";
+import { HttpClient } from "@/helper/http";
+
+export default function RolesPage() {
   const { toggleProgressBar, toast, modal, setPageTitle } = useAppLayoutContext();
-  
+  const { data: session, status } = useSession();
   const { locale } = useI18n();
   const { role_id } = useParams();
   const router = useRouter();
 
+  const [roleId, setRoleId] = useState(null);
+  const hasFetched = useRef(false);
+
   useEffect(() => {
-    setPageTitle('Role Sheet');
-    toggleProgressBar(false);
-  }, [locale, role_id,]);
+    if (status == 'authenticated') {
+      setPageTitle('Role Sheet');
+      toggleProgressBar(false);
+
+      // fetch(`/api/v1/roles?user_id=${session.user.id}`).then((res) => res.json()).then((data) => {
+      //   if (data.success && data.data.roles) {
+      //     console.log('roles: ', data.data.roles);
+      //   }
+      // }).catch(console.error);
+      fetchData();
+    }
+  }, [status]);
+  
+  const fetchData = async () => {
+    // console.log('fetchData()');
+    try {
+      if (status === "authenticated" || session?.user?.id) {
+        const data = await HttpClient({ url : `/roles`, params: { user_id: session.user.id}});
+        
+        if (data.success && Array.isArray(data.data?.role_user)) {
+          const role = data.data.role_user[0];
+          if (role?.id) {
+            setRoleId(role.id);
+          }
+        } 
+      }
+    } catch (err) {
+      console.error("Error loading role sheet:", err);
+    }
+  };
 
   /** Add New Role Sheet */
   const handleAddNewRole = () => {
-    router.push(`/roles/${role_id}/rs/add`);
+    router.push(`/roles/${roleId}/rs/add`);
   };
 
   /** View Role Sheet */
    const handleView = (id) => {
-    router.push(`/roles/${role_id}/rs/${id}/view`);
+    router.push(`/roles/${roleId}/rs/${id}/view`);
   };
 
   /** Edit Role Sheet */
   const handleEdit = (id) => {
-    router.push(`/roles/${role_id}/rs/${id}/edit`);
+    router.push(`/roles/${roleId}/rs/${id}/edit`);
   };
 
   /** Delete Role Sheet */
@@ -47,7 +80,7 @@ export default function RoleSheet() {
         label: "Yes, Delete",
         onClick: async () => {
           try {
-            const res = await fetch(`/api/v1/roles/${role_id}/rs/${id}/delete`, {
+            const res = await fetch(`/api/v1/roles/${roleId}/rs/${id}/delete`, {
               method: "DELETE",
             });
   
@@ -183,7 +216,7 @@ export default function RoleSheet() {
               }));
   
               try {
-                const res = await fetch(`/api/v1/roles/${role_id}/rs/upload`, {
+                const res = await fetch(`/api/v1/roles/${roleId}/rs/upload`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ data: finalData }),
@@ -193,6 +226,7 @@ export default function RoleSheet() {
                 if (!data.success) throw new Error(data.message || "Upload failed");
   
                 toast("success", "KPI data uploaded successfully!");
+                
                 // Cleanup
                 delete window._tempDownloadFn;
               } catch (err) {
@@ -233,7 +267,7 @@ export default function RoleSheet() {
       <div className="app-content">
         <div className="container-fluid">
           <div className="card mt-4">
-          <div className="card-header d-flex justify-content-between align-items-center">
+            <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Role Sheet</h5>
               <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewRole}>
                 <AppIcon ic="plus" className="text-info"/> Add New Role
@@ -243,15 +277,21 @@ export default function RoleSheet() {
               </button>
             </div>
             <div className="card-body">
-              <DataTable
-                apiPath={`/roles/${role_id}`}
-                dataKeyFromResponse="roles"
-                columns={[
-                  { column: "name", label: "Objective" },
-                ]}
-                paginationType="client"
-                actionColumnFn={renderActions}
-              />
+              {
+                status == 'authenticated' &&
+                <DataTable
+                  apiPath={`/roles`}
+                  additionalRequestParams={{
+                    'user_id': session.user.id,
+                  }}
+                  dataKeyFromResponse="roles"
+                  columns={[
+                    { column: "name", label: "Objective" },
+                  ]}
+                  paginationType="client"
+                  actionColumnFn={renderActions}
+                />
+              }
 
             </div>
           </div>
