@@ -6,6 +6,7 @@ import { APP_NAME, DEFAULT_TOAST_TIME } from "@/constants";
 import { SessionProvider } from 'next-auth/react';
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
+import Head from "next/head";
 
 const AppLayoutContext = createContext({
   pageTitle: '',
@@ -14,6 +15,7 @@ const AppLayoutContext = createContext({
   toggleProgressBar: (show) => {},
   toast: () => {},
   modal: () => {},
+  confirm: () => {},
 });
 
 const SwalToast = Swal.mixin({
@@ -37,10 +39,8 @@ export default function AppLayout({ children }) {
   const [ isLoading, toggleProgressBar ] = useState(true);
 
   const setPageTitle = (title) => {
-    title = (title || '');
 
-    setTitle(title);
-    document.title = `${title} | ${APP_NAME}`;
+    setTitle(title || '');
   };
 
   const toast = (type, message, time = DEFAULT_TOAST_TIME) => {
@@ -96,18 +96,39 @@ export default function AppLayout({ children }) {
     });
   };
 
+  const confirm = ({ title, message, positiveBtnOnClick = () => {}, negativeBtnOnClick = () => {}, positiveBtnLabel = 'Yes', negativeBtnLabel = 'No'}) => {
+    modal({
+      title: title,
+      body: message,
+      okBtn: {
+        label: positiveBtnLabel,
+        onClick: positiveBtnOnClick || (() => {})
+      },
+      cancelBtn: {
+        label: negativeBtnLabel,
+        onClick: negativeBtnOnClick || (() => {})
+      }
+    });
+  };
+
+  useEffect(() => {
+    document.body.className = bodyClass;
+  }, [bodyClass]);
+
+  useEffect(() => {
+    document.title = title ? `${title} | ${APP_NAME}` : APP_NAME;
+  }, [title]);
+
   return (
     <SessionProvider basePath="/api/v1/auth">
-      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal }}>
-        <body className={bodyClass}>
-          {
-            isLoading &&
-            <div className="loader-overlay">
-              <span className="loader"></span>
-            </div>
-          }
-          {children}
-        </body>
+      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, confirm }}>
+        {
+          isLoading &&
+          <div className="loader-overlay">
+            <span className="loader"></span>
+          </div>
+        }
+        {children}
       </AppLayoutContext.Provider>
     </SessionProvider>
   );
