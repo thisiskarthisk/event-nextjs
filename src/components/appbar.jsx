@@ -52,7 +52,7 @@ export default function AppBar({pageTitle}) {
           {
             pageTitle &&
               <li className="nav-item">
-                <span className="nav-link text-inherit">
+                <span className="nav-link text-inherit page-title">
                   {pageTitle}
                 </span>
               </li>

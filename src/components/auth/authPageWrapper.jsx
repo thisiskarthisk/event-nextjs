@@ -10,14 +10,14 @@ import { useAppLayoutContext } from "../appLayout";
 import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthPageLayoutContext = createContext({
-  toggleBreadCrumb: (show) => {},
+  toggleBreadcrumbs: (value) => {},
 });
 
 export default function AuthenticatedPage({ children }) {
   const router = useRouter();
 
   const { pageTitle, setBodyClass } = useAppLayoutContext();
-  const [ isBreadCrumpVisible, toggleBreadCrumb ] = useState(false);
+  const [ breadcrumbs, setBreadcrumbs ] = useState({});
 
   const { data: session, status } = useSession({
     required: true,
@@ -26,14 +26,22 @@ export default function AuthenticatedPage({ children }) {
     }
   });
 
+  const toggleBreadcrumbs = (newBreadcrumbs) => {
+    setBreadcrumbs({...newBreadcrumbs});
+  };
+
   useEffect(() => {
     if (status == 'authenticated') {
       setBodyClass('layout-fixed sidebar-expand-lg sidebar-open bg-body-tertiary');
     }
   }, [status]);
 
+  useEffect(() => {
+    // console.log('breadcrumbs:', breadcrumbs);
+  }, [breadcrumbs]);
+
   return (
-    <AuthPageLayoutContext.Provider value={{ toggleBreadCrumb }}>
+    <AuthPageLayoutContext.Provider value={{ toggleBreadcrumbs }}>
       {
         status == 'authenticated' &&
         <div className="app-wrapper">
@@ -43,7 +51,7 @@ export default function AuthenticatedPage({ children }) {
           <main className="app-main">
             <div className="app-content-header">
               <div className="container-fluid">
-                {/* <AppBreadCrumb pageTitle={pageTitle} showBreadCrumb={isBreadCrumpVisible} /> */}
+                <AppBreadCrumb breadcrumbs={breadcrumbs} />
               </div>
             </div>
     
