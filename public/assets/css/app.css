@@ -110,6 +110,13 @@
   }
 }
 
+.text-left {
+  text-align: left !important;
+}
+
+.flex-column {
+  display: flex;
+}
 *.float-right {
   float: right !important;
 }
@@ -157,6 +164,12 @@ th.is-orderable.is-ordered-asc::before, th.is-orderable.is-ordered-desc::after {
 .td-action {
   text-align: center;
 }
+
+dd {
+  margin-left: revert !important;
+  margin-bottom: revert !important;
+}
+
 
 .required-field label::after {
   content: '*';

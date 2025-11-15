@@ -1,5 +1,5 @@
 export default {
-  'dashboard': 'Dashboard',
+  'organizationChart': 'Organization Chart',
   'profile': 'Profile',
   'logout': 'Logout',
 

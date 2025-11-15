@@ -6,15 +6,19 @@ import { APP_NAME, DEFAULT_TOAST_TIME } from "@/constants";
 import { SessionProvider } from 'next-auth/react';
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-import Head from "next/head";
+
+import { ToastContainer, toast as toastify } from 'react-toastify';
 
 const AppLayoutContext = createContext({
   pageTitle: '',
-  setPageTitle: (title) => {},
-  setBodyClass: (className) => {},
-  toggleProgressBar: (show) => {},
-  toast: () => {},
-  modal: () => {},
+  setPageTitle: (title) => { },
+  setBodyClass: (className) => { },
+  toggleProgressBar: (show) => { },
+  toast: () => { },
+  modal: () => { },
+  closeModal: () => { },
+  appBarMenuItems: [],
+  setAppBarMenuItems: (items) => { },
   confirm: () => {},
 });
 
@@ -33,10 +37,12 @@ const SwalToast = Swal.mixin({
 const SwalModal = withReactContent(Swal);
 
 export default function AppLayout({ children }) {
-  const [ title, setTitle ] = useState('');
-  const [ bodyClass, setBodyClass ] = useState('');
+  const [title, setTitle] = useState('');
+  const [bodyClass, setBodyClass] = useState('');
 
-  const [ isLoading, toggleProgressBar ] = useState(true);
+  const [isLoading, toggleProgressBar] = useState(true);
+
+  const [appBarMenuItems, setAppBarMenuItems] = useState([]);
 
   const setPageTitle = (title) => {
 
@@ -44,25 +50,39 @@ export default function AppLayout({ children }) {
   };
 
   const toast = (type, message, time = DEFAULT_TOAST_TIME) => {
-    SwalToast.fire({
+    /* SwalToast.fire({
       icon: type,
       title: message,
       timer: time
+    }); */
+
+    toastify(message, {
+      type,
+      position: 'top-right',
+      hideProgressBar: false,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: false,
     });
   };
 
-  const modal = ({title, body, okBtn = {label: 'Ok', onClick: () => {}}, cancelBtn = null, closeOnEsc = false}) => {
+  const closeModal = () => {
+    SwalModal.close();
+  };
+
+  const modal = ({ title, body, okBtn = { label: 'Ok', onClick: () => { } }, cancelBtn = null, closeOnEsc = false }) => {
     let options = {
       title: title,
       html: body,
       focusConfirm: false,
+      showCloseButton: true,
       allowOutsideClick: closeOnEsc,
       allowEscapeKey: closeOnEsc,
       preConfirm: async (value) => {
         if (okBtn && okBtn.onClick) {
           await okBtn.onClick();
 
-          SwalModal.close();
+          // SwalModal.close();
 
           return false;
         }
@@ -73,7 +93,7 @@ export default function AppLayout({ children }) {
         if (cancelBtn && cancelBtn.onClick) {
           await cancelBtn.onClick();
 
-          SwalModal.close();
+          // SwalModal.close();
 
           return false;
         }
@@ -121,7 +141,8 @@ export default function AppLayout({ children }) {
 
   return (
     <SessionProvider basePath="/api/v1/auth">
-      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, confirm }}>
+      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, appBarMenuItems, setAppBarMenuItems, closeModal, confirm }}>
+        
         {
           isLoading &&
           <div className="loader-overlay">
@@ -129,6 +150,7 @@ export default function AppLayout({ children }) {
           </div>
         }
         {children}
+          <ToastContainer />
       </AppLayoutContext.Provider>
     </SessionProvider>
   );
