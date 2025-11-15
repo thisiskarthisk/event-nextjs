@@ -527,6 +527,13 @@ function openFormModal(type, payload = {}) {
         });
 
         const result = await res.json();
+        
+        // Handle explicit duplicate role error from manual save
+        if (!res.ok && res.status === 409) {
+            toast("error", result.message || "Duplicate active role name.");
+            return; // keep modal open
+        }
+
         toast(result.success ? "success" : "error", result.message);
         closeModal();
         if (result.success) loadRoles();
@@ -540,39 +547,73 @@ function openFormModal(type, payload = {}) {
 function formatUploadErrors(data) {
   if (!data || !data.errors) return "";
 
-  const { roleNotAssigned = [], missingUsers = [], duplicateUsers = [] } = data.errors;
+  const { 
+    roleNotAssigned = [], 
+    missingUsers = [], 
+    duplicateUsers = [], 
+    duplicateRoles = [] // 👈 NEW ERROR TYPE
+  } = data.errors;
+  
   let html = "";
+  let needsDivider = false;
 
-  // Role Not Assigned
+  // 1. Duplicate Roles (Active Role Check / Internal CSV Duplicates)
+  if (duplicateRoles.length > 0) {
+    html += `<h6 style="margin-top:15px; font-weight:600; color:#e74c3c;">Duplicate Role Error:</h6><dl style="margin-top:8px;">`;
+
+    for (const r of duplicateRoles) {
+      const reasonText = r.reason.includes("database")
+        ? `Role '${escapeHtml(r.role)}' already active in Roles Table`
+        : `Role '${escapeHtml(r.role)}' duplicated within CSV File`;
+      html += `<dt style="margin-top:8px;font-weight:600;">Row: ${r.row} </dt><dd style="margin-left:12px;">${reasonText}</dd>`;
+
+    }
+
+    html += `</dl><br>`;
+    needsDivider = true;
+  }
+  
+  // Divider if needed
+  if (needsDivider && (roleNotAssigned.length || missingUsers.length || duplicateUsers.length)) {
+    html += `<hr style="margin:12px 0;border-top:1px solid #8e8e8e;">`;
+    needsDivider = false;
+  }
+
+  // 2. Role Not Assigned (No user assigned to the role in CSV)
   if (roleNotAssigned.length > 0) {
-    html += `<h6 style="margin-top:15px; font-weight:600;">Role Not assigned User</h6><dl style="margin-top:8px;">`;
+    html += `<h6 style="margin-top:15px; font-weight:600;color:#e74c3c;">Role Not assigned User:</h6><dl style="margin-top:8px;">`;
     for (const r of roleNotAssigned) {
       html += `<dt style="margin-top:8px;font-weight:600;">Row: ${r.row}</dt><dd style="margin-left:12px;">User Not Assigned for Role '${escapeHtml(r.role)}'</dd>`;
     }
     html += `</dl><br>`;
-    // divider if next section exists
-    if (missingUsers.length || duplicateUsers.length) {
-      html += `<hr style="margin:12px 0;border-top:1px solid #8e8e8e;">`;
-    }
+    needsDivider = true;
   }
 
-  // Missing Users
+  // Divider if needed
+  if (needsDivider && (missingUsers.length || duplicateUsers.length)) {
+    html += `<hr style="margin:12px 0;border-top:1px solid #8e8e8e;">`;
+    needsDivider = false;
+  }
+
+  // 3. Missing Users
   if (missingUsers.length > 0) {
-    html += `<h6 style="margin-top:15px; font-weight:600;">User(s) not found in users table:</h6><dl style="margin-top:8px;">`;
+    html += `<h6 style="margin-top:15px; font-weight:600;color:#e74c3c;">User(s) not found in users table:</h6><dl style="margin-top:8px;">`;
     for (const m of missingUsers) {
       html += `<dt style="margin-top:8px;font-weight:600;">Row: ${m.row}</dt><dd style="margin-left:12px;">User '${escapeHtml(m.user)}' does not exist</dd>`;
     }
     html += `</dl><br>`;
-
-    // divider if next group exists
-    if (duplicateUsers.length) {
-      html += `<hr style="margin:12px 0;border-top:1px solid #8e8e8e;">`;
-    }
+    needsDivider = true;
   }
 
-  // Duplicate Users
+  // Divider if needed
+  if (needsDivider && duplicateUsers.length) {
+    html += `<hr style="margin:12px 0;border-top:1px solid #8e8e8e;">`;
+    needsDivider = false;
+  }
+
+  // 4. Duplicate Users (User assigned to multiple roles in CSV)
   if (duplicateUsers.length > 0) {
-      html += `<h6 style="margin-top:15px; font-weight:600;">User assigned to multiple roles:</h6><dl style="margin-top:8px;">`;
+      html += `<h6 style="margin-top:15px; font-weight:600;color:#e74c3c;">User assigned to multiple roles (within CSV):</h6><dl style="margin-top:8px;">`;
       for (const d of duplicateUsers) {
         html += `<dt style="margin-top:8px;font-weight:600;">Row: ${d.row}</dt>`;
         html += `<dd style="margin-left:12px;">User: ${escapeHtml(d.user)}</dd>`;

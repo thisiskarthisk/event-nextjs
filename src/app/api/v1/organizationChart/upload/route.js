@@ -1,16 +1,17 @@
 export const runtime = "nodejs";
 
-import { DB_Fetch } from "@/db";
-import { JsonResponse } from "@/helper/api"; // optional, not relied on for validation return
+import { DB_Fetch, Tables } from "@/db"; // Assuming Tables is imported here
+import { JsonResponse } from "@/helper/api";
 import { sql } from "drizzle-orm";
 import csv from "csv-parser";
 import { Readable } from "stream";
 
-/** Helper: Parse CSV buffer -> array of rows (csv-parser outputs an array of objects) */
+/** Parse uploaded CSV into array of objects */
 async function parseCSV(buffer) {
   return new Promise((resolve, reject) => {
     const results = [];
     const stream = Readable.from(buffer.toString());
+
     stream
       .pipe(csv())
       .on("data", (row) => results.push(row))
@@ -23,8 +24,9 @@ export async function POST(req) {
   try {
     const formData = await req.formData();
     const file = formData.get("file");
+
     if (!file) {
-      return new Response(JSON.stringify({ success: false, message: "No file uploaded" }), { status: 400, headers: { "Content-Type": "application/json" } });
+      return JsonResponse.error("No file uploaded", 400);
     }
 
     const bytes = await file.arrayBuffer();
@@ -32,32 +34,28 @@ export async function POST(req) {
     const rows = await parseCSV(buffer);
 
     if (!rows.length) {
-      return new Response(JSON.stringify({ success: false, message: "Empty CSV file" }), { status: 422, headers: { "Content-Type": "application/json" } });
+      return JsonResponse.error("Empty CSV file", 422);
     }
 
-    // require 'name' column
-    const headerKeys = Object.keys(rows[0] || {}).map((k) => (k || "").toLowerCase());
+    // Validate header
+    const headerKeys = Object.keys(rows[0] || {}).map(k => k.toLowerCase());
     if (!headerKeys.includes("name")) {
-      return new Response(JSON.stringify({ success: false, message: "Invalid CSV format — must include 'name' column" }), { status: 422, headers: { "Content-Type": "application/json" } });
+      return JsonResponse.error("Invalid CSV format — missing 'name' column", 422);
     }
 
-    // Normalize rows and preserve CSV row number (data row 2 = first data line)
-    const parsedRows = []; // { rowNumber, name, reporting_to, users: [] }
+    // Normalize rows
+    const parsedRows = [];
     const userSet = new Set();
+    const csvRoleNames = new Set(); // To check for duplicates within the CSV itself
 
     rows.forEach((raw, idx) => {
       const rowNumber = idx + 2;
       const name = (raw.name || "").toString().trim();
-      // If role name blank, treat as skip but still can report user-related errors? we skip empty rows
       if (!name) return;
 
       const reporting_to = raw.reporting_to ? String(raw.reporting_to).trim() : "";
       const usersArr = raw.users
-        ? raw.users
-            .toString()
-            .split(",")
-            .map((u) => String(u).trim())
-            .filter(Boolean)
+        ? raw.users.toString().split(",").map(u => u.trim()).filter(Boolean)
         : [];
 
       parsedRows.push({
@@ -67,134 +65,208 @@ export async function POST(req) {
         users: usersArr,
       });
 
-      usersArr.forEach((u) => userSet.add(u));
+      csvRoleNames.add(name.toLowerCase()); // Add role name for validation checks
+      usersArr.forEach(u => userSet.add(u));
     });
 
-    // RULE 1: Role Not Assigned (users empty)
+    // RULE 1: Role not assigned (Keep existing rule)
     const roleNotAssigned = parsedRows
-      .filter((r) => !r.users || r.users.length === 0)
-      .map((r) => ({ row: r.rowNumber, role: r.name }));
+      .filter(r => !r.users.length)
+      .map(r => ({ row: r.rowNumber, role: r.name }));
 
-    // RULE 3: Duplicate in CSV (same username appears in multiple rows -> multiple roles)
-    // Build map: lowerUser -> array of { row, role, originalUser }
-    const userMap = {};
-    for (const r of parsedRows) {
-      for (const uname of r.users) {
-        const key = (uname || "").toLowerCase();
-        if (!key) continue;
-        userMap[key] ??= [];
-        userMap[key].push({ row: r.rowNumber, role: r.name, user: uname });
-      }
+    // ⭐️ RULE 2: Duplicate Role Check (Active Roles Only)
+    const duplicateRoles = [];
+    if (csvRoleNames.size > 0) {
+      const roleNamesArray = Array.from(csvRoleNames);
+
+      // Fetch all ACTIVE roles from DB that match any name in the CSV
+      const whereClause = roleNamesArray
+        .map(n => sql`LOWER(name) = LOWER(${n})`)
+        .reduce((a, b) => sql`${a} OR ${b}`);
+
+      const existingActiveRoles = await DB_Fetch(sql`
+        SELECT name FROM ${sql.raw(Tables.TBL_ROLES)}
+        WHERE active = TRUE AND (${whereClause})
+      `);
+
+      const activeRoleSet = new Set(existingActiveRoles.map(r => r.name.toLowerCase()));
+
+      // Identify roles in the CSV that are duplicates of active roles in the DB
+      parsedRows.forEach(r => {
+        if (activeRoleSet.has(r.name.toLowerCase())) {
+          // Check for *new* duplicates. If a role in the CSV is active in DB,
+          // it's a conflict unless it's only in the CSV once.
+          // For simplicity and to match the 'row-base' requirement,
+          // we treat its presence in the CSV as a potential insertion/update conflict.
+          // Since the instruction is to "show error row base Duplicate Role",
+          // we flag all rows that contain a conflicting active role.
+          duplicateRoles.push({ row: r.rowNumber, role: r.name, reason: "Active role already exists in database" });
+        }
+      });
+      // OPTIONAL: Add check for duplicates *within* the CSV file itself (e.g., same role name in multiple rows)
+      const csvInternalDupes = {};
+      parsedRows.forEach(r => {
+        const lowerName = r.name.toLowerCase();
+        csvInternalDupes[lowerName] ??= [];
+        csvInternalDupes[lowerName].push(r.rowNumber);
+      });
+      Object.entries(csvInternalDupes)
+          .filter(([_, rows]) => rows.length > 1)
+          .forEach(([name, rows]) => {
+              rows.forEach(row => {
+                  duplicateRoles.push({ row, role: name, reason: "Duplicate role name within CSV file" });
+              });
+          });
     }
 
-    const duplicateUsers = Object.entries(userMap)
-      .filter(([_, arr]) => arr.length > 1)
-      .map(([key, arr]) => ({
-        // choose first occurrence row to display the row number
-        row: arr[0].row,
-        user: arr[0].user,
-        roles: arr.map((e) => e.role),
-      }));
+    // --- (Original User/Role Assignment Checks Follow) ---
 
-    // RULE 2: User exists check — find missing users
+    // RULE 3: Missing Users Check (Keep existing rule)
     const missingUsers = [];
     if (userSet.size > 0) {
       const namesArray = Array.from(userSet);
-      // Build where clause safely via drizzle sql fragments
       const whereClause = namesArray
-        .map((n) => sql`LOWER(first_name) = LOWER(${n})`)
+        .map(n => sql`LOWER(first_name) = LOWER(${n})`)
         .reduce((a, b) => sql`${a} OR ${b}`);
 
       const usersQuery = await DB_Fetch(sql`
-        SELECT id, first_name
-        FROM users
-        WHERE active = TRUE
-        AND ( ${whereClause} )
+        SELECT id, first_name FROM ${sql.raw(Tables.TBL_USERS)}
+        WHERE active = TRUE AND (${whereClause})
       `);
 
-      const existingLowerSet = new Set((usersQuery || []).map((u) => (u.first_name || "").toLowerCase()));
+      const existingSet = new Set(usersQuery.map(u => u.first_name.toLowerCase()));
 
-      // for each parsed row, for each user check existence
-      for (const r of parsedRows) {
-        for (const uname of r.users) {
-          if (!existingLowerSet.has((uname || "").toLowerCase())) {
-            missingUsers.push({ row: r.rowNumber, user: uname });
+      parsedRows.forEach(r => {
+        r.users.forEach(u => {
+          if (!existingSet.has(u.toLowerCase())) {
+            missingUsers.push({ row: r.rowNumber, user: u });
           }
-        }
-      }
+        });
+      });
     }
 
-    // If any validation errors found, return them together
-    if (roleNotAssigned.length || missingUsers.length || duplicateUsers.length) {
-      const payload = {
+    // RULE 4: Duplicate users across roles (Keep existing rule)
+    const userMap = {};
+    parsedRows.forEach(r => {
+      r.users.forEach(uname => {
+        const key = uname.toLowerCase();
+        userMap[key] ??= [];
+        userMap[key].push({ row: r.rowNumber, role: r.name, user: uname });
+      });
+    });
+
+    const duplicateUsers = Object.entries(userMap)
+      .filter(([_, arr]) => arr.length > 1)
+      .map(([_, arr]) => ({
+        row: arr[0].row,
+        user: arr[0].user,
+        roles: arr.map(e => e.role),
+      }));
+
+    // Return validation errors
+    if (roleNotAssigned.length || duplicateRoles.length || missingUsers.length || duplicateUsers.length) {
+      return JsonResponse.error("Validation errors in CSV", 422, {
         type: "validation_errors",
-        errors: {
-          roleNotAssigned,   // [{row, role}, ...]
-          missingUsers,      // [{row, user}, ...]
-          duplicateUsers,    // [{row, user, roles: [...]}, ...]
+        errors: { 
+            roleNotAssigned, 
+            duplicateRoles, // ⭐️ Add new error type
+            missingUsers, 
+            duplicateUsers 
         },
-      };
-      return new Response(JSON.stringify({ success: false, message: "Validation errors in CSV", data: payload }), { status: 422, headers: { "Content-Type": "application/json" } });
+      });
     }
 
-    // No validation errors — proceed with DB work (insert/update roles + assign users)
-    // -- Insert roles if missing, update reporting_to, assign users (your existing logic)
+
+  // INSERT NEW ROLES ONLY 
+  // (Deactivate old records first – never reuse old ones)
+  // -----------------------------
+    // const roleNames = new Set();
+    // parsedRows.forEach(r => {
+    //   roleNames.add(r.name);
+    //   if (r.reporting_to) roleNames.add(r.reporting_to);
+    // });
+
+    // const roleMap = {};
+
+    // for (const roleName of roleNames) {
+
+    //   // 1️⃣ Deactivate all old roles with same name
+    //   await DB_Fetch(sql`
+    //     UPDATE ${sql.raw(Tables.TBL_ROLES)}
+    //     SET active = FALSE, updated_at = NOW()
+    //     WHERE LOWER(name) = LOWER(${roleName})
+    //   `);
+
+    //   // 2️⃣ Insert new role
+    //   const inserted = await DB_Fetch(sql`
+    //     INSERT INTO ${sql.raw(Tables.TBL_ROLES)} (name, active, created_at)
+    //     VALUES (${roleName}, TRUE, NOW())
+    //     RETURNING id
+    //   `);
+
+    //   roleMap[roleName] = inserted[0].id;
+    // }
+
+    // -----------------------------
+    // INSERT NEW ROLES ONLY (Do NOT reactivate old roles)
+    // -----------------------------
     const roleNames = new Set();
-    parsedRows.forEach((r) => {
+    parsedRows.forEach(r => {
       roleNames.add(r.name);
       if (r.reporting_to) roleNames.add(r.reporting_to);
     });
 
     const roleMap = {};
-    for (const roleName of Array.from(roleNames)) {
-      const existingRole = await DB_Fetch(sql`
-        SELECT id FROM roles WHERE LOWER(name) = LOWER(${roleName}) LIMIT 1
+
+    for (const roleName of roleNames) {
+      // Always insert NEW entry
+      const inserted = await DB_Fetch(sql`
+        INSERT INTO ${sql.raw(Tables.TBL_ROLES)} (name, active)
+        VALUES (${roleName}, TRUE)
+        RETURNING id
       `);
-      if (existingRole.length > 0) {
-        roleMap[roleName] = existingRole[0].id;
-      } else {
-        const inserted = await DB_Fetch(sql`
-          INSERT INTO roles (name, active)
-          VALUES (${roleName}, TRUE)
-          RETURNING id
-        `);
-        roleMap[roleName] = inserted[0].id;
-      }
+
+      roleMap[roleName] = inserted[0].id;
     }
 
+    // Update reporting_to
     for (const r of parsedRows) {
-      const parentId = roleMap[r.reporting_to];
-      const thisId = roleMap[r.name];
-      if (parentId && thisId) {
+      const parent = roleMap[r.reporting_to];
+      const child = roleMap[r.name];
+
+      if (parent && child) {
         await DB_Fetch(sql`
-          UPDATE roles SET reporting_to = ${parentId} WHERE id = ${thisId}
+          UPDATE ${sql.raw(Tables.TBL_ROLES)} SET reporting_to = ${parent} WHERE id = ${child}
         `);
       }
     }
 
-    // Assign users to roles (users are guaranteed to exist now)
+    // -----------------------------
+    // ASSIGN USERS TO ROLES (Use TBL_USERS and TBL_ROLE_USERS)
+    // -----------------------------
     const allUserNames = Array.from(userSet);
+
     const usersData = allUserNames.length
       ? await DB_Fetch(sql`
-          SELECT id, first_name FROM users
-          WHERE ${allUserNames.map((n) => sql`LOWER(first_name) = LOWER(${n})`).reduce((a, b) => sql`${a} OR ${b}`)}
+          SELECT id, first_name FROM ${sql.raw(Tables.TBL_USERS)}
+          WHERE ${allUserNames.map(n => sql`LOWER(first_name) = LOWER(${n})`).reduce((a, b) => sql`${a} OR ${b}`)}
         `)
       : [];
 
-    const nameToId = {};
-    for (const u of usersData) {
-      nameToId[(u.first_name || "").toLowerCase()] = u.id;
-    }
+    const nameMap = {};
+    usersData.forEach(u => {
+      nameMap[u.first_name.toLowerCase()] = u.id;
+    });
 
     for (const r of parsedRows) {
       const roleId = roleMap[r.name];
-      if (!roleId) continue;
+
       for (const uname of r.users) {
-        const uid = nameToId[(uname || "").toLowerCase()];
+        const uid = nameMap[uname.toLowerCase()];
         if (!uid) continue;
 
         const existingMap = await DB_Fetch(sql`
-          SELECT id, active FROM role_users
+          SELECT id, active FROM ${sql.raw(Tables.TBL_ROLE_USERS)}
           WHERE role_id = ${roleId} AND user_id = ${uid}
           LIMIT 1
         `);
@@ -202,21 +274,27 @@ export async function POST(req) {
         if (existingMap.length > 0) {
           if (!existingMap[0].active) {
             await DB_Fetch(sql`
-              UPDATE role_users SET active = TRUE, updated_at = NOW() WHERE id = ${existingMap[0].id}
+              UPDATE ${sql.raw(Tables.TBL_ROLE_USERS)} SET active = TRUE, updated_at = NOW()
+              WHERE id = ${existingMap[0].id}
             `);
           }
         } else {
           await DB_Fetch(sql`
-            INSERT INTO role_users (role_id, user_id, active)
+            INSERT INTO ${sql.raw(Tables.TBL_ROLE_USERS)} (role_id, user_id, active)
             VALUES (${roleId}, ${uid}, TRUE)
           `);
         }
       }
     }
 
-    return new Response(JSON.stringify({ success: true, message: "CSV uploaded successfully — roles and user assignments created." }), { status: 200, headers: { "Content-Type": "application/json" } });
+    return JsonResponse.success(
+      {},
+      "CSV uploaded successfully — roles & users updated."
+    );
+
   } catch (err) {
-    console.error("[api/v1/organizationChart/upload] Error:", err);
-    return new Response(JSON.stringify({ success: false, message: "Error processing CSV upload: " + (err?.message || String(err)) }), { status: 500, headers: { "Content-Type": "application/json" } });
+    console.error("CSV UPLOAD ERROR:", err);
+    // Use Tables in catch error log if possible, but keep original for simplicity
+    return JsonResponse.error("Server error: " + err.message, 500);
   }
 }

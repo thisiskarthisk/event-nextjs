@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { DB_Fetch, DB_Insert } from "@/db";
+import { DB_Fetch, DB_Insert, Tables } from "@/db"; // Assuming Tables is imported here
 import { JsonResponse } from "@/helper/api";
 import { sql } from "drizzle-orm";
 
@@ -15,16 +15,33 @@ export async function POST(req) {
     if (!type) return JsonResponse.error("Missing request type", 400);
 
     /* =====================================================
-      ADD ROLE
+      ADD ROLE  (updated logic)
     ===================================================== */
     if (type === "addRole") {
       if (!name || !name.trim()) {
         return JsonResponse.error("Role name is required", 400);
       }
+      const roleName = name.trim();
 
-      // convert reporting_to safely
+      // ⭐️ CHECK ACTIVE DUPLICATE — Active = error
+      const activeDuplicate = await DB_Fetch(sql`
+        SELECT id FROM ${sql.raw(Tables.TBL_ROLES)}
+        WHERE LOWER(name) = LOWER(${roleName}) AND active = TRUE
+        LIMIT 1
+      `);
+
+      if (activeDuplicate.length > 0) {
+        return JsonResponse.error(
+          `Role "${roleName}" is already available and active. Please choose a different name.`,
+          409
+        );
+      }
+
+      // ⭐️ INACTIVE ROLES SHOULD NOT BE REACTIVATED 
+      // (do nothing — just insert new row)
+
+      // Convert reporting_to safely
       let parentId = null;
-
       if (reporting_to !== undefined && reporting_to !== null && reporting_to !== "") {
         const numericId = Number(reporting_to);
         if (isNaN(numericId)) {
@@ -33,10 +50,10 @@ export async function POST(req) {
         parentId = numericId;
       }
 
-      // IMPORTANT: Use DB_Fetch for RETURNING queries
+      // ⭐️ ALWAYS INSERT — even if same inactive name exists
       const inserted = await DB_Fetch(sql`
-        INSERT INTO roles (name, reporting_to, active)
-        VALUES (${name.trim()}, ${parentId}, TRUE)
+        INSERT INTO ${sql.raw(Tables.TBL_ROLES)} (name, reporting_to, active)
+        VALUES (${roleName}, ${parentId}, TRUE)
         RETURNING id
       `);
 
@@ -47,23 +64,40 @@ export async function POST(req) {
     }
 
 
+
     /* =====================================================
-       EDIT ROLE
+      EDIT ROLE
     ===================================================== */
     if (type === "editRole") {
       if (!role_id) return JsonResponse.error("Missing role_id for editRole", 400);
+      const roleName = name.trim();
+      const currentRoleId = Number(role_id);
+
+      // ⭐️ DUPLICATE ROLE CHECK for EDIT: Check for an ACTIVE role with the same name, but ensure it's not the current role being edited.
+      const existingActiveRole = await DB_Fetch(sql`
+        SELECT id FROM ${sql.raw(Tables.TBL_ROLES)}
+        WHERE LOWER(name) = LOWER(${roleName}) AND active = TRUE AND id != ${currentRoleId}
+        LIMIT 1
+      `);
+      
+      if (existingActiveRole.length > 0) {
+         return JsonResponse.error(
+            `Role "${roleName}" is already available and active for another role. Please choose a different name.`,
+            409
+          );
+      }
 
       await DB_Insert(sql`
-        UPDATE roles
-        SET name = ${name.trim()}, updated_at = NOW()
-        WHERE id = ${Number(role_id)}
+        UPDATE ${sql.raw(Tables.TBL_ROLES)}
+        SET name = ${roleName}, updated_at = NOW()
+        WHERE id = ${currentRoleId}
       `);
 
       return JsonResponse.success({}, "Role updated successfully");
     }
 
     /* =====================================================
-       ADD USER (existing user only, one role per user)
+      ADD USER (existing user only, one role per user)
     ===================================================== */
   if (type === "addUser") {
     if (!role_id) return JsonResponse.error("Missing role_id", 400);
@@ -71,7 +105,7 @@ export async function POST(req) {
 
     // ✅ Check if user exists
     const userExists = await DB_Fetch(sql`
-      SELECT id FROM users WHERE id = ${Number(user_id)} AND active = TRUE LIMIT 1
+      SELECT id FROM ${sql.raw(Tables.TBL_USERS)} WHERE id = ${Number(user_id)} AND active = TRUE LIMIT 1
     `);
     if (userExists.length === 0) {
       return JsonResponse.error("Selected user not found or inactive", 404);
@@ -80,8 +114,8 @@ export async function POST(req) {
     // ❌ Check if already assigned to another active role
     const existingRole = await DB_Fetch(sql`
       SELECT ru.role_id, r.name AS role_name
-      FROM role_users ru
-      JOIN roles r ON r.id = ru.role_id
+      FROM ${sql.raw(Tables.TBL_ROLE_USERS)} ru
+      JOIN ${sql.raw(Tables.TBL_ROLES)} r ON r.id = ru.role_id
       WHERE ru.user_id = ${Number(user_id)} AND ru.active = TRUE
       LIMIT 1
     `);
@@ -96,7 +130,7 @@ export async function POST(req) {
 
     // ✅ Check if this role-user combo exists but inactive
     const inactiveMap = await DB_Fetch(sql`
-      SELECT id FROM role_users
+      SELECT id FROM ${sql.raw(Tables.TBL_ROLE_USERS)}
       WHERE role_id = ${Number(role_id)} AND user_id = ${Number(user_id)} AND active = FALSE
       LIMIT 1
     `);
@@ -104,14 +138,14 @@ export async function POST(req) {
     if (inactiveMap.length > 0) {
       // Reactivate existing mapping
       await DB_Fetch(sql`
-        UPDATE role_users
+        UPDATE ${sql.raw(Tables.TBL_ROLE_USERS)}
         SET active = TRUE, updated_at = NOW()
         WHERE id = ${inactiveMap[0].id}
       `);
     } else {
       // Fresh insert (no RETURNING to avoid errors)
       await DB_Fetch(sql`
-        INSERT INTO role_users (role_id, user_id, active)
+        INSERT INTO ${sql.raw(Tables.TBL_ROLE_USERS)} (role_id, user_id, active)
         VALUES (${Number(role_id)}, ${Number(user_id)}, TRUE)
       `);
     }
