@@ -69,7 +69,7 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
 
     setFilteredRecords(filteredData.length);
     setTotalPages(Math.ceil(filteredData.length / pageSize));
-    setCurrentPageNo(1);
+    setCurrentPageNo( !(searchValue) ? currentPageNo : 1 );
 
     setData([
       ...filteredData.slice((currentPageNo * pageSize) - pageSize, currentPageNo * pageSize),
