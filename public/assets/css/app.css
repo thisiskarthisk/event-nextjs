@@ -164,3 +164,33 @@ th.is-orderable.is-ordered-asc::before, th.is-orderable.is-ordered-desc::after {
 .td-action {
   text-align: center;
 }
+
+dd {
+  margin-left: revert !important;
+  margin-bottom: revert !important;
+}
+
+
+.required-field label::after {
+  content: '*';
+  user-select: none;
+  color: #f00;
+  margin-left: 0.5em;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.page-title {
+  font-weight: bold;
+  font-size: 1.2em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.flex-space-between {
+  display: flex;
+  justify-content: space-between;
+}

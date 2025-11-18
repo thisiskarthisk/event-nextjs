@@ -19,6 +19,7 @@ const AppLayoutContext = createContext({
   closeModal: () => { },
   appBarMenuItems: [],
   setAppBarMenuItems: (items) => { },
+  confirm: () => {},
 });
 
 const SwalToast = Swal.mixin({
@@ -44,10 +45,8 @@ export default function AppLayout({ children }) {
   const [appBarMenuItems, setAppBarMenuItems] = useState([]);
 
   const setPageTitle = (title) => {
-    title = (title || '');
 
-    setTitle(title);
-    document.title = `${title} | ${APP_NAME}`;
+    setTitle(title || '');
   };
 
   const toast = (type, message, time = DEFAULT_TOAST_TIME) => {
@@ -117,19 +116,41 @@ export default function AppLayout({ children }) {
     });
   };
 
+  const confirm = ({ title, message, positiveBtnOnClick = () => {}, negativeBtnOnClick = () => {}, positiveBtnLabel = 'Yes', negativeBtnLabel = 'No'}) => {
+    modal({
+      title: title,
+      body: message,
+      okBtn: {
+        label: positiveBtnLabel,
+        onClick: positiveBtnOnClick || (() => {})
+      },
+      cancelBtn: {
+        label: negativeBtnLabel,
+        onClick: negativeBtnOnClick || (() => {})
+      }
+    });
+  };
+
+  useEffect(() => {
+    document.body.className = bodyClass;
+  }, [bodyClass]);
+
+  useEffect(() => {
+    document.title = title ? `${title} | ${APP_NAME}` : APP_NAME;
+  }, [title]);
+
   return (
     <SessionProvider basePath="/api/v1/auth">
-      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, appBarMenuItems, setAppBarMenuItems, closeModal }}>
-        <body className={bodyClass}>
-          {
-            isLoading &&
-            <div className="loader-overlay">
-              <span className="loader"></span>
-            </div>
-          }
-          {children}
+      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, appBarMenuItems, setAppBarMenuItems, closeModal, confirm }}>
+        
+        {
+          isLoading &&
+          <div className="loader-overlay">
+            <span className="loader"></span>
+          </div>
+        }
+        {children}
           <ToastContainer />
-        </body>
       </AppLayoutContext.Provider>
     </SessionProvider>
   );

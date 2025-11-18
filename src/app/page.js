@@ -6,6 +6,7 @@ import { useAppLayoutContext } from "@/components/appLayout";
 import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
 import AppIcon from "@/components/icon";
+import Link from "next/link";
 
 /* Dynamically import chart */
 const Tree = dynamic(() => import("react-organizational-chart").then((mod) => mod.Tree), { ssr: false });
@@ -116,16 +117,9 @@ function OrgChartCard({
             <AppIcon ic="plus" />
           </span>
 
-          <div
-            style={{ marginLeft: "10px", cursor: "pointer" }}
-            title="View Role Sheet"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(`/roles/${role.id}`);
-            }}
-          >
+          <Link style={{ marginLeft: "10px", color: "#fff" }} href={`/roles/${role.id}`} onClick={() => toggleProgressBar(true)}>
             <AppIcon ic="chart-bar" />
-          </div>
+          </Link>
         </div>
 
         {/* Body */}
@@ -188,17 +182,6 @@ function OrgChartCard({
                   }}
                 >
                   {/* Edit icon */}
-                  {/* <span
-                    style={{ cursor: "pointer", display: "flex", alignItems: "center", marginRight: "-2px" , color: "#2980b9" , fontSize: "14px"}}
-                    title="Edit User"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddUser(role.id, user); // reuse modal for edit
-                    }}
-                  >
-                    <AppIcon ic="pencil" />
-                  </span> */}
-
                   <span
                     style={{ cursor: "pointer", color: "#2980b9" }}
                     title="Edit User"
@@ -299,7 +282,7 @@ function renderOrgNode(node, expandedNodes, toggleExpand, actions) {
 }
 
 /* -------------------- Upload Chart Widget -------------------- */
-function UploadOrgChartWidget({ onChange, error = "" }) {
+function UploadOrgChartWidget({ onChange, errorMessage }) {
   return (
     <div className="row mt-3 text-left">
       <div className="col-12">
@@ -313,7 +296,17 @@ function UploadOrgChartWidget({ onChange, error = "" }) {
           <div>
             <label className="form-label">Select a CSV File</label>
             <input type="file" name="file" className="form-control mb-3" accept=".csv" autoFocus onChange={onChange} />
-            {error && <div className="invalid-feedback">{error}</div>}
+            {errorMessage && (
+              <div
+                className="alert alert-danger mt-3"
+                role="alert"
+                style={{ whiteSpace: "pre-wrap" }}   // 👈 IMPORTANT
+              >
+                <strong className="mt-3">Upload Error:</strong>
+                <br />
+                <dl dangerouslySetInnerHTML={{ __html: errorMessage }}></dl>
+              </div>
+            )}
           </div>
         </form>
       </div>
@@ -353,80 +346,36 @@ export default function OrganizationChartPage() {
     }
   }
 
-  /* -------------------- Unified Modal -------------------- */
-  function openFormModal(type, payload = {}) {
-    let title = "";
-    if (type === "addRole") title = "Add Role";
-    else if (type === "editRole") title = "Edit Role";
-    else if (type === "addUser") title = "Add User";
-    else if (type === "editUser") title = "Edit User";
-    else if (type === "deleteRole") title = `Delete Role "${payload.name}"?`;
-    else if (type === "deleteUser") title = `Delete User "${payload.user}"?`;
-    if (type.startsWith("delete")) {
-      const isRole = type === "deleteRole";
-      const nameLabel = isRole ? payload.name || "(unnamed)" : payload.user || "(unknown)";
-      const idField = payload.role_id || payload.id;
+/* -------------------- Unified Modal -------------------- */
+function openFormModal(type, payload = {}) {
+  let title = "";
+  if (type === "addRole") title = "Add Role";
+  else if (type === "editRole") title = "Edit Role";
+  else if (type === "addUser") title = "Add User";
+  else if (type === "editUser") title = "Edit User";
+  else if (type === "deleteRole") title = `Delete Role "${payload.name}"?`;
+  else if (type === "deleteUser") title = `Delete User "${payload.user}"?`;
 
-      modal({
-        title: `Delete ${isRole ? "Role" : "User"} "${nameLabel}"?`,
-        body: <p>Are you sure you want to delete this {isRole ? "role" : "user"}?</p>,
-        okBtn: {
-          label: "Delete",
-          variant: "danger",
-          onClick: async () => {
-            const finalPayload = {
-              type,
-              role_id: idField, // ✅ ensure backend gets role_id
-              user: payload.user || null,
-            };
+  /* -------------------- DELETE MODAL -------------------- */
+  if (type.startsWith("delete")) {
+    const isRole = type === "deleteRole";
+    const nameLabel = isRole ? payload.name || "(unnamed)" : payload.user || "(unknown)";
+    const idField = payload.role_id || payload.id;
 
-            const res = await fetch(`/api/v1/organizationChart/delete`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(finalPayload),
-            });
-
-            const result = await res.json();
-            toast(result.success ? "success" : "error", result.message);
-            closeModal();
-            if (result.success) loadRoles();
-          },
-        },
-        cancelBtn: { label: "Cancel" },
-      });
-      return;
-    }
-
-    // ✏️ ADD/EDIT Modals
-    let name = payload.name || "";
     modal({
-      title,
-      body: (
-        <div>
-          <label>Name</label>
-          <input
-            type="text"
-            className="form-control mt-2"
-            defaultValue={name}
-            onChange={(e) => (name = e.target.value)}
-            placeholder="Enter name"
-          />
-        </div>
-      ),
+      title: `Delete ${isRole ? "Role" : "User"} "${nameLabel}"?`,
+      body: <p>Are you sure you want to delete this {isRole ? "role" : "user"}?</p>,
       okBtn: {
-        label: "Save",
+        label: "Delete",
+        variant: "danger",
         onClick: async () => {
-          if (!name.trim()) return toast("error", "Enter a name");
-
           const finalPayload = {
             type,
-            name,
-            role_id: payload.role_id || payload.id || null,
-            user_id: payload.user_id || null,
-            reporting_to: payload.reporting_to || null,
+            role_id: idField,
+            user: payload.user || null,
           };
 
-          const res = await fetch(`/api/v1/organizationChart/save`, {
+          const res = await fetch(`/api/v1/organizationChart/delete`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(finalPayload),
@@ -440,43 +389,333 @@ export default function OrganizationChartPage() {
       },
       cancelBtn: { label: "Cancel" },
     });
+    return;
   }
 
+  /* -------------------- ADD USER MODAL -------------------- */
+  if (type === "addUser") {
+    let selectedUser = "";
+    let users = [];
 
-  /* -------------------- Upload Modal -------------------- */
-  const showUploadDialog = () => {
-    let selectedFile = null;
+    // Load user list dynamically inside try/catch
+    (async () => {
+      try {
+        const res = await fetch("/api/v1/users/list");
+        const data = await res.json();
+        const list = data?.data?.users ?? data?.data ?? [];
+
+        if (Array.isArray(list)) {
+          users = list;
+          const select = document.getElementById("userDropdown");
+          if (select) {
+            select.innerHTML = `<option value="">-- Select User --</option>`;
+            users.forEach((u) => {
+              const opt = document.createElement("option");
+              opt.value = u.id;
+              opt.textContent = `${u.first_name || ""} ${u.last_name || ""}`.trim() || "(Unnamed)";
+              select.appendChild(opt);
+            });
+          }
+        }
+      } catch (err) {
+        console.error("❌ Failed to load users:", err);
+        toast("error", "Failed to load user list.");
+      }
+    })();
+
+    modal({
+      title: "Add User",
+      body: (
+        <div>
+          <label className="form-label">User Name</label>
+          <select
+            id="userDropdown"
+            className="form-control mt-2"
+            defaultValue=""
+            onChange={(e) => (selectedUser = e.target.value)}
+          >
+            <option value="">Select users...</option>
+          </select>
+
+          <div className="text-center mt-3">
+            <Link
+              href={`/admin/user?role_id=${payload.role_id || ""}`}
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => closeModal()}
+            >
+              + Create New User
+            </Link>
+          </div>
+        </div>
+      ),
+      okBtn: {
+        label: "Assign User",
+        onClick: async () => {
+          try {
+            if (!selectedUser) {
+              toast("error", "Please select a user");
+              return;
+            }
+
+            const finalPayload = {
+              type: "addUser",
+              role_id: payload.role_id,
+              user_id: selectedUser,
+            };
+
+            const res = await fetch(`/api/v1/organizationChart/save`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(finalPayload),
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || !result.success) {
+              toast("error", result.message || "Failed to assign user");
+              return; // ⛔ keep modal open
+            }
+
+            toast("success", result.message || "User assigned successfully");
+            closeModal();
+            loadRoles();
+          } catch (err) {
+            console.error("Error assigning user:", err);
+            toast("error", "Unexpected error while assigning user.");
+          }
+        },
+      },
+      cancelBtn: { label: "Cancel" },
+    });
+
+    return;
+  }
+
+  /* -------------------- ADD / EDIT ROLE -------------------- */
+  let name = payload.name || "";
+  modal({
+    title,
+    body: (
+      <div>
+        <label>Name</label>
+        <input
+          type="text"
+          className="form-control mt-2"
+          defaultValue={name}
+          onChange={(e) => (name = e.target.value)}
+          placeholder="Enter name"
+        />
+      </div>
+    ),
+    okBtn: {
+      label: "Save",
+      onClick: async () => {
+        if (!name.trim()) return toast("error", "Enter a name");
+
+        const finalPayload = {
+          type,
+          name,
+          role_id: payload.role_id || payload.id || null,
+          user_id: payload.user_id || null,
+          reporting_to: payload.reporting_to || null,
+        };
+
+        const res = await fetch(`/api/v1/organizationChart/save`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(finalPayload),
+        });
+
+        const result = await res.json();
+        
+        // Handle explicit duplicate role error from manual save
+        if (!res.ok && res.status === 409) {
+            toast("error", result.message || "Duplicate active role name.");
+            return; // keep modal open
+        }
+
+        toast(result.success ? "success" : "error", result.message);
+        closeModal();
+        if (result.success) loadRoles();
+      },
+    },
+    cancelBtn: { label: "Cancel" },
+  });
+}
+
+/* -------------------- Formatter: build HTML for validation errors -------------------- */
+function formatUploadErrors(data) {
+  if (!data || !data.errors) return "";
+
+  const { 
+    roleNotAssigned = [], 
+    missingUsers = [], 
+    duplicateUsers = [], 
+    duplicateRoles = [] // 👈 NEW ERROR TYPE
+  } = data.errors;
+  
+  let html = "";
+  let needsDivider = false;
+
+  // 1. Duplicate Roles (Active Role Check / Internal CSV Duplicates)
+  if (duplicateRoles.length > 0) {
+    html += `<h6 style="margin-top:15px; font-weight:600; color:#e74c3c;">Duplicate Role Error:</h6><dl style="margin-top:8px;">`;
+
+    for (const r of duplicateRoles) {
+      const reasonText = r.reason.includes("database")
+        ? `Role '${escapeHtml(r.role)}' already active in Roles Table`
+        : `Role '${escapeHtml(r.role)}' duplicated within CSV File`;
+      html += `<dt style="margin-top:8px;font-weight:600;">Row: ${r.row} </dt><dd style="margin-left:12px;">${reasonText}</dd>`;
+
+    }
+
+    html += `</dl><br>`;
+    needsDivider = true;
+  }
+  
+  // Divider if needed
+  if (needsDivider && (roleNotAssigned.length || missingUsers.length || duplicateUsers.length)) {
+    html += `<hr style="margin:12px 0;border-top:1px solid #8e8e8e;">`;
+    needsDivider = false;
+  }
+
+  // 2. Role Not Assigned (No user assigned to the role in CSV)
+  if (roleNotAssigned.length > 0) {
+    html += `<h6 style="margin-top:15px; font-weight:600;color:#e74c3c;">Role Not assigned User:</h6><dl style="margin-top:8px;">`;
+    for (const r of roleNotAssigned) {
+      html += `<dt style="margin-top:8px;font-weight:600;">Row: ${r.row}</dt><dd style="margin-left:12px;">User Not Assigned for Role '${escapeHtml(r.role)}'</dd>`;
+    }
+    html += `</dl><br>`;
+    needsDivider = true;
+  }
+
+  // Divider if needed
+  if (needsDivider && (missingUsers.length || duplicateUsers.length)) {
+    html += `<hr style="margin:12px 0;border-top:1px solid #8e8e8e;">`;
+    needsDivider = false;
+  }
+
+  // 3. Missing Users
+  if (missingUsers.length > 0) {
+    html += `<h6 style="margin-top:15px; font-weight:600;color:#e74c3c;">User(s) not found in users table:</h6><dl style="margin-top:8px;">`;
+    for (const m of missingUsers) {
+      html += `<dt style="margin-top:8px;font-weight:600;">Row: ${m.row}</dt><dd style="margin-left:12px;">User '${escapeHtml(m.user)}' does not exist</dd>`;
+    }
+    html += `</dl><br>`;
+    needsDivider = true;
+  }
+
+  // Divider if needed
+  if (needsDivider && duplicateUsers.length) {
+    html += `<hr style="margin:12px 0;border-top:1px solid #8e8e8e;">`;
+    needsDivider = false;
+  }
+
+  // 4. Duplicate Users (User assigned to multiple roles in CSV)
+  if (duplicateUsers.length > 0) {
+      html += `<h6 style="margin-top:15px; font-weight:600;color:#e74c3c;">User assigned to multiple roles (within CSV):</h6><dl style="margin-top:8px;">`;
+      for (const d of duplicateUsers) {
+        html += `<dt style="margin-top:8px;font-weight:600;">Row: ${d.row}</dt>`;
+        html += `<dd style="margin-left:12px;">User: ${escapeHtml(d.user)}</dd>`;
+        const escapedRoles = d.roles.map(role => escapeHtml(role));
+        const rolesString = escapedRoles.join(" , <br>"); 
+        html += `<dd style="margin-left:12px;">Role(s): ${rolesString}</dd>`;
+      }
+      html += `</dl><br>`;
+  }
+
+  return html;
+}
+
+/* small helper to escape html so user names don't break output */
+function escapeHtml(str) {
+  if (typeof str !== "string") return str;
+  return str.replace(/[&<>"']/g, (m) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+}
+
+
+/* -------------------- showUploadDialog (modal handler) -------------------- */
+const showUploadDialog = () => {
+  let selectedFile = null;
+  let errorMessage = "";
+
+  const openDialog = () => {
     modal({
       title: "Upload Organization Chart",
       body: (
         <UploadOrgChartWidget
+          errorMessage={errorMessage}
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (!file) return toast("error", "Please select a file.");
-            if (!file.name.toLowerCase().endsWith(".csv")) return toast("error", "Select a valid CSV file.");
-            selectedFile = file;
-            toast("success", `Selected: ${file.name}`);
+            try {
+              const file = e.target.files?.[0];
+              if (!file) {
+                toast("error", "Please select a file.");
+                return;
+              }
+              if (!file.name.toLowerCase().endsWith(".csv")) {
+                toast("error", "Please select a valid CSV file (.csv)");
+                return;
+              }
+              selectedFile = file;
+            } catch (err) {
+              console.error("File selection error:", err);
+              toast("error", "Something went wrong while selecting the file.");
+            }
           }}
         />
       ),
       okBtn: {
         label: "Upload",
         onClick: async () => {
-          if (!selectedFile) return toast("error", "Please select a CSV file.");
-          const formData = new FormData();
-          formData.append("file", selectedFile);
-          const res = await fetch("/api/v1/organizationChart/upload", { method: "POST", body: formData });
-          const result = await res.json();
-          toast(result.success ? "success" : "error", result.message || "Upload failed.");
-          if (result.success) {
+          try {
+            if (!selectedFile) {
+              toast("error", "Please select a CSV file first.");
+              return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+
+            const res = await fetch("/api/v1/organizationChart/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            const result = await res.json();
+
+            // Validation errors returned as structured payload: result.data.type === "validation_errors"
+            if (!res.ok && result?.data?.type === "validation_errors") {
+              errorMessage = formatUploadErrors(result.data);
+              openDialog(); // reopen modal with error details
+              toast("error", "Validation errors found in CSV. See modal.");
+              return;
+            }
+
+            // generic error fallback
+            if (!res.ok || !result.success) {
+              const msg = result?.message || "Upload failed.";
+              errorMessage = escapeHtml(msg).replace(/\n/g, "<br>");
+              openDialog();
+              toast("error", msg);
+              return;
+            }
+
+            // success
+            toast("success", result.message || "Upload successful.");
             closeModal();
             loadRoles();
+          } catch (err) {
+            console.error("Upload exception:", err);
+            toast("error", "Server error while uploading file.");
           }
         },
       },
       cancelBtn: { label: "Close" },
     });
   };
+
+  openDialog();
+};
 
   /* -------------------- Render -------------------- */
   if (loading)

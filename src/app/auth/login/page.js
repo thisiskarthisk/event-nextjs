@@ -2,6 +2,7 @@
 
 import { useAppLayoutContext } from "@/components/appLayout";
 import UnAuthenticatedPage from "@/components/auth/unAuthPagewrapper";
+import TextField from "@/components/form/TextField";
 import AppIcon from "@/components/icon";
 
 import { APP_NAME } from "@/constants";
@@ -10,8 +11,6 @@ import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const { setPageTitle, toggleProgressBar, toast } = useAppLayoutContext();
-
-  const [ isPasswordVisible, togglePasswordField ] = useState(false);
 
   const [ formData, setFormData ] = useState({
     email: '',
@@ -77,28 +76,22 @@ export default function LoginPage() {
             <p className="login-box-msg">Please login to proceed</p>
 
             <form action="" method="POST" onSubmit={onLoginFormSubmitted}>
-              <div className="input-group mb-3">
-                <div className="input-group-text">
-                  <AppIcon ic="email" />
-                </div>
-                <input type="email" name="email" className="form-control" placeholder="Email" autoFocus onChange={e => onFieldChanged(e, 'email')} />
-              </div>
+              <TextField
+                type="email"
+                name="email"
+                placeholder="Email"
+                autoFocus
+                onChange={e => onFieldChanged(e, 'email')}
+                prefixIcon="email" />
 
-              <div className="input-group mb-3">
-                <div className="input-group-text">
-                  <AppIcon ic="lock" />
-                </div>
-                <input type={isPasswordVisible ? "text" : "password"} name="password" className="form-control" placeholder="Password" onChange={e => onFieldChanged(e, 'password')} />
-                <a href="#" className="btn btn-outline-secondary" onClick={e => {
-                  e.preventDefault();
-
-                  if(document.activeElement) document.activeElement.blur();
-
-                  togglePasswordField(!isPasswordVisible);
-                }}>
-                  <AppIcon ic={isPasswordVisible ? "eye-off" : "eye"} />
-                </a>
-              </div>
+              <TextField
+                className="mb-3"
+                name="password"
+                type="password"
+                placeholder="Password"
+                autoFocus
+                onChange={e => onFieldChanged(e, 'password')}
+                prefixIcon="lock" />
 
               <div className="row">
                 <div className="col-12 text-center">
