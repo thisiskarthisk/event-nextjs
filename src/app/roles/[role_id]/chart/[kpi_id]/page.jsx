@@ -17,10 +17,8 @@ import AppIcon from "@/components/icon";
 export default function KPIResponseChart({ params }) {
   const { data: session, status } = useSession();
   const { role_id, kpi_id, user_id } = use(params);
-  
-  console.log("User Id", user_id)
-  
-  const { setPageTitle, setPageType, toggleProgressBar, toast } = useAppLayoutContext();
+
+  const { setPageTitle, toggleProgressBar, toast } = useAppLayoutContext();
   const { t } = useI18n();
   const [data, setData] = useState([]);
   const [filterData, setFilterData] = useState(null);
@@ -131,7 +129,6 @@ export default function KPIResponseChart({ params }) {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      setPageType("dashboard");
       setPageTitle(`${t(" KPI Chart Responses ")}`);
 
       fetchKPIDetails();

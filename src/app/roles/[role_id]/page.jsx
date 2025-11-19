@@ -23,6 +23,12 @@ export default function RoleSheet() {
     toggleProgressBar(false);
   }, [locale, role_id,]);
 
+
+  /** View Responses Sheet */
+  const handleViewResponses = () => {
+    router.push(`/roles/${role_id}/responses`);
+  };
+
   /** Add New Role Sheet */
   const handleAddNewRole = () => {
     router.push(`/roles/${role_id}/rs/add`);
@@ -233,9 +239,12 @@ export default function RoleSheet() {
       <div className="app-content">
         <div className="container-fluid">
           <div className="card mt-4">
-          <div className="card-header d-flex justify-content-between align-items-center">
+            <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Role Sheet</h5>
-              <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewRole}>
+              <button className="btn btn-warning ms-auto me-2" onClick={handleViewResponses}>
+                <AppIcon ic="sitemap-outline" className="text-black"/> Record Responses
+              </button>
+              <button className="btn btn-primary me-2" onClick={handleAddNewRole}>
                 <AppIcon ic="plus" className="text-info"/> Add New Role
               </button>
               <button className="btn btn-outline-success " onClick={handleOpenCsvModal}>
