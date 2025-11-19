@@ -9,3 +9,7 @@ export function mapObject(obj, fn = null) {
     })
   );
 }
+
+export function random(n) {
+  return Math.floor( Math.random() * n );
+}
