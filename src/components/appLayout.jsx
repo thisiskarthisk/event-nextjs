@@ -1,23 +1,25 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from "react";
-import AppBar from "./appbar";
-import AppBreadCrumb from "./breadcrumb";
-import AppSidebar from "./sidebar";
-import AppFooter from "./appFooter";
 import { APP_NAME, DEFAULT_TOAST_TIME } from "@/constants";
 
 import { SessionProvider } from 'next-auth/react';
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 
+import { ToastContainer, toast as toastify } from 'react-toastify';
+
 const AppLayoutContext = createContext({
-  setPageTitle: (title) => {},
-  toggleBreadCrumb: (show) => {},
-  setPageType: (pageType) => {},
-  toggleProgressBar: (show) => {},
-  toast: () => {},
-  modal: () => {},
+  pageTitle: '',
+  setPageTitle: (title) => { },
+  setBodyClass: (className) => { },
+  toggleProgressBar: (show) => { },
+  toast: () => { },
+  modal: () => { },
+  closeModal: () => { },
+  appBarMenuItems: [],
+  setAppBarMenuItems: (items) => { },
+  confirm: () => {},
 });
 
 const SwalToast = Swal.mixin({
@@ -35,40 +37,52 @@ const SwalToast = Swal.mixin({
 const SwalModal = withReactContent(Swal);
 
 export default function AppLayout({ children }) {
-  const [ title, setTitle ] = useState('');
-  const [ isBreadCrumpVisible, toggleBreadCrumb ] = useState(false);
-  const [ bodyClass, setBodyClass ] = useState('');
-  const [ pageType, setPageType ] = useState('');
+  const [title, setTitle] = useState('');
+  const [bodyClass, setBodyClass] = useState('');
 
-  const [ isLoading, toggleProgressBar ] = useState(true);
+  const [isLoading, toggleProgressBar] = useState(true);
+
+  const [appBarMenuItems, setAppBarMenuItems] = useState([]);
 
   const setPageTitle = (title) => {
-    title = (title || '');
 
-    setTitle(title);
-    document.title = `${title} | ${APP_NAME}`;
+    setTitle(title || '');
   };
 
   const toast = (type, message, time = DEFAULT_TOAST_TIME) => {
-    SwalToast.fire({
+    /* SwalToast.fire({
       icon: type,
       title: message,
       timer: time
+    }); */
+
+    toastify(message, {
+      type,
+      position: 'top-right',
+      hideProgressBar: false,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: false,
     });
   };
 
-  const modal = ({title, body, okBtn = {label: 'Ok', onClick: () => {}}, cancelBtn = null, closeOnEsc = false}) => {
+  const closeModal = () => {
+    SwalModal.close();
+  };
+
+  const modal = ({ title, body, okBtn = { label: 'Ok', onClick: () => { } }, cancelBtn = null, closeOnEsc = false }) => {
     let options = {
       title: title,
       html: body,
       focusConfirm: false,
+      showCloseButton: true,
       allowOutsideClick: closeOnEsc,
       allowEscapeKey: closeOnEsc,
       preConfirm: async (value) => {
         if (okBtn && okBtn.onClick) {
           await okBtn.onClick();
 
-          SwalModal.close();
+          // SwalModal.close();
 
           return false;
         }
@@ -79,7 +93,7 @@ export default function AppLayout({ children }) {
         if (cancelBtn && cancelBtn.onClick) {
           await cancelBtn.onClick();
 
-          SwalModal.close();
+          // SwalModal.close();
 
           return false;
         }
@@ -102,59 +116,41 @@ export default function AppLayout({ children }) {
     });
   };
 
+  const confirm = ({ title, message, positiveBtnOnClick = () => {}, negativeBtnOnClick = () => {}, positiveBtnLabel = 'Yes', negativeBtnLabel = 'No'}) => {
+    modal({
+      title: title,
+      body: message,
+      okBtn: {
+        label: positiveBtnLabel,
+        onClick: positiveBtnOnClick || (() => {})
+      },
+      cancelBtn: {
+        label: negativeBtnLabel,
+        onClick: negativeBtnOnClick || (() => {})
+      }
+    });
+  };
+
   useEffect(() => {
-    let newBodyClass = '';
+    document.body.className = bodyClass;
+  }, [bodyClass]);
 
-    if (pageType == 'auth') {
-      newBodyClass = 'login-page bg-body-secondary app-loaded';
-    } else if (pageType == 'dashboard') {
-      newBodyClass = 'layout-fixed sidebar-expand-lg sidebar-open bg-body-tertiary';
-    }
-
-    setBodyClass(newBodyClass);
-  }, [pageType]);
+  useEffect(() => {
+    document.title = title ? `${title} | ${APP_NAME}` : APP_NAME;
+  }, [title]);
 
   return (
     <SessionProvider basePath="/api/v1/auth">
-      <AppLayoutContext.Provider value={{ setPageTitle, toggleBreadCrumb, setPageType, toggleProgressBar, toast, modal }}>
-        <body className={bodyClass}>
-          {
-            isLoading &&
-            <div className="loader-overlay">
-              <span className="loader"></span>
-            </div>
-          }
-          {
-            !pageType &&
-            <div className="c">{children}</div>
-          }
-          {
-            pageType == 'auth' &&
-            <>
-              {children}
-              <AppFooter />
-            </>
-          }
-          {
-            pageType == 'dashboard' &&
-            <div className="app-wrapper">
-              <AppBar />
-              <AppSidebar />
-
-              <main className="app-main">
-                <AppBreadCrumb pageTitle={title} showBreadCrumb={isBreadCrumpVisible} />
-
-                <div className="app-content">
-                  <div className="container-fluid">
-                    {children}
-                  </div>
-                </div>
-              </main>
-
-              <AppFooter />
-            </div>
-          }
-        </body>
+      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, appBarMenuItems, setAppBarMenuItems, closeModal, confirm }}>
+        
+        {
+          isLoading &&
+          <div className="loader-overlay">
+            <span className="loader"></span>
+          </div>
+        }
+        {children}
+          <ToastContainer />
       </AppLayoutContext.Provider>
     </SessionProvider>
   );

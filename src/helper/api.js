@@ -15,7 +15,7 @@ function successJsonResponse(data, message = null, code = 200) {
 }
 
 function errorJsonResponse(message = null, code = 500, data) {
-  return appJsonResponse(true, message, data, code || 500);
+  return appJsonResponse(false, message, data, code || 500);
 }
 
 export const JsonResponse = {

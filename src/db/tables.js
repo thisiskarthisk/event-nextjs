@@ -6,10 +6,11 @@ export default {
   TBL_KPIS: 'kpis',
   TBL_KPI_RESPONSES: 'kpi_responses',
   TBL_KPI_RESPONSE_CHART_DATA: 'kpi_response_chart_data',
-
+  TBL_ROLES: 'roles',
+  
   PublicFields: {
     'users': [
-      'id', 'employee_id', 'first_name', 'last_name', 'email', 'mobile_no'
+      'id', 'user_type', 'employee_id', 'first_name', 'last_name', 'email', 'mobile_no'
     ],
   },
 };

@@ -3,8 +3,6 @@ import { sql } from "drizzle-orm";
 import bcrypt from 'bcrypt';
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { mapObject } from "@/helper/utils";
-import { v4 as uuidv4 } from 'uuid';
 
 const handler = NextAuth({
   providers: [
@@ -28,7 +26,7 @@ const handler = NextAuth({
 
           user = user[0];
 
-          // console.log('NextAuth -> authorize() -> user:', password, user.password);
+          // console.log('\n\nNextAuth -> authorize() -> user:', password, user.password);
 
           const isValid = await bcrypt.compare(password, user.password);
 
@@ -42,7 +40,7 @@ const handler = NextAuth({
             formattedUser[col] = user[col];
           }
 
-          // console.log('user:', formattedUser);
+          // console.log('\n\nuser:', formattedUser, '\n\n');
 
           return {
             ...formattedUser
@@ -66,8 +64,32 @@ const handler = NextAuth({
     signOut: '/auth/logout',
   },
   callbacks: {
+    jwt: async ({ token, user, account }) => {
+      // console.log('NextAuth -> callbacks -> jwt()', token, user, account);
+
+      if (user) {
+        token = {
+          ...user,
+          ...token
+        };
+      }
+
+      return token;
+    },
     session: async ({ session, token, user }) => {
-      console.log('NextAuth->callbacks->session()');
+      // console.log('NextAuth -> callbacks -> session()', session, token, user);
+
+      if (token) {
+        session.user = {
+          ...token,
+          ...session.user,
+        };
+      } else if (user) {
+        session.user = {
+          ...user,
+          ...session.user,
+        };
+      }
 
       return session;
     },

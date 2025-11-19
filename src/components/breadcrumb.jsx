@@ -1,26 +1,27 @@
 'use client';
 
-import { useI18n } from "./i18nProvider";
-
-export default function AppBreadCrumb({ pageTitle, showBreadCrumb = true }) {
-  const { t } = useI18n();
-
+export default function AppBreadCrumb({ breadcrumbs = {} }) {
   return (
-    <div className="app-content-header">
-      <div className="container-fluid">
-        <div className="row">
-          <div className="col-sm-6"><h3 className="mb-0">{ pageTitle }</h3></div>
-          {
-            pageTitle && showBreadCrumb &&
-            <div className="col-sm-6">
-              <ol className="breadcrumb float-sm-end">
-                <li className="breadcrumb-item">{ t('home') }</li>
-                <li className="breadcrumb-item active">{ pageTitle }</li>
-              </ol>
-            </div>
-          }
+    <div className="row">
+      <div className="col-sm-6"></div>
+      {
+        breadcrumbs && Object.keys(breadcrumbs).length > 0 && 
+        <div className="col-sm-6">
+          <ol className="breadcrumb float-sm-end">
+            {
+              Object.keys(breadcrumbs).map(b => {
+                return (
+                  <li className={"breadcrumb-item" + (!breadcrumbs[b] ? ' active' : '')}>
+                    {
+                      breadcrumbs[b] ? <a href={breadcrumbs[b]}>{b}</a> : b
+                    }
+                  </li>
+                );
+              })
+            }
+          </ol>
         </div>
-      </div>
+      }
     </div>
   );
 }
