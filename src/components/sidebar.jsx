@@ -13,6 +13,13 @@ export default function AppSidebar() {
   const { t } = useI18n();
   const [roles, setRoles] = useState([]);
 
+  const [open, setOpen] = useState(true); // Initial open state for Dashboard menu
+
+    const toggleMenu = (e) => {
+        e.preventDefault();
+        setOpen(!open);
+    };
+
   return (
     <aside className="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
       <div className="sidebar-brand">
@@ -57,6 +64,25 @@ export default function AppSidebar() {
                 <p>{t('RCA')}</p>
               </Link>
             </li>
+            <li className={`nav-item ${open ? "menu-open" : ""}`}>
+              <Link href="#" className="nav-link active" onClick={toggleMenu}>
+                  <AppIcon className="nav-icon bi bi-journal"></AppIcon>
+                  <p>
+                      Reports
+                      <AppIcon className="nav-arrow bi bi-chevron-right"></AppIcon>
+                  </p>
+              </Link>
+              {open && (
+                  <ul className="nav nav-treeview">
+                      <li className="nav-item">
+                          <Link href="/reports/abnormalities-report" className="nav-link active">
+                              <AppIcon className="nav-icon bi bi-journal-bookmark-fill"></AppIcon>
+                              <p>Abnormalities Report</p>
+                          </Link>
+                      </li>
+                  </ul>
+              )}
+          </li>
           </ul>
         </nav>
       </div>
