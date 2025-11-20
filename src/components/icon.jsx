@@ -1,3 +1,3 @@
-export default function AppIcon({ ic, className }) {
-  return <span className={`${className || ''} mdi mdi-${ic}`}></span>
+export default function AppIcon({ ic, className, size = 'normal' }) {
+  return <span className={`${className || ''} mdi mdi-${ic} fs-${size}`}></span>
 }

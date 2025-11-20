@@ -52,7 +52,7 @@ export default function TextField({
       error={error}
       prefixIcon={prefixIcon ? <div className="input-group-text"><AppIcon ic={prefixIcon} /></div> : null}
       suffixIcon={
-        (type == 'password' ? <a href="#" className="btn btn-outline-secondary" onClick={onBtnTogglePasswordClicked}><AppIcon ic={isPasswordVisible ? 'eye-off' : 'eye'} /></a> : null)
+        (type == 'password' ? <a href="#" tabIndex={-1} className="btn btn-outline-secondary" onClick={onBtnTogglePasswordClicked}><AppIcon ic={isPasswordVisible ? 'eye-off' : 'eye'} /></a> : null)
       }
       className={className}>
       <input

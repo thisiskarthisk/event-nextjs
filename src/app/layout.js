@@ -48,7 +48,7 @@ export default async function RootLayout({ children }) {
             <Script src="/assets/js/bootstrap.min.js" type="text/javascript" strategy="lazyOnload" />
             <Script src="/assets/js/apexcharts.min.js" type="text/javascript" strategy="lazyOnload" />
 
-            <Script src="/assets/js/adminlte.min.js" type="text/javascript" strategy="lazyOnload" />
+            {/* <Script src="/assets/js/adminlte.min.js" type="text/javascript" strategy="lazyOnload" /> */}
           </AppLayout>
         </I18nProvider>
       </body>
