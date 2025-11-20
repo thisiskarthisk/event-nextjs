@@ -1,53 +1,78 @@
-import { DB_Insert, Tables } from "@/db";
+import { DB_Fetch, DB_Insert, Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
-import bcrypt from 'bcrypt';
+import bcrypt from "bcrypt";
 import Validation from "@/helper/validation";
 import { sql } from "drizzle-orm";
-
 export async function POST(req) {
   try {
     const data = await req.json();
+    const isUpdate = !!data.id;
 
-    const errors = Validation(data, {
-      'employee_id': 'required|alpha_num',
-      'first_name': 'required',
-      'last_name': 'required',
-      'email': 'required|email',
-      'mobile_no': 'required|mobile_no',
-      'password': 'required',
-    });
+    const rules = {
+      employee_id: "required|alpha_num",
+      first_name: "required",
+      last_name: "required",
+      email: "required|email",
+      mobile_no: "required|mobile_no"
+    };
 
-    if (errors && Object.keys(errors).length > 0) {
-      return JsonResponse.error('There are some invalid inputs found. Please correct them all to continue', 422, {
-        'errors': errors,
-      })
+    if (!isUpdate) {
+      rules.password = "required";
     }
 
-    const password = await bcrypt.hash(data.password, 10);
+    const errors = Validation(data, rules);
 
-    const insertedRow = await DB_Insert(sql`
+    if (errors && Object.keys(errors).length > 0) {
+      return JsonResponse.error("Please correct the errors.", 422, errors);
+    }
+
+    const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : null;
+
+    // UPDATE
+    if (isUpdate) {
+      await DB_Fetch(sql`
+        UPDATE ${sql.identifier(Tables.TBL_USERS)}
+        SET
+          employee_id = ${data.employee_id},
+          first_name  = ${data.first_name},
+          last_name   = ${data.last_name},
+          email       = ${data.email},
+          mobile_no   = ${data.mobile_no},
+          password    = COALESCE(${passwordHash}, password),
+          updated_at  = NOW()
+        WHERE id = ${Number(data.id)}
+      `);
+
+      return JsonResponse.success(
+        { id: data.id },
+        "The User has been updated successfully."
+      );
+    }
+
+    // INSERT (NO RETURNING)
+    const inserted = await DB_Insert(sql`
       INSERT INTO ${sql.identifier(Tables.TBL_USERS)}
         (employee_id, first_name, last_name, email, mobile_no, password)
       VALUES
-        (${data.employee_id}, ${data.first_name}, ${data.last_name}, ${data.email}, ${data.mobile_no}, ${password})
+        (${data.employee_id}, ${data.first_name}, ${data.last_name}, ${data.email}, ${data.mobile_no}, ${passwordHash})
     `);
 
-    return JsonResponse.success({
-      'insertedRow': insertedRow,
-    }, 'The User has been created successfully.');
+    return JsonResponse.success(
+      { id: inserted },
+      "The User has been created successfully."
+    );
   } catch (error) {
-    console.error('[api/users/save] Error:', error);
+    console.error("[api/users/save] Error:", error);
 
-    let message = 'Error occurred when trying to save User data.';
+    let message = "Error occurred while saving user.";
 
-    if (error.cause && error.cause.constraint) {
-      if (error.cause.constraint.includes('unique_employee_id')) {
-        message = 'The given employee ID has already been taken.';
-      } else if (error.cause.constraint.includes('unique_email')) {
-        message = 'The given email address has already been used.';
-      } else if (error.cause.constraint.includes('unique_mobile_no')) {
-        message = 'The given mobile number has already been used.';
-      }
+    if (error.cause?.constraint) {
+      if (error.cause.constraint.includes("unique_employee_id"))
+        message = "Employee ID already taken.";
+      else if (error.cause.constraint.includes("unique_email"))
+        message = "Email already used.";
+      else if (error.cause.constraint.includes("unique_mobile_no"))
+        message = "Mobile number already used.";
     }
 
     return JsonResponse.error(message);

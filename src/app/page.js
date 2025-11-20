@@ -7,6 +7,9 @@ import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
 import AppIcon from "@/components/icon";
 import Link from "next/link";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
+import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 /* Dynamically import chart */
 const Tree = dynamic(() => import("react-organizational-chart").then((mod) => mod.Tree), { ssr: false });
@@ -38,7 +41,6 @@ const orgNodeCardStyle = {
   padding: "0px",
   display: "flex",
   flexDirection: "column",
-  cursor: "pointer",
   transition: "transform 0.2s ease, box-shadow 0.2s ease",
 };
 
@@ -51,6 +53,7 @@ const orgNodeHeaderStyle = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
+  cursor: "pointer",
 };
 
 const orgNodeBodyStyle = {
@@ -81,7 +84,7 @@ function OrgChartCard({
   onEditUser,
   onDeleteUser,
 }) {
-  const userList = role.users ? role.users.split(",").map((u) => u.trim()).filter(Boolean) : [];
+  const userList = role.users || [];
 
   return (
     <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
@@ -122,114 +125,49 @@ function OrgChartCard({
           </Link>
         </div>
 
-        {/* Body */}
-        <div style={{ ...orgNodeBodyStyle, flexDirection: "column" }}>
-          {userList.length > 0 ? (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "6px",
-                marginBottom: "10px",
-                padding: "0 10px",
-              }}
-            >
-              {userList.map((user, i) => (
-              <div
-                key={i}
-                style={{
-                  position: "relative",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  background: "#f1f5ff",
-                  color: "#215fb1",
-                  borderRadius: "20px",
-                  padding: "4px 12px",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-                  margin: "4px",
-                  transition: "all 0.25s ease",
-                  overflow: "hidden",
-                  maxWidth: "150px",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.paddingRight = "38px";
-                  const icons = e.currentTarget.querySelector(".user-actions");
-                  if (icons) icons.style.opacity = 1;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.paddingRight = "12px";
-                  const icons = e.currentTarget.querySelector(".user-actions");
-                  if (icons) icons.style.opacity = 0;
-                }}
-              >
-                <span>{user}</span>
-
-                {/* Hover icons (hidden until hover) */}
-                <div
-                  className="user-actions"
-                  style={{
-                    position: "absolute",
-                    right: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    opacity: 0,
-                    transition: "opacity 0.2s ease",
-                  }}
-                >
-                  {/* Edit icon */}
-                  <span
-                    style={{ cursor: "pointer", color: "#2980b9" }}
-                    title="Edit User"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(`/users/${user}`); // ✅ opens user page, no modal
-                    }}
-                  >
-                    <AppIcon ic="pencil" />
-                  </span>
-
-                  {/* Delete icon */}
-                  <span
-                    style={{ cursor: "pointer", display: "flex", alignItems: "center", marginRight: "-7px", color: "#e74c3c" }}
-                    title="Delete User"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteUser(role.id, user);
-                    }}
-                  >
-                    <AppIcon ic="delete" />
-                  </span>
-                </div>
-              </div>
-            ))}
-            </div>
-          ) : (
-            <span style={{ color: "#888", fontSize: "14px", marginBottom: "8px" }}>No users assigned</span>
-          )}
-
-          <button
-            onClick={(e) => {
+        <div className="my-2">
+          <a href="#" className="btn btn-primary btn-rounded" onClick={(e) => {
               e.stopPropagation();
               onAddUser(role.id);
-            }}
-            style={{
-              background: "#19e9a4",
-              border: 0,
-              color: "#fff",
-              borderRadius: "24px",
-              padding: "8px 28px",
-              fontWeight: 500,
-              fontSize: "15px",
-              cursor: "pointer",
-            }}
-          >
-            + Add User
-          </button>
+            }}>
+            <AppIcon ic="plus" />&nbsp;Add a User
+          </a>
+        </div>
+
+        {/* Body */}
+        <div className="list-group text-left mb-3 mx-1">
+          {
+            userList.length > 0 &&
+            userList.map((user) => (
+              <div key={user.id} className="list-group-item flex-space-between flex-valign-center">
+                <span className="flex-column">
+                  <span className="badge bg-secondary rounded-pill mb-2"><AppIcon ic="badge-account" />&nbsp;{ user.employee_id }</span>
+                  <span>{ user.first_name } {user.last_name || '' }</span>
+                </span>
+
+                <span className="">
+                  <Link href={`/roles/${encodeURLParam(role.id)}/responses/${encodeURLParam(user.id)}`} className="text-success">
+                    <AppIcon ic="speedometer" size="large" />
+                  </Link>
+                  &nbsp;|&nbsp;
+                  <Link href={`/admin/users/edit/${encodeURLParam(user.id)}?from=${encodeURLParam('/')}`} className="text-primary">
+                    <AppIcon ic="pencil" size="large" />
+                  </Link>
+                  &nbsp;|&nbsp;
+                  <a href="#" className="text-danger fs-large" onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteUser(role.id, user);
+                    }}>
+                    <AppIcon ic="delete" />
+                  </a>
+                </span>
+              </div>
+            ))
+          }
+
+          {
+            userList.length == 0 && <div className="list-group-item text-secondary">No users assigned</div>
+          }
         </div>
 
         {/* Footer */}
@@ -322,16 +260,30 @@ export default function OrganizationChartPage() {
   const [roles, setRoles] = useState([]);
   const [expandedNodes, setExpandedNodes] = useState({});
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
 
   const toggleExpand = (id) => setExpandedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
 
   useEffect(() => {
-    setPageTitle(t ? t("organizationChart") : "Organization Chart");
-    toggleProgressBar(false);
-    setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Organization Chart", className: "text-primary", onClick: showUploadDialog }]);
-  }, []);
+    if (status == 'authenticated') {
+      setPageTitle(t ? t("organizationChart") : "Organization Chart");
+      toggleProgressBar(false);
+      setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Organization Chart", className: "text-primary", onClick: showUploadDialog }]);
 
-  useEffect(() => { loadRoles(); }, []);
+      loadRoles();
+
+      const action = decodeURLParam(searchParams.get('action'));
+      const temp_role_id = decodeURLParam(searchParams.get('role'));
+      const temp_user_id = decodeURLParam(searchParams.get('user'));
+
+      if (action == 'assign' && temp_role_id) {
+        console.log('temp_user_id:',temp_user_id);
+
+        openFormModal("addUser", { role_id: temp_role_id, user_id: (temp_user_id || null) });
+      }
+    }
+  }, [status]);
 
   async function loadRoles() {
     setLoading(true);
@@ -394,10 +346,10 @@ function openFormModal(type, payload = {}) {
 
   /* -------------------- ADD USER MODAL -------------------- */
   if (type === "addUser") {
-    let selectedUser = "";
+    let selectedUser = payload.user_id || null;
+    console.log('selectedUser:',selectedUser);
     let users = [];
 
-    // Load user list dynamically inside try/catch
     (async () => {
       try {
         const res = await fetch("/api/v1/users/list");
@@ -413,12 +365,17 @@ function openFormModal(type, payload = {}) {
               const opt = document.createElement("option");
               opt.value = u.id;
               opt.textContent = `${u.first_name || ""} ${u.last_name || ""}`.trim() || "(Unnamed)";
+
+              if (selectedUser == u.id) {
+                opt.selected = true;
+              }
+
               select.appendChild(opt);
             });
           }
         }
       } catch (err) {
-        console.error("❌ Failed to load users:", err);
+        console.error("Failed to load users:", err);
         toast("error", "Failed to load user list.");
       }
     })();
@@ -439,11 +396,11 @@ function openFormModal(type, payload = {}) {
 
           <div className="text-center mt-3">
             <Link
-              href={`/admin/user?role_id=${payload.role_id || ""}`}
+              href={`/admin/users/add?from=${encodeURLParam(`/?action=${encodeURLParam('assign')}&role=${encodeURLParam(payload.role_id)}`)}`}
               className="btn btn-outline-primary btn-sm"
               onClick={() => closeModal()}
             >
-              + Create New User
+              <AppIcon ic="plus" />&nbsp;Create New User
             </Link>
           </div>
         </div>
@@ -635,6 +592,89 @@ function escapeHtml(str) {
 
 
 /* -------------------- showUploadDialog (modal handler) -------------------- */
+// const showUploadDialog = () => {
+//   let selectedFile = null;
+//   let errorMessage = "";
+
+//   const openDialog = () => {
+//     modal({
+//       title: "Upload Organization Chart",
+//       body: (
+//         <UploadOrgChartWidget
+//           errorMessage={errorMessage}
+//           onChange={(e) => {
+//             try {
+//               const file = e.target.files?.[0];
+//               if (!file) {
+//                 toast("error", "Please select a file.");
+//                 return;
+//               }
+//               if (!file.name.toLowerCase().endsWith(".csv")) {
+//                 toast("error", "Please select a valid CSV file (.csv)");
+//                 return;
+//               }
+//               selectedFile = file;
+//             } catch (err) {
+//               console.error("File selection error:", err);
+//               toast("error", "Something went wrong while selecting the file.");
+//             }
+//           }}
+//         />
+//       ),
+//       okBtn: {
+//         label: "Upload",
+//         onClick: async () => {
+//           try {
+//             if (!selectedFile) {
+//               toast("error", "Please select a CSV file first.");
+//               return;
+//             }
+
+//             const formData = new FormData();
+//             formData.append("file", selectedFile);
+
+//             const res = await fetch("/api/v1/organizationChart/upload", {
+//               method: "POST",
+//               body: formData,
+//             });
+
+//             const result = await res.json();
+
+//             // Validation errors returned as structured payload: result.data.type === "validation_errors"
+//             if (!res.ok && result?.data?.type === "validation_errors") {
+//               errorMessage = formatUploadErrors(result.data);
+//               openDialog(); // reopen modal with error details
+//               toast("error", "Validation errors found in CSV. See modal.");
+//               return;
+//             }
+
+//             // generic error fallback
+//             if (!res.ok || !result.success) {
+//               const msg = result?.message || "Upload failed.";
+//               errorMessage = escapeHtml(msg).replace(/\n/g, "<br>");
+//               openDialog();
+//               toast("error", msg);
+//               return;
+//             }
+
+//             // success
+//             toast("success", result.message || "Upload successful.");
+//             closeModal();
+//             loadRoles();
+//           } catch (err) {
+//             console.error("Upload exception:", err);
+//             toast("error", "Server error while uploading file.");
+//           }
+//         },
+//       },
+//       cancelBtn: { label: "Close" },
+//     });
+//   };
+
+//   openDialog();
+// };
+
+/* -------------------- showUploadDialog (modal handler) -------------------- */
 const showUploadDialog = () => {
   let selectedFile = null;
   let errorMessage = "";
@@ -683,9 +723,13 @@ const showUploadDialog = () => {
 
             const result = await res.json();
 
-            // Validation errors returned as structured payload: result.data.type === "validation_errors"
-            if (!res.ok && result?.data?.type === "validation_errors") {
-              errorMessage = formatUploadErrors(result.data);
+            // NORMALIZE where validation payload might sit (some servers use `data`, others use `errors`)
+            const validationWrapper = result?.errors || result?.data || null;
+
+            // Validation errors returned as structured payload: wrapper.type === "validation_errors"
+            if (!res.ok && validationWrapper?.type === "validation_errors") {
+              // validationWrapper has shape: { type: "validation_errors", errors: { roleNotAssigned:[], missingUsers:[], ... } }
+              errorMessage = formatUploadErrors(validationWrapper); // formatUploadErrors expects the wrapper (it looks at wrapper.errors)
               openDialog(); // reopen modal with error details
               toast("error", "Validation errors found in CSV. See modal.");
               return;
@@ -716,6 +760,7 @@ const showUploadDialog = () => {
 
   openDialog();
 };
+
 
   /* -------------------- Render -------------------- */
   if (loading)

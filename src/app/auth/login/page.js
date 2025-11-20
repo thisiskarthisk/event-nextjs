@@ -21,7 +21,8 @@ export default function LoginPage() {
     setFormData(prevData => {
       return {
         ...prevData,
-        [fieldName]: e.target.value || '',
+        // [fieldName]: e.target.value || '',
+        [fieldName]: e || '',
       };
     });
   };

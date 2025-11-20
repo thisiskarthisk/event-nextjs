@@ -8,6 +8,7 @@ export async function GET() {
     FROM
       ${Tables.TBL_USERS}
     WHERE active = TRUE
+    ORDER BY id DESC
   `);
 
   return JsonResponse.success({

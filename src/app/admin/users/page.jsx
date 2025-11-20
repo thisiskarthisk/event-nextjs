@@ -4,9 +4,10 @@ import { useAppLayoutContext } from "@/components/appLayout";
 import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import DataTable from "@/components/DataTable";
 import AppIcon from "@/components/icon";
+import { HttpClient } from "@/helper/http";
 import { encodeURLParam } from "@/helper/utils";
 import Link from "next/link";
-import { useEffect } from "react";
+import { use, useEffect , useState} from "react";
 
 export default function UsersListPage() {
   const columns = [
@@ -17,26 +18,53 @@ export default function UsersListPage() {
     { 'column': 'mobile_no', 'label': 'Mobile No' },
   ];
 
-  const { setPageTitle, toggleProgressBar, confirm } = useAppLayoutContext();
+  const { setPageTitle, toggleProgressBar, confirm, toast ,closeModal } = useAppLayoutContext();
 
-  const onDeleteUserClicked = (e) => {
+  const {userList , setUserList} = useState();
+
+  useEffect(() => {
+    setPageTitle('Users');
+    toggleProgressBar(false);
+    // fetchUserList();
+  }, []);
+  
+  const onDeleteUserClicked = (e, id) => {
     e.preventDefault();
-
     if (document.activeElement) document.activeElement.blur();
-
     confirm({
-      title: 'Delete User',
-      message: 'Are you sure you want to Delete the User?',
+      title: "Delete User",
+      message: "Are you sure you want to Delete the User?",
       positiveBtnOnClick: () => {
-        // toggleProgressBar(true);
-        // TODO: Implement delete functionality
+        toggleProgressBar(true);
+        try {
+          HttpClient({
+            url: '/users/delete',
+            method: "POST",
+            data: { id: id },
+          }).then(res => {
+            toast('success', res.message || 'The User record has been deleted successfully.');
+            toggleProgressBar(false);
+            closeModal();
+            // fetchUserList();
+          }).catch(err => {
+            closeModal();
+            toggleProgressBar(false);
+            let message = 'Error occurred when trying to delete the User.';
+            if (err.response && err.response.data && err.response.data.message) {
+              message = err.response.data.message;
+            }
+            toast('error', message);
+          });
+        } catch (error) {
+          toast('error', 'Error occurred when trying to save the User data.');
+        }
       },
     });
   };
 
+
   useEffect(() => {
     setPageTitle('Users');
-
     toggleProgressBar(false);
   }, []);
 
@@ -66,7 +94,7 @@ export default function UsersListPage() {
                           <AppIcon ic="pencil" />
                         </Link>
                         &nbsp;|&nbsp;
-                        <a href="#" className="text-danger" onClick={onDeleteUserClicked}>
+                        <a href="#" className="text-danger" onClick={(e) => onDeleteUserClicked(e, rowData.id)}>
                           <AppIcon ic="delete" />
                         </a>
                       </>

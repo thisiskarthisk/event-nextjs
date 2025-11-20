@@ -14,29 +14,43 @@ function fromBase64Url(base64url) {
 }
 
 export function encodeURLParam(data) {
-  const iv = crypto.randomBytes(12);
+  try {
+    /* const iv = crypto.randomBytes(12);
 
-  const cipher = crypto.createCipheriv(URL_ENC_ALGORITHM, secretKey, iv);
+    const cipher = crypto.createCipheriv(URL_ENC_ALGORITHM, secretKey, iv);
 
-  const encrypted = Buffer.concat([ cipher.update(data, 'utf8'), cipher.final() ]);
+    const encrypted = Buffer.concat([ cipher.update(data, 'utf8'), cipher.final() ]);
 
-  const tag = cipher.getAuthTag();
+    const tag = cipher.getAuthTag();
 
-  return toBase64Url(Buffer.concat([ iv, tag, encrypted ]));
+    return toBase64Url(Buffer.concat([ iv, tag, encrypted ])); */
+    return btoa(data).replace(/=*$/, '');
+  } catch (error) {
+    console.error('[encodeURLParam] Error:', error);
+
+    return null;
+  }
 }
 
 export function decodeURLParam(encData) {
-  encData = fromBase64Url(encData);
+  try {
+    /* encData = fromBase64Url(encData);
 
-  const iv = encData.subarray(0, 12);
-  const tag = encData.subarray(12, 28);
-  const encrypted = encData.subarray(28);
+    const iv = encData.subarray(0, 12);
+    const tag = encData.subarray(12, 28);
+    const encrypted = encData.subarray(28);
 
-  const decipher = crypto.createDecipheriv(URL_ENC_ALGORITHM, secretKey, iv);
+    const decipher = crypto.createDecipheriv(URL_ENC_ALGORITHM, secretKey, iv);
 
-  decipher.setAuthTag(tag);
+    decipher.setAuthTag(tag);
 
-  const decrypted = Buffer.concat([ decipher.update(encrypted), decipher.final() ]);
+    const decrypted = Buffer.concat([ decipher.update(encrypted), decipher.final() ]);
 
-  return decrypted.toString('utf8');
+    return decrypted.toString('utf8'); */
+    return atob(encData);
+  } catch (error) {
+    console.error('[decodeURLParam] Error:', error);
+
+    return null;
+  }
 }
