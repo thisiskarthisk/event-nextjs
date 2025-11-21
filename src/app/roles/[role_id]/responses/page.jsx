@@ -9,6 +9,96 @@ import { useSession } from "next-auth/react";
 import AppIcon from "@/components/icon";
 import Papa from "papaparse";
 import Link from "next/link";
+import TextField from "@/components/form/TextField";
+import SelectPicker from "@/components/form/SelectPicker";
+
+const initialUploadFormData = {
+  periodDate: '',
+  file: '',
+};
+
+function UploadResponseForm({ frequency, onChange }) {
+  const [ formData, setFormData ] = useState({ ...initialUploadFormData });
+  const [weeksList, setWeeksList] = useState([]);
+
+  const onPeriodFieldChanged = (value, name) => {
+    if (frequency === 'weekly' && name === 'month') {
+      const [year, month] = value.split("-").map(Number)
+
+      setWeeksList([
+        ...noOfWeeksInMonth(year, month),
+      ]);
+    }
+
+    setFormData(prevData => {
+      name = name === 'file' ? name : 'periodDate';
+
+      return {
+        ...prevData,
+        [name]: value,
+      };
+    });
+  };
+
+  useEffect(() => {
+    onChange(formData);
+  }, [formData]);
+
+  return (
+    <>
+      <span className="badge bg-success text-white mb-3">Uploading new data will overwrite existing data.</span>
+
+      {
+        (frequency === 'daily' || frequency === 'weekly') &&
+        <div className="mb-3">
+          <TextField
+            type="month"
+            label="Select Month"
+            placeholder="YYYY-MM"
+            name="month"
+            value={formData.periodDate}
+            onChange={(v) => onPeriodFieldChanged(v, 'month')}
+            isRequired={true} />
+        </div>
+      }
+
+      {
+        frequency === 'monthly' &&
+        <div className="mb-3">
+          <TextField
+            type="number"
+            label="Enter Year"
+            placeholder="YYYY-MM"
+            name="year"
+            value={formData.periodDate}
+            onChange={(v) => onPeriodFieldChanged(v, 'year')}
+            isRequired={true} />
+        </div>
+      }
+
+      {
+        frequency === 'weekly' &&
+        <div className="mb-3">
+          <SelectPicker
+            label="Select Week"
+            options={weeksList}
+            value={formData.periodDate}
+            isRequired={true}
+            onChange={(v) => onPeriodFieldChanged(v, 'week')} />
+        </div>
+      }
+
+      <div className="mb-3 mt-3">
+        <TextField
+            type="file"
+            label="Choose File"
+            name="file"
+            onChange={(v) => onPeriodFieldChanged(v, 'file')}
+            isRequired={true} />
+      </div>
+    </>
+  );
+}
 
 export default function KPIResponses({ params }) {
   const { data: session, status } = useSession();
@@ -17,6 +107,12 @@ export default function KPIResponses({ params }) {
   const { setPageTitle, toggleProgressBar, toast, modal} = useAppLayoutContext();
   const { t, locale } = useI18n();
   const [data, setData] = useState([]);
+
+  const [ uploadFormData, setUploadFormData ] = useState({ ...initialUploadFormData });
+
+  useEffect(() => {
+    console.log('uploadFormData:', uploadFormData);
+  }, [uploadFormData]);
 
   const sampleChartTemplate = {
     "bar-chart": "LABEL,VALUE\n1,10\n2,20",
@@ -189,88 +285,42 @@ export default function KPIResponses({ params }) {
     });
   };
 
+  const onUploadFormSubmitted = (frequency, user_id, chartType, role_id, record_id, existingChartData) => {
+    console.log("onUploadFormSubmitted()", uploadFormData);
+
+    handleFileUpload(user_id, uploadFormData.file, chartType, role_id, record_id, existingChartData, uploadFormData.periodDate);
+  };
+
   const handleModalFileUpload = (frequency, user_id, chartType, role_id, record_id, existingChartData) => {
-    let frequencyField = "";
-    let periodDate = "";
-
-    if (frequency === "daily")
-      frequencyField = `
-        <div class="mb-3">
-          <label class="form-label">Select Month</label>
-          <input type="month" id="dailyMonth" class="form-control" />
-        </div>
-      `;
-
-    if (frequency === "monthly")
-      frequencyField = `
-        <div class="mb-3">
-          <label class="form-label">Enter Year</label>
-          <input type="number" id="monthlyYear" class="form-control" placeholder="YYYY" min="1900" max="2100" />
-        </div>
-      `;
-
-    if (frequency === "weekly")
-      frequencyField = `
-        <div class="mb-3">
-          <label class="form-label">Select Month</label>
-          <input type="month" id="weeklyMonth" class="form-control"/>
-          <div id="weeklyMonthError" class="text-danger small mt-1"></div>
-        </div>
-        <div class="mb-3" id="weekDropdownContainer"></div>
-      `;
-
     modal({
-      title: "Upload KPI Response",
-      body: `
-        <span class="badge bg-success text-white mb-3">Uploading new data will overwrite existing data.</span>
-        ${frequencyField}
-        <div class="mb-3 mt-3">
-          <label class="form-label">Choose File</label>
-          <input type="file" id="responseFile" accept=".csv" class="form-control" />
-        </div>
-      `,
+      title: 'Upload KPI Response',
+      body: (
+        <UploadResponseForm
+          frequency={frequency}
+          onChange={newData => {
+            console.log("newData", newData);
+            setUploadFormData(prevData => ({
+              ...prevData,
+              ...newData,
+            }));
+          }} />
+      ),
       okBtn: {
-        label: "Upload",
+        label: 'Upload',
         onClick: async () => {
-          if (frequency === "daily")
-            periodDate =  `${document.getElementById("dailyMonth")?.value}-01`;
+          console.log("Ok button", uploadFormData);
 
-          if (frequency === "monthly")
-            periodDate = document.getElementById("monthlyYear")?.value;
+          onUploadFormSubmitted(frequency, user_id, chartType, role_id, record_id, existingChartData);
 
-          if (frequency === "weekly")
-            periodDate = `${document.getElementById("weeklyMonth")?.value}-${document.getElementById("weekSelect")?.value}W`;
-            
-
-          const fileInput = document.getElementById("responseFile")
-          if (!fileInput?.files?.length) return
-          const file = fileInput.files[0]
-          handleFileUpload(user_id, file, chartType, role_id, record_id, existingChartData, periodDate)
-        }
+          // handleFileUpload(user_id, uploadFormData.file, chartType, role_id, record_id, existingChartData, uploadFormData.periodDate);
+        },
       },
-      cancelBtn: { label: "Cancel" }
-    })
+      cancelBtn: {
+        label: 'Cancel',
+      },
+    });
 
-    setTimeout(() => {
-      const monthInput = document.getElementById("weeklyMonth")
-      if (!monthInput) return
-
-      monthInput.addEventListener("change", e => {
-        const value = e.target.value
-        if (!value) return
-
-        const [year, month] = value.split("-").map(Number)
-        const weeks = noOfWeeksInMonth(year, month)
-
-        let options = ""
-        for (let i = 1; i <= weeks; i++) options += `<option value="${i}">Week ${i}</option>`
-
-        document.getElementById("weekDropdownContainer").innerHTML = `
-          <label class="form-label">Select Week</label>
-          <select id="weekSelect" class="form-control" required>${options}</select>
-        `
-      })
-    }, 200)
+    return;
   }
 
 
@@ -281,7 +331,7 @@ export default function KPIResponses({ params }) {
       fetchKPIResponses();
       toggleProgressBar(false);
     }
-  }, []);
+  }, [status]);
 
   return (
     <AuthenticatedPage>
@@ -386,14 +436,6 @@ export default function KPIResponses({ params }) {
           )}
         </div>
       </div>
-      <style jsx>{`
-        .icon-hover-btn:hover svg {
-          color: white !important;
-          fill: white !important;
-          stroke: white !important;
-        }
-      `}
-      </style>
     </AuthenticatedPage>
   );
 }

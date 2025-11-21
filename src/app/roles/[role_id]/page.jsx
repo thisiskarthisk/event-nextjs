@@ -21,7 +21,7 @@ export default function RoleSheet() {
   useEffect(() => {
     setPageTitle('Role Sheet');
     toggleProgressBar(false);
-  }, [locale, role_id,]);
+  }, [locale, role_id]);
 
 
   /** View Responses Sheet */

@@ -150,7 +150,9 @@ export default function AppLayout({ children }) {
           </div>
         }
         {children}
-          <ToastContainer />
+
+        <ToastContainer />
+        
       </AppLayoutContext.Provider>
     </SessionProvider>
   );
