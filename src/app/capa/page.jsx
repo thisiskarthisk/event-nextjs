@@ -3,109 +3,85 @@
 import { useAppLayoutContext } from "@/components/appLayout";
 import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import AppIcon from "../../components/icon";
 import DataTable from "@/components/DataTable";
 import { useRouter } from "next/navigation";
+import { HttpClient } from "@/helper/http";
 
 export default function Capa() {
-    const { setPageTitle, modal, toast, closeModal, toggleProgressBar } = useAppLayoutContext();
+
+    const { setPageTitle, toast, toggleProgressBar, confirm ,closeModal} = useAppLayoutContext();
     const { t, locale } = useI18n();
     const router = useRouter();
-    const [data, setData] = useState([]);
 
     const columns = [
-        { 'column': 'capa_no', 'label': 'CAPA No' },
+        { column: 'capa_no', label: 'CAPA No' },
     ];
 
-    /** Add New CAPA */
-    const handleAddNewCAPA = () => {
-        router.push(`/capa/new`);
+    const handleAddNewCAPA = () => router.push(`/capa/new`);
+
+    const handleView = (id) => router.push(`/capa/view/${id}`);
+
+    const handleEdit = (id) => router.push(`/capa/edit/${id}`);
+
+    const handleDelete = (id) => {
+        console.log("handleDelete called with ID: " + id);
+        if (document.activeElement) document.activeElement.blur();
+
+        confirm({
+            title: "Delete CAPA",
+            message: "Are you sure you want to Delete the CAPA?",
+            positiveBtnOnClick: () => {
+                toggleProgressBar(true);
+                try {
+                    HttpClient({
+                        url: `/capa/delete/${id}`,
+                        method: "POST",
+                        data: { id: id },
+                    }).then(res => {
+                        toast('success', res.message || 'The User record has been deleted successfully.');
+                        toggleProgressBar(false);
+                        closeModal();
+                    }).catch(err => {
+                        closeModal();
+                        toggleProgressBar(false);
+                        let message = 'Error occurred when trying to delete the User.';
+                        if (err.response && err.response.data && err.response.data.message) {
+                        message = err.response.data.message;
+                        }
+                        toast('error', message);
+                    });
+                } catch (error) {
+                    toast('error', 'Error occurred when trying to save the User data.');
+                }
+            },
+        });
     };
 
-    /** View CAPA */
-    const handleView = (id) => {
-        router.push(`/capa/view/${id}`);
-    };
-
-    /** Edit CAPA */
-    const handleEdit = (id) => {
-        router.push(`/capa/edit/${id}`);
-    };
 
     const renderActions = (rowData) => (
         <>
             <button className="btn btn-md me-2" onClick={() => handleView(rowData.ga_id)}>
                 <AppIcon ic="eye" className="text-info" />
             </button>
+
             <button className="btn btn-md me-2" onClick={() => handleEdit(rowData.ga_id)}>
                 <AppIcon ic="pencil" className="text-primary" />
             </button>
+
             <button className="btn btn-md" onClick={() => handleDelete(rowData.ga_id)}>
                 <AppIcon ic="delete" className="text-danger" />
             </button>
         </>
     );
 
-    const fetchCAPAList = () => {
-        fetch("/api/v1/capa/list")
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.success) {
-                    setData(json.data.gap_analysis);
-                } else {
-                    console.error("Error fetching data:", json.message);
-                }
-            })
-            .catch((err) => console.error("API Error:", err));
-    }
 
     useEffect(() => {
         setPageTitle(t('CAPA'));
-
         toggleProgressBar(false);
-
-        fetchCAPAList();
     }, [locale]);
 
-    /** Delete CAPA */
-    const handleDelete = async (id) => {
-        modal({
-            title: "Are you sure?",
-            body: "<p>This action will permanently delete the CAPA.</p>",
-            okBtn: {
-                label: "Yes, Delete",
-                onClick: async () => {
-                    try {
-                        const res = await fetch(`/api/v1/capa/delete/${id}`, {
-                            method: "DELETE",
-                        });
-
-                        const data = await res.json();
-                        if (!data.success) throw new Error(data.message || "Failed to delete");
-
-                        // Update UI after successful delete
-                        setData((prev) =>
-                            prev.filter((obj) => obj.id !== id)
-                        );
-
-                        closeModal();
-                        toast('success', data.message || 'CAPA deleted successfully!');
-                    } catch (err) {
-                        console.error("Delete error:", err);
-                        toast('error', 'Error deleting role sheet');
-                    }
-                },
-            },
-            cancelBtn: {
-                label: "Cancel",
-                onClick: () => {
-                    console.log("Delete canceled");
-                },
-            },
-            closeOnEsc: true,
-        });
-    };
 
     return (
         <AuthenticatedPage>
@@ -115,16 +91,19 @@ export default function Capa() {
                         <div className="card-body">
                             <div className="card-header d-flex justify-content-between align-items-center">
                                 <h5 className="mb-0">CAPA</h5>
+
                                 <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewCAPA}>
                                     <AppIcon ic="plus" className="text-info" /> Add New CAPA
                                 </button>
                             </div>
+
                             <DataTable
                                 apiPath="/capa/list"
                                 dataKeyFromResponse="gap_analysis"
                                 columns={columns}
                                 actionColumnFn={renderActions}
-                                paginationType="client" />
+                                paginationType="client"
+                            />
                         </div>
                     </div>
                 </div>
