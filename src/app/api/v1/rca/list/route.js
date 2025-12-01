@@ -7,6 +7,7 @@ export async function GET() {
       *
     FROM
       root_cause_analysis rca
+    WhERE rca.active = TRUE
     ORDER BY rca.id ASC
   `);
 

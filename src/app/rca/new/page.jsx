@@ -3,14 +3,20 @@
 import { useAppLayoutContext } from "@/components/appLayout";
 import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState ,use } from "react";
 import { useRouter } from "next/navigation";
+import TextField from "@/components/form/TextField";
+import SelectPicker from "@/components/form/SelectPicker";
+import TextArea from "@/components/form/TextArea";
+import { HttpClient } from "@/helper/http";
 
 export default function RcaForm({ params }) {
-    const { setPageTitle, modal, closeModal, toast, toggleProgressBar } = useAppLayoutContext();
+    const { setPageTitle, modal, closeModal, toast, toggleProgressBar , confirm } = useAppLayoutContext();
     const { t, locale } = useI18n();
     const router = useRouter();
+    // const id = params?.id;
     const { id } = use(params);
+
 
     const initialForm = {
         id: null,
@@ -18,7 +24,7 @@ export default function RcaForm({ params }) {
         gap_analysis_id: "",
         department: "",
         date_of_report: "",
-        reported_by: "",
+        reported_by: "", // ✅ Default numeric user ID
         date_of_occurrence: "",
         impact: "",
         problem_description: "",
@@ -29,71 +35,91 @@ export default function RcaForm({ params }) {
     const [form, setForm] = useState(initialForm);
     const [capaList, setCapaList] = useState([]);
     const [cpActionsList, setCpActionsList] = useState([]);
-    const [selectedCapa, setSelectedCapa] = useState(null);
+    const [selectedCapa, setSelectedCapa] = useState([]);
+    const [errors, setErrors] = useState({});
+    const [rcaWhyErrors, setRcaWhyErrors] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [rcaId, setRCAID] = useState(false);
 
-    const getCapaDetails = () => {
-        fetch("/api/v1/rca/new")
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.success) {
-                    setCapaList(json.data.gap_analysis_list || []);
-                    setCpActionsList(json.data.cp_actions || []);
-                } else {
-                    console.error("Error fetching data:", json.message);
+
+    const getCapaDetails = async () => {
+        try {
+            HttpClient({
+                url: "/rca/new",
+                method: "GET",
+            }).then(res => {
+                if (res.success) {
+                    setCapaList(res.data.gap_analysis_list || []);
+                    setCpActionsList(res.data.cp_actions || []);
                 }
-            })
-            .catch((err) => console.error("API Error:", err));
-    }
+            }).catch(err => console.error("getCapaDetails error:", err));
+        } catch (err) {
+            console.error("getCapaDetails error:", err);
+        }
+    };
+
+
+     const loadRcaData = async (rcaId) => {
+        try {
+            HttpClient({
+                url: `/rca/${rcaId}`,
+                method: "GET",
+            }).then(res => {
+                if (res.success) {
+                    const root_cause_analysis = res.data.root_cause_analysis;
+                    const rca_whys = res.data.rca_whys || [];
+
+                    const rca_whys_data = rca_whys.map(a => ({
+                        id: a.id,
+                        question: a.question || '',
+                        response: a.answer || '',
+                        isExist: true
+                    }));
+
+                    setForm({
+                        ...initialForm,
+                        id: root_cause_analysis.id,
+                        rca_no: root_cause_analysis.rca_no || '',
+                        gap_analysis_id: root_cause_analysis.gap_analysis_id || '',
+                        // gap_analysis_id: String(res.gap_analysis_id || ""),
+                        department: root_cause_analysis.department || '',
+                        date_of_report: root_cause_analysis.date_of_report || '',
+                        reported_by: root_cause_analysis.reported_by || "1",
+                        date_of_occurrence: root_cause_analysis.date_of_occurrence || '',
+                        impact: root_cause_analysis.impact || '',
+                        problem_description: root_cause_analysis.problem_desc || '',
+                        immediate_action_taken: root_cause_analysis.immediate_action_taken || '',
+                        rca_whys: rca_whys_data.length > 0 ? rca_whys_data : [initialForm.rca_whys[0]]
+                    });
+                }
+            }).catch(err => console.error("loadRcaData error:", err));
+        } catch (err) {
+            console.error("loadRcaData error:", err);
+        }
+    };
+            
 
     useEffect(() => {
-        setPageTitle(id ? t('RCA Details') : t('RCA New'));
-
+        setPageTitle(id ? t("RCA Details") : t("RCA New"));
         toggleProgressBar(false);
 
-        getCapaDetails();
-
         if (id) {
-            fetch(`/api/v1/rca/${id}`)
-                .then((res) => res.json())
-                .then((response) => {
-                    if (response.success) {
-                        const root_cause_analysis = response.data.root_cause_analysis;
-                        const rca_whys = response.data.rca_whys;
+            setRCAID(id);
+            loadRcaData(id);
+        } 
+        getCapaDetails();
+    }, [id, locale]);
 
-                        const rca_whys_data = rca_whys.map(a => ({
-                            id: a.id,
-                            question: a.question || '',
-                            response: a.answer || '',
-                            isExist: true
-                        }));
 
-                        setForm({
-                            ...initialForm,
-                            id: root_cause_analysis.id || '',
-                            rca_no: root_cause_analysis.rca_no || '',
-                            gap_analysis_id: root_cause_analysis.gap_analysis_id || '',
-                            department: root_cause_analysis.department || '',
-                            date_of_report: root_cause_analysis.date_of_report || '',
-                            reported_by: root_cause_analysis.reported_by || '',
-                            date_of_occurrence: root_cause_analysis.date_of_occurrence || '',
-                            impact: root_cause_analysis.impact || '',
-                            problem_description: root_cause_analysis.problem_desc || '',
-                            immediate_action_taken: root_cause_analysis.immediate_action_taken || '',
-                            rca_whys: rca_whys_data || []
-                        });
 
-                    } else {
-                        console.error("Error fetching data:", response.message);
-                    }
-                })
-                .catch((err) => console.error("API Error:", err));
+    const handleChange = (value, fieldName) => {
+        setForm(prev => ({
+            ...prev,
+            [fieldName]: typeof value === "object" ? value.target?.value : value
+        }));
+        if (errors[fieldName]) {
+            setErrors(prev => ({ ...prev, [fieldName]: '' }));
         }
-
-    }, [locale, id]);
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setForm({ ...form, [name]: value });
     };
 
     const handleWhyChange = (e, index) => {
@@ -106,112 +132,100 @@ export default function RcaForm({ params }) {
     const addWhy = () => {
         setForm((prev) => ({
             ...prev,
-            rca_whys: [...prev.rca_whys, { question: "", response: "" }],
+            rca_whys: [...prev.rca_whys, { id: null, question: "", response: "", isExist: false }],
         }));
     };
 
-    const removeWhy = async (index, rca_why_id) => {
-        modal({
-            title: "Are you sure?",
-            body: "<p>This action will permanently delete the question.</p>",
-            okBtn: {
-                label: "Yes, Delete",
-                onClick: async () => {
-                    if (rca_why_id) {
-                        try {
-                            const res = await fetch(`/api/v1/rca/${rca_why_id}`, {
-                                method: "DELETE",
-                            });
 
-                            const data = await res.json();
-                            if (!data.success) throw new Error(data.message || "Failed to delete");
+    const removeWhy = (id, why_id) => {
+        console.log("RCA Question removeWhy called with ID: " + why_id);
 
-                            const newWhys = form.rca_whys.filter((_, i) => i !== index);
-                            setForm({ ...form, rca_whys: newWhys });
+        if (document.activeElement) document.activeElement.blur();
+   
+        console.log("RCA Question removeWhy called with ID: " + why_id);
 
-                            closeModal();
-                            toast('success', data.message || 'RCA question deleted successfully!');
-                        } catch (err) {
-                            console.error("Delete error:", err);
-                            toast('error', 'Error deleting rca question');
+        confirm({
+            title: "Delete RCA Question",
+            message: "Are you sure you want to Delete the RCA Question?",
+            positiveBtnOnClick: () => {
+                toggleProgressBar(true);
+                try {
+                    HttpClient({
+                        url: `/rca/delete/rca_whys/${why_id}`, // Assuming a new specific endpoint for 'rca_whys'
+                        method: "POST", // Changed from 'POST'
+                        // No need to send 'data: { id }' in the body for a DELETE with ID in URL
+                    }).then(res => {
+                        // console.log(res);
+                        // *** CORRECTION 3: The success message should indicate a 'why' question was deleted.
+                        toast('success', res.message || 'The RCA Question has been deleted successfully.');
+                        closeModal();
+                        toggleProgressBar(false);
+
+                        if(rcaId){                            
+                            loadRcaData(id);
                         }
-                    } else {
-                        const newWhys = form.rca_whys.filter((_, i) => i !== index);
-                        setForm({ ...form, rca_whys: newWhys });
-                    }
-                },
+                    }).catch(err => {
+                        closeModal();
+                        let message = 'Error occurred when trying to delete the RCA Question.';
+                        if (err.response?.data?.message) {
+                            message = err.response.data.message;
+                        }
+                        toast('error', message);
+                        toggleProgressBar(false);
+                    });
+                } catch (error) {
+                    toast('error', 'Error occurred when trying to delete the RCA Question data.');
+                }
             },
-            cancelBtn: {
-                label: "Cancel",
-                onClick: () => {
-                    console.log("Delete canceled");
-                },
-            },
-            closeOnEsc: true,
         });
     };
 
 
-    const handleCapaSelect = (e) => {
-        const value = e.target.value;
+
+    const handleCapaSelect = (value) => {
         setForm({ ...form, gap_analysis_id: value });
     };
 
-    const [errors, setErrors] = useState({});
-    const [rcaWhyErrors, setRcaWhyErrors] = useState({});
-
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setErrors({});
+        setRcaWhyErrors({});
+        setLoading(true);
 
         try {
-            const response = await fetch("/api/v1/rca/save", {
+            HttpClient({
+                url: "/rca/save",
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form),
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                toast('success', result.message || 'RCA saved successfully!');
-                router.push("/rca");
-            } else {
-                toast('error', result.message || "Failed to save RCA");
-
-                if (result.data.errors) {
-                    const rcaWhyErrorMap = [];
-                    const formErrors = result.data.errors;
-
-                    if (Object.keys(formErrors).length > 0) {
-                        setErrors(formErrors);
-
-                        if (formErrors.rca_whys && formErrors.rca_whys.length > 0) {
-                            formErrors.rca_whys.forEach((err) => {
-                                rcaWhyErrorMap[err.index] = err;
-                            })
-                            setRcaWhyErrors(rcaWhyErrorMap);
-                        } else {
-                            setRcaWhyErrors({});
-                        }
-                    }
+                data: form,
+            }).then(res => {
+                if (res.success) {
+                    toast('success', res.message || 'RCA saved successfully!');
+                    router.push("/rca");
+                } else {
+                    toast('error', res.message || "Failed to save RCA");
                 }
-            }
+            }).catch(err => {
+                console.error("Submit Error:", err);
+                toast('error', 'Network error. Please try again.');
+            }).finally(() => {
+                setLoading(false);
+            });
         } catch (err) {
-            console.error("Error:", err);
-            toast('error', 'Failed to save RCA');
+            console.error("Submit Error:", err);
+            toast('error', 'Network error. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
+
     useEffect(() => {
         if (form.gap_analysis_id) {
-            const found = cpActionsList.filter(
-                (c) => String(c.ga_id) === String(form.gap_analysis_id)
-            );
-            setSelectedCapa(found || []);
+            const found = cpActionsList.filter((c) => String(c.ga_id) === String(form.gap_analysis_id));
+            setSelectedCapa(found);
         } else {
             setSelectedCapa([]);
         }
-
     }, [form.gap_analysis_id, cpActionsList]);
 
     const handleCancel = () => router.push("/rca");
@@ -222,131 +236,101 @@ export default function RcaForm({ params }) {
                 <div className="col-12">
                     <form className="p-3" onSubmit={handleSubmit}>
                         <div className="card border-success shadow">
-                            <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                <h5 className="my-1">Root Cause Analysis (RCA)</h5>
+                            <div className="card-header bg-success text-white">
+                                <h5>Root Cause Analysis (RCA)</h5>
                             </div>
-
                             <div className="card-body">
-                                {/* RCA Info */}
                                 <div className="row">
-                                    {id && <div className="col-md-4 mb-3">
-                                        <label className="form-label">RCA No</label>
-                                        <input
-                                            className="form-control"
-                                            name="rca_no"
-                                            value={form.rca_no}
-                                            readOnly
-                                            style={{
-                                                cursor: "not-allowed",
-                                                color: "black",
-                                                backgroundColor: "lightgray",
-                                            }}
-                                        />
-                                    </div>}
-
+                                    {id && (
+                                        <div className="col-md-4 mb-3">
+                                            <TextField
+                                                label="RCA No"
+                                                name="rca_no"
+                                                value={form.rca_no || ''}
+                                                disabled
+                                                style={{ backgroundColor: "lightgray" }}
+                                            />
+                                        </div>
+                                    )}
                                     <div className="col-md-4 mb-3">
-                                        <label className="form-label fw-bold">Department</label>
-                                        <input
-                                            className={`form-control ${errors?.department ? "is-invalid" : ""}`}
+                                        <TextField
+                                            label="Department *"
+                                            className={`form-control ${errors.department ? "is-invalid" : ""}`}
                                             name="department"
-                                            value={form.department}
-                                            onChange={handleChange}
+                                            value={form.department || ''}
+                                            onChange={(e) => handleChange(e, "department")}
                                         />
-                                        {errors?.department && (
-                                            <span id="departmentInputError" className="error invalid-feedback">{errors?.department}</span>
-                                        )}
+                                        {errors.department && <div className="invalid-feedback">{errors.department}</div>}
                                     </div>
-
                                     <div className="col-md-4 mb-3">
-                                        <label className="form-label fw-bold">Reported By</label>
-                                        <input
-                                            className={`form-control ${errors?.reported_by ? "is-invalid" : ""}`}
+                                        <TextField
+                                            label="Reported By *"
+                                            className={`form-control ${errors.reported_by ? "is-invalid" : ""}`}
                                             name="reported_by"
-                                            value={form.reported_by}
-                                            onChange={handleChange}
+                                            value={form.reported_by || ''}
+                                            onChange={(e) => handleChange(e, "reported_by")}
                                         />
-                                        {errors?.reported_by && (
-                                            <span id="reportedByInputError" className="error invalid-feedback">{errors?.reported_by}</span>
-                                        )}
                                     </div>
-
                                     <div className="col-md-4 mb-3">
-                                        <label className="form-label fw-bold">Date of Report</label>
-                                        <input
+                                        <TextField
+                                            label="Date of Report *"
                                             type="date"
-                                            className={`form-control ${errors?.date_of_report ? "is-invalid" : ""}`}
+                                            className={`form-control ${errors.date_of_report ? "is-invalid" : ""}`}
                                             name="date_of_report"
-                                            value={form.date_of_report}
-                                            onChange={handleChange}
+                                            value={form.date_of_report || ''}
+                                            onChange={(e) => handleChange(e, "date_of_report")}
                                         />
-                                        {errors?.date_of_report && (
-                                            <span id="dateOfReportInputError" className="error invalid-feedback">{errors?.date_of_report}</span>
-                                        )}
                                     </div>
-
-
                                     <div className="col-md-4 mb-3">
-                                        <label className="form-label fw-bold">Date of Occurrence</label>
-                                        <input
+                                        <TextField
+                                            label="Date of Occurrence *"
                                             type="date"
-                                            className={`form-control ${errors?.date_of_occurrence ? "is-invalid" : ""}`}
+                                            className={`form-control ${errors.date_of_occurrence ? "is-invalid" : ""}`}
                                             name="date_of_occurrence"
-                                            value={form.date_of_occurrence}
-                                            onChange={handleChange}
+                                            value={form.date_of_occurrence || ''}
+                                            onChange={(e) => handleChange(e, "date_of_occurrence")}
                                         />
-                                        {errors?.date_of_occurrence && (
-                                            <span id="dateOfOccurrenceInputError" className="error invalid-feedback">{errors?.date_of_occurrence}</span>
-                                        )}
                                     </div>
                                 </div>
 
-                                {/* Text Areas */}
                                 <div className="mb-3">
-                                    <label className="form-label fw-bold">Impact</label>
-                                    <textarea
-                                        className={`form-control ${errors?.impact ? "is-invalid" : ""}`}
-                                        rows="2"
+                                    <TextArea
+                                        label="Impact *"
                                         name="impact"
-                                        value={form.impact}
-                                        onChange={handleChange}
+                                        value={form.impact || ''}
+                                        onChange={(e) => handleChange(e, "impact")}
+                                        className={`form-control ${errors.impact ? "is-invalid" : ""}`}
+                                        rows="2"
                                     />
-                                    {errors?.impact && (
-                                        <span id="impactInputError" className="error invalid-feedback">{errors?.impact}</span>
-                                    )}
                                 </div>
 
                                 <div className="mb-3">
-                                    <label className="form-label fw-bold">Problem Description</label>
-                                    <textarea
-                                        className={`form-control ${errors?.problem_description ? "is-invalid" : ""}`}
-                                        rows="3"
+                                    <TextArea
+                                        label="Problem Description *"
                                         name="problem_description"
-                                        value={form.problem_description}
-                                        onChange={handleChange}
+                                        value={form.problem_description || ''}
+                                        onChange={(e) => handleChange(e, "problem_description")}
+                                        className={`form-control ${errors.problem_description ? "is-invalid" : ""}`}
+                                        rows="3"
                                     />
-                                    {errors?.problem_description && (
-                                        <span id="problemDescriptionInputError" className="error invalid-feedback">{errors?.problem_description}</span>
-                                    )}
                                 </div>
 
                                 <div className="mb-3">
-                                    <label className="form-label fw-bold">Immediate Action Taken</label>
-                                    <textarea
-                                        className={`form-control ${errors?.immediate_action_taken ? "is-invalid" : ""}`}
-                                        rows="3"
+                                    <TextArea
+                                        label="Immediate Action Taken *"
                                         name="immediate_action_taken"
-                                        value={form.immediate_action_taken}
-                                        onChange={handleChange}
+                                        value={form.immediate_action_taken || ''}
+                                        onChange={(e) => handleChange(e, "immediate_action_taken")}
+                                        className={`form-control ${errors.immediate_action_taken ? "is-invalid" : ""}`}
+                                        rows="3"
                                     />
-                                    {errors?.immediate_action_taken && (
-                                        <span id="immediateActionTakenInputError" className="error invalid-feedback">{errors?.immediate_action_taken}</span>
-                                    )}
                                 </div>
 
                                 {/* RCA 5 Whys */}
                                 <div className="mt-4">
                                     <h5 className="text-primary mb-3 border-bottom pb-2">RCA 5 Whys</h5>
                                     {form.rca_whys.map((why, idx) => (
+                                        console.log(why),
                                         <div key={idx} className="card mb-3 border-info">
                                             <div className="card-header bg-light d-flex justify-content-between">
                                                 <span className="fw-bold text-info">Why {idx + 1}</span>
@@ -355,166 +339,110 @@ export default function RcaForm({ params }) {
                                                         type="button"
                                                         className="btn btn-sm btn-outline-danger"
                                                         onClick={() => removeWhy(idx, why.id)}
+                                                        style={{ marginLeft: "auto" }}
                                                     >
                                                         Delete
                                                     </button>
                                                 )}
                                             </div>
                                             <div className="card-body">
-                                                <label className="form-label fw-bold">Question</label>
-                                                <textarea
-                                                    className={`form-control mb-3 ${rcaWhyErrors[idx]?.errors?.question ? "is-invalid" : ""}`}
-                                                    rows="2"
+                                                <TextArea
+                                                    label="Question"
                                                     name="question"
-                                                    value={why.question}
+                                                    value={why.question || ''}
                                                     onChange={(e) => handleWhyChange(e, idx)}
-                                                />
-                                                {rcaWhyErrors[idx]?.errors?.question && (
-                                                    <span id="questionInputError" className="error invalid-feedback">{rcaWhyErrors[idx]?.errors?.question}</span>
-                                                )}
-
-                                                <label className="form-label fw-bold">Response</label>
-                                                <textarea
-                                                    className={`form-control ${rcaWhyErrors[idx]?.errors?.response ? "is-invalid" : ""}`}
+                                                    className="form-control mb-3"
                                                     rows="2"
-                                                    name="response"
-                                                    value={why.response}
-                                                    onChange={(e) => handleWhyChange(e, idx)}
                                                 />
-                                                {rcaWhyErrors[idx]?.errors?.response && (
-                                                    <span id="responseInputError" className="error invalid-feedback">{rcaWhyErrors[idx]?.errors?.response}</span>
-                                                )}
+                                                <TextArea
+                                                    label="Response"
+                                                    name="response"
+                                                    value={why.response || ''}
+                                                    onChange={(e) => handleWhyChange(e, idx)}
+                                                    className="form-control mb-3"
+                                                    rows="2"
+                                                />
                                             </div>
                                         </div>
                                     ))}
-                                    <button
-                                        type="button"
-                                        className="btn btn-info mt-2"
-                                        onClick={addWhy}
-                                    >
+                                    <button type="button" className="btn btn-info mt-2" onClick={addWhy}>
                                         + Add New Why
                                     </button>
                                 </div>
 
-                                {/* Linked CAPA Section */}
+                                {/* Linked CAPA */}
                                 <div className="mt-5">
                                     <h5 className="text-primary mb-3 border-bottom pb-2">Linked CAPA</h5>
                                     <div className="col-md-4 mb-3">
-                                        <label className="form-label fw-bold">Select CAPA No</label>
-                                        <select
-                                            className={`form-select ${errors?.gap_analysis_id ? "is-invalid" : ""}`}
+                                         <SelectPicker
+                                            label="Select CAPA"
                                             name="gap_analysis_id"
-                                            value={form.gap_analysis_id}
+                                            value={form.gap_analysis_id || ''}
                                             onChange={handleCapaSelect}
-                                        >
-                                            <option value="">Select CAPA</option>
-                                            {capaList.map((capa, idx) => (
-                                                <option key={idx} value={capa.id}>
-                                                    {capa.capa_no}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {errors?.gap_analysis_id && (
-                                            <span id="dateInputError" className="error invalid-feedback">{errors?.gap_analysis_id}</span>
-                                        )}
+                                            options={capaList.map((capa, idx) => ({ 
+                                                key: idx, 
+                                                value: capa.id, 
+                                                label: capa.capa_no 
+                                            }))}
+                                        /> 
                                     </div>
-
-                                    {/* View-only CAPA Table */}
-                                    {selectedCapa && selectedCapa.length > 0 && (
+                                    {selectedCapa.length > 0 && (
                                         <div className="card p-3 border-info">
-                                            <h6 className="mb-3 text-end">
-                                                CAPA No: {selectedCapa[0].capa_no || "—"}
-                                            </h6>
-                                            <style>{`
-                                            .fixed-table {
-                                                table-layout: fixed;
-                                                width: 100%;
-                                            }
-                                            .description-cell {
-                                                word-wrap: break-word;
-                                                word-break: break-all;
-                                                max-width: 120px;
-                                            }
-                                            .col-date { width: 8%; }
-                                            .col-reason { width: 15%; }
-                                            .col-desc { width: 15%; }
-                                            .col-target { width: 10%; }
-                                            .col-status { width: 7%; }
-                                            .col-resp { width: 15%; }
-                                            `}
-                                            </style>
-
-                                            <table className="table table-bordered text-center align-middle fixed-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th rowSpan="3" className="col-date" style={{ verticalAlign: "middle" }}>
-                                                            Date
-                                                        </th>
-                                                        <th rowSpan="3" className="col-reason" style={{ verticalAlign: "middle" }}>
-                                                            Reason for Deviation
-                                                        </th>
-                                                        <th colSpan="8"># Counter Measure</th>
-                                                    </tr>
-                                                    <tr>
-                                                        <th colSpan="4">Corrective</th>
-                                                        <th colSpan="4">Preventive</th>
-                                                    </tr>
-                                                    <tr>
-                                                        <th className="col-desc">Description</th>
-                                                        <th className="col-target">Target Date</th>
-                                                        <th className="col-status">Status</th>
-                                                        <th className="col-resp">Responsibility</th>
-                                                        <th className="col-desc">Description</th>
-                                                        <th className="col-target">Target Date</th>
-                                                        <th className="col-status">Status</th>
-                                                        <th className="col-resp">Responsibility</th>
-                                                    </tr>
-                                                </thead>
-
-                                                <tbody>
-                                                    {selectedCapa?.length > 0 ? (
-                                                        selectedCapa.map((a, i) => (
-                                                            <tr key={i}>
-                                                                <td className="col-date">{a.date || "—"}</td>
-                                                                <td className="col-reason">{a.reason || "—"}</td>
-                                                                <td className="col-desc description-cell">
-                                                                    {a.cor_action_desc || "—"}
-                                                                </td>
-                                                                <td className="col-target">{a.cor_action_target_date || "—"}</td>
-                                                                <td className="col-status">{a.cor_action_status || "—"}</td>
-                                                                <td className="col-resp">{a.cor_action_responsibility || "—"}</td>
-                                                                <td className="col-desc description-cell">
-                                                                    {a.prev_action_desc || "—"}
-                                                                </td>
-                                                                <td className="col-target">{a.prev_action_target_date || "—"}</td>
-                                                                <td className="col-status">{a.prev_action_status || "—"}</td>
-                                                                <td className="col-resp">{a.prev_action_responsibility || "—"}</td>
-                                                            </tr>
-                                                        ))
-                                                    ) : (
+                                            <h6>CAPA No: {selectedCapa[0].capa_no || "—"}</h6>
+                                            <div className="table-responsive">
+                                                <table className="table table-bordered text-center">
+                                                    <thead>
                                                         <tr>
-                                                            <td colSpan="10">No CAPA actions found.</td>
+                                                            <th>Date</th><th>Reason</th>
+                                                            <th colSpan="4">Corrective</th>
+                                                            <th colSpan="4">Preventive</th>
                                                         </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
+                                                        <tr>
+                                                            <th></th><th></th>
+                                                            <th>Desc</th><th>Target</th><th>Status</th><th>Resp</th>
+                                                            <th>Desc</th><th>Target</th><th>Status</th><th>Resp</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {selectedCapa.map((a, i) => (
+                                                            <tr key={i}>
+                                                                <td>{a.date || "—"}</td>
+                                                                <td>{a.reason || "—"}</td>
+                                                                <td>{a.cor_action_desc || "—"}</td>
+                                                                <td>{a.cor_action_target_date || "—"}</td>
+                                                                <td>{a.cor_action_status || "—"}</td>
+                                                                <td>{a.cor_action_responsibility || "—"}</td>
+                                                                <td>{a.prev_action_desc || "—"}</td>
+                                                                <td>{a.prev_action_target_date || "—"}</td>
+                                                                <td>{a.prev_action_status || "—"}</td>
+                                                                <td>{a.prev_action_responsibility || "—"}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Buttons */}
-                                <div className="mt-4 text-end">
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary me-2"
+                               <div className="mt-4 text-end">
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-secondary me-2" 
                                         onClick={handleCancel}
                                     >
                                         Cancel
                                     </button>
-                                    <button type="submit" className="btn btn-primary">
+
+                                    <button 
+                                        type="submit" 
+                                        className="btn btn-primary"
+                                    >
                                         {id ? 'Update RCA' : 'Save RCA'}
                                     </button>
                                 </div>
+
                             </div>
                         </div>
                     </form>

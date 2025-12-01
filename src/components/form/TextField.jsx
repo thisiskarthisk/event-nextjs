@@ -5,7 +5,7 @@ import AppIcon from "../icon";
 import FieldWrapper from "./FieldWrapper";
 
 const TextFieldTypes = [
-  'text', 'number', 'email', 'password', 'url', 'tel', 'search', 'date', 'time', 'datetime-local', 'month', 'year', 'file'
+  'text', 'number', 'email', 'password', 'url', 'tel', 'search', 'date', 'time', 'datetime-local', 'month', 'year', 'file', 'color',
 ];
 
 export default function TextField({
@@ -14,10 +14,13 @@ export default function TextField({
   onChange,
   isRequired,
   autoFocus = false,
+  disabled = false,
   error = null,
   type = 'text',
   subType = null,
   prefixIcon = null,
+  suffixIcon = null,
+  suffixIconOnClick = null,
   className = '',
   placeholder = '',
   name = '',
@@ -52,7 +55,9 @@ export default function TextField({
       error={error}
       prefixIcon={prefixIcon ? <div className="input-group-text"><AppIcon ic={prefixIcon} /></div> : null}
       suffixIcon={
-        (type == 'password' ? <a href="#" tabIndex={-1} className="btn btn-outline-secondary" onClick={onBtnTogglePasswordClicked}><AppIcon ic={isPasswordVisible ? 'eye-off' : 'eye'} /></a> : null)
+        (suffixIcon || type == 'password' ? <a href="#" tabIndex={-1} className="btn btn-outline-secondary" onClick={suffixIcon ? suffixIconOnClick : onBtnTogglePasswordClicked}>
+          { suffixIcon || <AppIcon ic={isPasswordVisible ? 'eye-off' : 'eye'} /> }
+        </a> : null)
       }
       className={className}>
       <input
@@ -64,7 +69,8 @@ export default function TextField({
         required={isRequired}
         placeholder={placeholder}
         name={name}
-        autoComplete={autoComplete} />
+        autoComplete={autoComplete}
+        disabled={disabled} />
     </FieldWrapper>
   );
 }

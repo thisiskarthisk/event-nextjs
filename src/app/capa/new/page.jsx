@@ -5,6 +5,7 @@ import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { exists } from "drizzle-orm";
 
 export default function CAPAForm({ params }) {
     const { setPageTitle,toggleProgressBar } = useAppLayoutContext();
@@ -39,54 +40,121 @@ export default function CAPAForm({ params }) {
     const [form, setForm] = useState(initialForm);
     const [errors, setErrors] = useState({});
 
+    // useEffect(() => {
+
+    //     setPageTitle(id ? t('CAPA Details') : t('CAPA New'));
+
+    //     toggleProgressBar(false);
+
+    //     fetch(`/api/v1/capa/${id}`)
+    //         .then((res) => res.json())
+    //         .then((response) => {
+    //             if (response.success) {
+    //                 const data = response.data.gap_analysis;
+
+    //                 if (data.length > 0) {
+    //                     const fixedActions = (data || []).map((a) => ({
+    //                         date: a.date || "",
+    //                         reason_for_deviation: a.reason || "",
+    //                         corrective: {
+    //                             counter_measure: a.cor_counter_measure || "",
+    //                             description: a.cor_action_desc || "",
+    //                             target_date: a.cor_action_target_date || "",
+    //                             status: a.cor_action_status || "",
+    //                             responsibility: a.cor_action_responsibility || "",
+    //                         },
+    //                         preventive: {
+    //                             counter_measure: a.prev_counter_measure || "",
+    //                             description: a.prev_action_desc || "",
+    //                             target_date: a.prev_action_target_date || "",
+    //                             status: a.prev_action_status || "",
+    //                             responsibility: a.prev_action_responsibility || "",
+    //                         },
+    //                         isExist: true,
+    //                         cpa_id: a.cpa_id
+    //                     }));
+
+    //                     setForm({
+    //                         ...initialForm,
+    //                         id: data[0].ga_id || "",
+    //                         capa_no: data[0].capa_no || '',
+    //                         capa_actions: fixedActions.length ? fixedActions : initialForm.capa_actions,
+    //                     });
+    //                 }
+    //             } else {
+    //                 console.error("Error fetching data:", response.message);
+    //             }
+    //         })
+    //         .catch((err) => console.error("API Error:", err));
+
+    // }, [locale, id]);
+
+
     useEffect(() => {
-
-        setPageTitle(id ? t('CAPA Details') : t('CAPA New'));
-
+        setPageTitle(id ? t("CAPA Details") : t("CAPA New"));
         toggleProgressBar(false);
 
+        if (!id) return; // no call when creating new
+
         fetch(`/api/v1/capa/${id}`)
-            .then((res) => res.json())
+            .then(async (res) => {
+            if (!res.ok) {
+                // optional: log status/text for debugging
+                const text = await res.text();
+                console.error("CAPA GET failed:", res.status, text);
+                return null;
+            }
+
+            // handle empty body safely
+            const text = await res.text();
+            if (!text) return null;
+
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error("Invalid JSON from /api/v1/capa/:id", e, text);
+                return null;
+            }
+            })
             .then((response) => {
-                if (response.success) {
-                    const data = response.data.gap_analysis;
+            if (!response || !response.success) return;
 
-                    if (data.length > 0) {
-                        const fixedActions = (data || []).map((a) => ({
-                            date: a.date || "",
-                            reason_for_deviation: a.reason || "",
-                            corrective: {
-                                counter_measure: a.cor_counter_measure || "",
-                                description: a.cor_action_desc || "",
-                                target_date: a.cor_action_target_date || "",
-                                status: a.cor_action_status || "",
-                                responsibility: a.cor_action_responsibility || "",
-                            },
-                            preventive: {
-                                counter_measure: a.prev_counter_measure || "",
-                                description: a.prev_action_desc || "",
-                                target_date: a.prev_action_target_date || "",
-                                status: a.prev_action_status || "",
-                                responsibility: a.prev_action_responsibility || "",
-                            },
-                            isExist: true,
-                            cpa_id: a.cpa_id
-                        }));
+            const data = response.data?.gap_analysis || [];
 
-                        setForm({
-                            ...initialForm,
-                            id: data[0].ga_id || "",
-                            capa_no: data[0].capa_no || '',
-                            capa_actions: fixedActions.length ? fixedActions : initialForm.capa_actions,
-                        });
-                    }
-                } else {
-                    console.error("Error fetching data:", response.message);
-                }
+            if (data.length > 0) {
+                const fixedActions = data.map((a) => ({
+                date: a.date || "",
+                reason_for_deviation: a.reason || "",
+                corrective: {
+                    counter_measure: a.cor_counter_measure || "",
+                    description: a.cor_action_desc || "",
+                    target_date: a.cor_action_target_date || "",
+                    status: a.cor_action_status || "",
+                    responsibility: a.cor_action_responsibility || "",
+                },
+                preventive: {
+                    counter_measure: a.prev_counter_measure || "",
+                    description: a.prev_action_desc || "",
+                    target_date: a.prev_action_target_date || "",
+                    status: a.prev_action_status || "",
+                    responsibility: a.prev_action_responsibility || "",
+                },
+                isExist: true,
+                cpa_id: a.cpa_id,
+                }));
+
+                setForm({
+                ...initialForm,
+                id: data[0].ga_id || "",
+                capa_no: data[0].capa_no || "",
+                capa_actions:
+                    fixedActions.length > 0 ? fixedActions : initialForm.capa_actions,
+                });
+            }
             })
             .catch((err) => console.error("API Error:", err));
+        }, [locale, id]);
 
-    }, [locale, id]);
 
     const handleActionChange = (e, index, section, field) => {
         const { name, value } = e.target;
@@ -171,42 +239,82 @@ export default function CAPAForm({ params }) {
         }
     };
 
+    // const handleSubmit = async (e) => {
+    //     e.preventDefault();
+
+    //     try {
+    //         const response = await fetch("/api/v1/capa/save", {
+    //             method: "POST",
+    //             headers: { "Content-Type": "application/json" },
+    //             body: JSON.stringify(form),
+    //         });
+
+    //         const result = await response.json();
+
+    //         console.log(result);
+    //         if (result.success) {
+    //             alert(result.message || "Saved successfully!");
+    //             router.push("/capa");
+    //         } else {
+    //             alert(result.message || "Failed to save CAPA");
+
+    //             if (result.data.errors) {
+    //                 const formErrors = result.data.errors;
+    //                 const errorMap = [];
+
+    //                 if (formErrors.length > 0) {
+    //                     formErrors.forEach((err) => {
+    //                         errorMap[err.index] = err;
+    //                     })
+    //                     setErrors(errorMap);
+    //                 }
+    //             }
+    //         }
+    //     } catch (err) {
+    //         console.error("Error:", err);
+    //         alert("Something went wrong.");
+    //     }
+    // };
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
-            const response = await fetch("/api/v1/capa/save", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form),
+        const res = await fetch("/api/v1/capa/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: form }),
+        });
+
+        console.log(res);
+        // const result = await response.json();
+        const result = await res.json();
+
+
+        console.log(result);
+
+        if (result.success) {
+            alert(result.message || "Saved successfully!");
+            router.push("/capa");
+        } else {
+            alert(result.message || "Failed to save CAPA");
+
+            const formErrors = result.data?.errors || [];
+            if (Array.isArray(formErrors) && formErrors.length > 0) {
+            const errorMap = [];
+            formErrors.forEach((err) => {
+                errorMap[err.index] = err; // { index, errors: { main, corrective, preventive } }
             });
-
-            const result = await response.json();
-
-            console.log(result);
-            if (result.success) {
-                alert(result.message || "Saved successfully!");
-                router.push("/capa");
+            setErrors(errorMap);
             } else {
-                alert(result.message || "Failed to save CAPA");
-
-                if (result.data.errors) {
-                    const formErrors = result.data.errors;
-                    const errorMap = [];
-
-                    if (formErrors.length > 0) {
-                        formErrors.forEach((err) => {
-                            errorMap[err.index] = err;
-                        })
-                        setErrors(errorMap);
-                    }
-                }
+            setErrors([]);
             }
+        }
         } catch (err) {
-            console.error("Error:", err);
-            alert("Something went wrong.");
+        console.error("Error:", err);
+        alert("Something went wrong.");
         }
     };
+
 
     const handleCancel = () => router.push("/capa");
 

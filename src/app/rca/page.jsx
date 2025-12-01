@@ -8,9 +8,11 @@ import Papa from "papaparse";
 import AppIcon from "../../components/icon";
 import { useRouter } from "next/navigation";
 import DataTable from "@/components/DataTable";
+import { HttpClient } from "@/helper/http";
+import Link from "next/link";
 
 export default function Rca() {
-    const { setPageTitle, modal, toast, closeModal, toggleProgressBar } = useAppLayoutContext();
+    const { setPageTitle, modal, toast, closeModal, toggleProgressBar , confirm ,setAppBarMenuItems} = useAppLayoutContext();
     const { t, locale } = useI18n();
     const [data, setData] = useState([]);
     const router = useRouter();
@@ -21,10 +23,6 @@ export default function Rca() {
         { 'column': 'date_of_report', 'label': 'Date of Report' },
     ];
 
-    /** Add New RCA */
-    const handleAddNewCAPA = () => {
-        router.push(`/rca/new`);
-    };
 
     /** Edit RCA */
     const handleEdit = (id) => {
@@ -42,18 +40,20 @@ export default function Rca() {
         </>
     );
 
+    // RCA List
     const fetchRCAList = () => {
-        fetch("/api/v1/rca/list")
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.success) {
-                    setData(json.data.root_cause_analysis || []);
-                } else {
-                    console.error("Error fetching data:", json.message);
-                }
-            })
-            .catch((err) => console.error("API Error:", err));
+        HttpClient({
+            url: "/rca/list",
+            method: "GET",
+        }).then(res => {
+            if (res.success) {
+                setData(res.data.root_cause_analysis || []);
+            } else {
+                console.error("Error fetching data:", res.message);
+            }
+        }).catch(err => console.error("API Error:", err));
     }
+    
 
     useEffect(() => {
         setPageTitle(t('RCA'));
@@ -61,7 +61,10 @@ export default function Rca() {
         toggleProgressBar(false);
 
         fetchRCAList();
+        setAppBarMenuItems([{ icon: "upload", tooltip: "Upload RCA", className: "text-primary", onClick: handleOpenCsvModal }]);
     }, [locale]);
+
+
 
     const handleOpenCsvModal = () => {
         /** Store reference to download function */
@@ -209,6 +212,8 @@ export default function Rca() {
         });
     };
 
+
+
     // ✅ Handle Download Template
     const handleDownloadTemplate = () => {
         const headers = [
@@ -247,66 +252,64 @@ export default function Rca() {
         URL.revokeObjectURL(url);
     };
 
-    const handleDelete = async (id) => {
-        modal({
-            title: "Are you sure?",
-            body: "<p>This action will permanently delete the RCA.</p>",
-            okBtn: {
-                label: "Yes, Delete",
-                onClick: async () => {
-                    try {
-                        const res = await fetch(`/api/v1/rca/delete/${id}`, {
-                            method: "DELETE",
-                        });
+    // Delete Function
+    const handleDelete = (id) => {
+        console.log("RCA handleDelete called with ID: " + id);
+        if (document.activeElement) document.activeElement.blur();
 
-                        const data = await res.json();
-                        if (!data.success) throw new Error(data.message || "Failed to delete");
-
-                        // Update UI after successful delete
-                        setData((prev) =>
-                            prev.filter((obj) => obj.id !== id)
-                        );
-
+        confirm({
+            title: "Delete RCA",
+            message: "Are you sure you want to Delete the RCA?",
+            positiveBtnOnClick: () => {
+                toggleProgressBar(true);
+                try {
+                    HttpClient({
+                        url: `/rca/delete/${id}`,
+                        method: "POST",
+                        data: { id },
+                    }).then(res => {
+                        console.log(res);
+                        toast('success', res.message || 'The RCA record has been deleted successfully.');
                         closeModal();
-                        toast('success', data.message || 'RCA deleted successfully!');
-                    } catch (err) {
-                        console.error("Delete error:", err);
-                        toast('error', 'Error deleting role sheet');
-                    }
-                },
+                        toggleProgressBar(false);
+                    }).catch(err => {
+                        closeModal();
+                        let message = 'Error occurred when trying to delete the RCA.';
+                        if (err.response?.data?.message) {
+                            message = err.response.data.message;
+                        }
+                        toast('error', message);
+                        toggleProgressBar(false);
+                    });
+                } catch (error) {
+                    toast('error', 'Error occurred when trying to delete the RCA data.');
+                }
             },
-            cancelBtn: {
-                label: "Cancel",
-                onClick: () => {
-                    console.log("Delete canceled");
-                },
-            },
-            closeOnEsc: true,
         });
     };
+    // Delete Function
+
 
     return (
         <AuthenticatedPage>
-
+            <div className="row mb-3">
+                <div className="col-12 text-right">
+                    <Link href="/rca/new" className="btn btn-primary">
+                        <AppIcon ic="plus" />&nbsp;Add RCA
+                    </Link>
+                </div>
+            </div>
             <div className="row">
                 <div className="col-12">
                     <div className="card">
                         <div className="card-body">
-                            <div className="card-header d-flex justify-content-between align-items-center">
-                                <h5 className="mb-0">RCA</h5>
-                                <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewCAPA}>
-                                    <AppIcon ic="plus" className="text-info" /> Add New RCA
-                                </button>
-                                <button className="btn btn-outline-success " onClick={handleOpenCsvModal}>
-                                    <AppIcon ic="upload" className="text-success" /> Upload RCA File (CSV)
-                                </button>
-                            </div>
                             <DataTable
                                 apiPath="/rca/list"
                                 dataKeyFromResponse="root_cause_analysis"
                                 columns={columns}
+                                paginationType="client"
                                 actionColumnFn={renderActions}
-                                paginationType="client" />
+                            />
                         </div>
                     </div>
                 </div>

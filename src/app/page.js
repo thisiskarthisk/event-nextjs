@@ -85,6 +85,7 @@ function OrgChartCard({
   onDeleteUser,
 }) {
   const userList = role.users || [];
+  // console.log('role:', role, 'userList:', userList);
 
   return (
     <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
@@ -120,7 +121,7 @@ function OrgChartCard({
             <AppIcon ic="plus" />
           </span>
 
-          <Link style={{ marginLeft: "10px", color: "#fff" }} href={`/roles/${role.id}`} onClick={() => toggleProgressBar(true)}>
+          <Link style={{ marginLeft: "10px", color: "#fff" }} href={`/roles/${encodeURLParam(role.id)}`} onClick={() => toggleProgressBar(true)}>
             <AppIcon ic="chart-bar" />
           </Link>
         </div>
