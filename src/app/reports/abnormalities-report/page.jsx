@@ -8,39 +8,68 @@ import AppIcon from "../../../components/icon";
 import DataTable from "@/components/DataTable";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useRef } from "react";
 import { HttpClient } from "@/helper/http";
 
 export default function AbnormalitiesReport(){
     const { toggleProgressBar, toast, modal, setPageTitle } = useAppLayoutContext();
     const { data: session, status } = useSession();
-    const { locale } = useI18n();
-    const router = useRouter();
+    const tableRef = useRef(null);
     const [selectedKpi, setSelectedKpi] = useState("");
+    const [selectedUser, setSelectedUser] = useState("");
     const [kpiList, setKpiList] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [usersList, setUsersList] = useState([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
-    const [filterData, setFilterData] = useState({
-        kpi:"",
-        startDate:"",
-        endDate:""
-    })
-
     
+    const [filterData, setFilterData] = useState({
+        kpi: "",
+        startDate: "",
+        endDate: "",
+        userId: ""
+    });
 
     const fetchData = async () => {
+        
         try {
-          if (status === "authenticated" || session?.user?.id) {
-            const data = await HttpClient({ url : `/reports/abnormalities-report`, params: { user_id: session.user.id}});
+            if (status === "authenticated" || session?.user?.id) {
+                const kpi = await HttpClient({ 
+                    url : `/reports/abnormalities-report/kpiList`,
+                    method:"GET"
+                });
             
-            if (data.success && Array.isArray(data.data?.kpiList)) {
-                setKpiList(data.data.kpiList);
-            } 
-          }
+                if (kpi.success && Array.isArray(kpi?.data)) {
+                    setKpiList(kpi.data);
+                }
+
+                const users = await HttpClient({
+                    url : `/reports/abnormalities-report/usersList`,
+                    method : "GET",
+                    params : {}
+                });
+
+                if (users.success && Array.isArray(users?.data)) {
+                    setUsersList(users.data);
+                }
+
+            }
         } catch (err) {
           console.error("Error loading KPI List:", err);
         }
     };
+
+    const onUserChange = async (user_id) => {
+        const kpi = await HttpClient({ 
+            url : `/reports/abnormalities-report/kpiList`,
+            method:"GET",
+            params:{user_id:user_id}
+        });
+    
+        if (kpi.success && Array.isArray(kpi?.data)) {
+            setKpiList(kpi.data);
+        }
+
+    }
     useEffect(() => {
         if (status == 'authenticated') {
             setPageTitle('Abnormalities/Outliers Report');
@@ -49,32 +78,82 @@ export default function AbnormalitiesReport(){
         }
     }, [status]);
     const columns = [
-        { 'column': 'label', 'label': 'Date' },
+        { 'column': 'period_date', 'label': 'Date' },
+        { 'column': 'label', 'label': 'Label' },
         { 'column': 'value', 'label': 'Value' },
         { 'column': 'limit', 'label': 'Limit Exceeded' },
         { 'column': 'type', 'label': 'Type' },
     ];
 
-    const applyFilter = async ()=>{
-        setFilterData({
-            kpi:selectedKpi,
-            startDate:startDate,
-            endDate:endDate
-        });
-
+    const onFilterChange = (name, value) => {
+        switch(name){
+            case "kpi":
+                setSelectedKpi(value);
+                break;
+            case "startDate":
+                setStartDate(value);
+                break;
+            case "endDate":
+                setEndDate(value);
+                break;
+            case "user":
+                setSelectedUser(value);
+                onUserChange(value);
+                break;
+            default:
+                console.log("Unknown Params");
+        }
+        setFilterData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        
+    };
+    useEffect(() => {
+        tableRef.current?.refreshTable();
         console.log(filterData);
-        DataTable.refreshTable;
-    }
+    }, [filterData]);
 
     const handleFilter = (e) => {
         e.preventDefault();
     };
+
+    const resetFilter = () => {
+        setSelectedKpi("");
+        setStartDate("");
+        setEndDate("");
+        setSelectedUser("");
+        setFilterData({
+            kpi: "",
+            startDate: "",
+            endDate: "",
+            userId: ""
+        });
+
+    }
     return(
         <AuthenticatedPage>
             <div className="app-content">
                 <div className="card p-3 mb-4 shadow-sm">
                     <form onSubmit={handleFilter}>
                         <div className="row g-3 align-items-end">
+
+                            {/* Users Dropdown */}
+                            <div className="col-md-4 col-lg-3">
+                                <label className="form-label fw-bold" htmlFor="kpiSelect">User</label>
+                                <select
+                                    className="form-select"
+                                    id="userSelect"
+                                    value={selectedUser}
+                                    onChange={(e) => onFilterChange("user", e.target.value)}
+                                >
+                                    <option value="">-- All Users --</option>
+                                    {/* Dynamically populated Users list */}
+                                    {usersList.map(user => (
+                                        <option key={user.full_name} value={user.id}>{user.full_name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             
                             {/* KPI Dropdown */}
                             <div className="col-md-4 col-lg-3">
@@ -83,12 +162,12 @@ export default function AbnormalitiesReport(){
                                     className="form-select"
                                     id="kpiSelect"
                                     value={selectedKpi}
-                                    onChange={(e) => setSelectedKpi(e.target.value)}
+                                    onChange={(e) => onFilterChange("kpi", e.target.value)}
                                 >
                                     <option value="">-- All KPIs --</option>
                                     {/* Dynamically populated KPI list */}
                                     {kpiList.map(kpi => (
-                                        <option key={kpi.name} value={kpi.id}>{kpi.name}</option>
+                                        <option key={kpi.name} value={kpi.kpi_id}>{kpi.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -101,7 +180,7 @@ export default function AbnormalitiesReport(){
                                     className="form-control"
                                     id="startDate"
                                     value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
+                                    onChange={(e) => onFilterChange("startDate", e.target.value)}
                                 />
                             </div>
 
@@ -113,26 +192,26 @@ export default function AbnormalitiesReport(){
                                     className="form-control"
                                     id="endDate"
                                     value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
+                                    onChange={(e) => onFilterChange("endDate", e.target.value)}
                                 />
                             </div>
 
                             {/* Apply Filters Button */}
                             <div className="col-12 col-lg-3 d-grid">
-                                <button type="submit" className="btn btn-primary" onClick={applyFilter}>
-                                    <i className="bi bi-filter me-2"></i> Apply Filters
+                                <button type="submit" className="btn btn-primary" onClick={resetFilter}>
+                                    <i className="bi bi-filter me-2"></i> Reset Filters
                                 </button>
-                            </div>
+                            </div> 
                         </div>
                     </form>
                 </div>
                 <div className="card p-3 mb-4 shadow-sm">
                     <DataTable
+                        ref={tableRef}
                         apiPath = "/reports/abnormalities-report"
-                        dataKeyFromResponse="data"
+                        dataKeyFromResponse="row"
                         columns = {columns}
-                        additionalRequestParams = {filterData}
-                        paginationType="server"
+                        additionalRequestParams = {{...filterData}}
                     />
                 </div>
             </div>
