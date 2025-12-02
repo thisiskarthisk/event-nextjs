@@ -18,10 +18,16 @@ export default function AppSidebar() {
   const [roles, setRoles] = useState([]);
 
   const [open, setOpen] = useState(true); // Initial open state for Dashboard menu
+  const [reportOpen, setReportOpen] = useState(true); // Initial open state for Dashboard menu
 
   const toggleMenu = (e) => {
       e.preventDefault();
-      setOpen(!open);
+      setReportOpen(!reportOpen);
+  };
+
+  const toggleSettings = (e) => {
+    e.preventDefault();
+    setOpen(!open);
   };
 
 
@@ -74,7 +80,7 @@ export default function AppSidebar() {
             {/* Admin Settings */}
             {/* {UserType == 'Admin' && */}
               <li className={`nav-item ${open ? "menu-open" : ""}`}>
-                <Link href="/" className={"nav-link " + (pathName == '/settings' ? 'active' : '')}>
+                <Link href="/" className={"nav-link " + (pathName == '/settings' ? 'active' : '')} onClick={toggleSettings}>
                   <AppIcon ic="cog" className="nav-icon" />
                   <p>{t('Settings')}</p>
                 </Link>
@@ -96,19 +102,19 @@ export default function AppSidebar() {
                 )}
               </li>
             {/* } */}
-            <li className={`nav-item ${open ? "menu-open" : ""}`}>
+            <li className={`nav-item ${reportOpen ? "menu-open" : ""}`}>
               <Link href="#" className="nav-link active" onClick={toggleMenu}>
-                  <AppIcon className="nav-icon bi bi-journal"></AppIcon>
+                  <AppIcon className="nav-icon bi bi-journal mdi mdi-chart-box-multiple"></AppIcon>
                   <p>
                       Reports
                       <AppIcon className="nav-arrow bi bi-chevron-right"></AppIcon>
                   </p>
               </Link>
-              {open && (
+              {reportOpen && (
                   <ul className="nav nav-treeview">
                       <li className="nav-item">
                           <Link href="/reports/abnormalities-report" className="nav-link active">
-                              <AppIcon className="nav-icon bi bi-journal-bookmark-fill"></AppIcon>
+                              <AppIcon className="nav-icon bi bi-journal-bookmark-fill mdi mdi-file-chart-outline"></AppIcon>
                               <p>Abnormalities Report</p>
                           </Link>
                       </li>

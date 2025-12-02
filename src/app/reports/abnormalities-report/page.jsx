@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useRef } from "react";
 import { HttpClient } from "@/helper/http";
+import Link from "next/link";
+import { encodeURLParam } from "@/helper/utils";
 
 export default function AbnormalitiesReport(){
     const { toggleProgressBar, toast, modal, setPageTitle } = useAppLayoutContext();
@@ -66,6 +68,7 @@ export default function AbnormalitiesReport(){
         });
     
         if (kpi.success && Array.isArray(kpi?.data)) {
+            setSelectedKpi('');
             setKpiList(kpi.data);
         }
 
@@ -111,7 +114,6 @@ export default function AbnormalitiesReport(){
     };
     useEffect(() => {
         tableRef.current?.refreshTable();
-        console.log(filterData);
     }, [filterData]);
 
     const handleFilter = (e) => {
@@ -129,7 +131,43 @@ export default function AbnormalitiesReport(){
             endDate: "",
             userId: ""
         });
+    }
+    const exportFilter = async () => {
+        const report = await HttpClient({ 
+            url : `/reports/abnormalities-report`,
+            method:"GET",
+            params:{
+                ...filterData,
+                export:true
+            }
+        });
 
+        if (report.data?.row){
+            const rows = report.data.row;
+            let csv = "";
+            csv += Object.keys(rows[0]).join(",") + "\n";   // headers
+
+            rows.forEach(row => {
+                csv += Object.values(row)
+                    .map(v => `"${String(v).replace(/"/g, '""')}"`)
+                    .join(",") + "\n";
+            });
+
+            // Create file
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+
+            // Create hidden link and click it
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "abnormalities_report.csv";
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        }
     }
     return(
         <AuthenticatedPage>
@@ -139,7 +177,7 @@ export default function AbnormalitiesReport(){
                         <div className="row g-3 align-items-end">
 
                             {/* Users Dropdown */}
-                            <div className="col-md-4 col-lg-3">
+                            <div className="col-md-3 col-lg-2">
                                 <label className="form-label fw-bold" htmlFor="kpiSelect">User</label>
                                 <select
                                     className="form-select"
@@ -156,7 +194,7 @@ export default function AbnormalitiesReport(){
                             </div>
                             
                             {/* KPI Dropdown */}
-                            <div className="col-md-4 col-lg-3">
+                            <div className="col-md-3 col-lg-2">
                                 <label className="form-label fw-bold" htmlFor="kpiSelect">KPI</label>
                                 <select
                                     className="form-select"
@@ -173,7 +211,7 @@ export default function AbnormalitiesReport(){
                             </div>
 
                             {/* Start Date */}
-                            <div className="col-md-4 col-lg-3">
+                            <div className="col-md-3 col-lg-2">
                                 <label className="form-label fw-bold" htmlFor="startDate">Start Date</label>
                                 <input
                                     type="date"
@@ -185,7 +223,7 @@ export default function AbnormalitiesReport(){
                             </div>
 
                             {/* End Date */}
-                            <div className="col-md-4 col-lg-3">
+                            <div className="col-md-3 col-lg-2">
                                 <label className="form-label fw-bold" htmlFor="endDate">End Date</label>
                                 <input
                                     type="date"
@@ -197,10 +235,19 @@ export default function AbnormalitiesReport(){
                             </div>
 
                             {/* Apply Filters Button */}
-                            <div className="col-12 col-lg-3 d-grid">
-                                <button type="submit" className="btn btn-primary" onClick={resetFilter}>
-                                    <i className="bi bi-filter me-2"></i> Reset Filters
-                                </button>
+                            <div className="col-md-3 col-lg-3 d-grid">
+                                <div className="row">
+                                    <div className="col-12">
+                                        <button type="submit" className="btn btn-secondary" onClick={resetFilter}>
+                                            <AppIcon className="nav-icon bi bi-journal-bookmark-fill mdi mdi-filter-off-outline"></AppIcon>
+                                            <i className="bi bi-filter me-2"></i> Reset Filters
+                                        </button>&nbsp;
+                                        <button type="button" className="btn btn-success" onClick={exportFilter}>
+                                            <AppIcon className="nav-icon bi bi-journal-bookmark-fill mdi mdi-cloud-download-outline"></AppIcon>
+                                            <i className="bi bi-filter me-2"></i> Export
+                                        </button>
+                                    </div>
+                                </div>
                             </div> 
                         </div>
                     </form>
@@ -212,6 +259,16 @@ export default function AbnormalitiesReport(){
                         dataKeyFromResponse="row"
                         columns = {columns}
                         additionalRequestParams = {{...filterData}}
+                        actionColumnFn={(rowData) => {
+                        return (
+                            <>
+                                <Link href={"/edit/" + encodeURLParam(rowData.kpi_id)} className="text-primary">
+                                <AppIcon ic="eye" />
+                                </Link>
+                                
+                            </>
+                            );
+                        }}
                     />
                 </div>
             </div>

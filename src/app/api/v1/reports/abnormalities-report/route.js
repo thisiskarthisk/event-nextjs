@@ -1,4 +1,4 @@
-import { DB_Fetch } from "@/db";
+import { DB_Fetch, Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
 
 export async function GET(req) {
@@ -10,12 +10,17 @@ export async function GET(req) {
     const endDate = req.nextUrl.searchParams.get("endDate") || "";
     const searchValue = req.nextUrl.searchParams.get("search");
     const userId = req.nextUrl.searchParams.get("user");
+    const exportRecord = req.nextUrl.searchParams.get("export") || false;
+    const offset = (page - 1) * pageSize;
     let where = " WHERE kr.ucl IS NOT NULL AND kr.lcl IS NOT NULL ";
-
+    let pagination = `LIMIT ${pageSize} OFFSET ${offset}`;
     if (kpi) where += ` AND k.id = ${kpi}`;
     if (startDate) where += ` AND kr.period_date >= '${startDate}'::date `;
     if (endDate) where += ` AND kr.period_date <= '${endDate}'::date `;
     if (userId) where += ` AND kr.user_id = '${userId}'`;
+    
+    if (exportRecord) pagination = ``;
+
 
     // GLOBAL SEARCH
     if (searchValue) {
@@ -32,20 +37,20 @@ export async function GET(req) {
         `;
     }
 
-    const offset = (page - 1) * pageSize;
-
     let sql = `
         SELECT 
             *,
             COUNT(*) OVER() AS total_records
         FROM (
             SELECT
+                kr.kpi_id,
+                kr.user_id,
                 kr.period_date, 
                 k.name,
                 kr.ucl,
                 kr.lcl,
                 krcd.label,
-                krcd.value,
+                ROUND(krcd.value::numeric, 2) AS value,
                 CASE
                     WHEN krcd.value < kr.lcl THEN 'lower'
                     WHEN krcd.value < kr.ucl THEN 'boundary'
@@ -56,14 +61,14 @@ export async function GET(req) {
                     WHEN krcd.value < kr.ucl THEN 'boundary'
                     ELSE CONCAT('UAL:', (kr.ucl)::INT)
                 END AS limit
-            FROM kpis k
-            LEFT JOIN kpi_responses kr ON k.id = kr.kpi_id
-            LEFT JOIN kpi_response_chart_data krcd ON kr.id = krcd.kpi_response_id 
+            FROM ${Tables.TBL_KPIS} k
+            LEFT JOIN ${Tables.TBL_KPI_RESPONSE} kr ON k.id = kr.kpi_id
+            LEFT JOIN ${Tables.TBL_KPI_RESPONSE_CHART_DATA} krcd ON kr.id = krcd.kpi_response_id 
             ${where}
         ) t
         WHERE t.type != 'boundary'
         ORDER BY t.label
-        LIMIT ${pageSize} OFFSET ${offset};
+        ${pagination};
     `;
 
     const rows = await DB_Fetch(sql);

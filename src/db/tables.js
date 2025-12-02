@@ -14,6 +14,8 @@ export default {
   
 
   TBL_KPIS: 'kpis',
+  TBL_KPI_RESPONSE: 'kpi_responses',
+  TBL_KPI_RESPONSE_CHART_DATA: 'kpi_response_chart_data',
 
   PublicFields: {
     'users': [
