@@ -70,9 +70,30 @@ export async function POST(req) {
             rca_id = Number(lastRecord[0].id) + 1;
         }
 
-        const prefix = "RCA";
-        const currentYear = new Date().getFullYear();
-        const rca_no = `${prefix}/${currentYear}/${rca_id}`;
+
+        // TODO: Generate RCA No In Settings Table
+        const Setting = await DB_Fetch(sql`
+            SELECT * FROM settings WHERE setting_group = 'general' AND field_name = 'rca_id'
+        `);
+
+        // Example: value = "RCA,4"
+        const settingValue = Setting?.[0]?.value || "";  
+
+        // Split by comma
+        const [prefix, digits] = settingValue.split(',');
+
+        // Now you have:
+        console.log("Prefix:", prefix);  // RCA
+        console.log("Digits:", digits);  // 4
+
+        const paddedId = String(rca_id).padStart(digits, '0');
+        const rca_no = `${prefix}${paddedId}`;
+        console.log('IMPORT: Generated RCA No:', rca_no);
+
+
+        // const prefix = "RCA";
+        // const currentYear = new Date().getFullYear();
+        // const rca_no = `${prefix}/${currentYear}/${rca_id}`;
 
         const insertedRCA = await DB_Insert(sql`
             INSERT INTO root_cause_analysis (
