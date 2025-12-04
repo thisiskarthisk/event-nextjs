@@ -46,20 +46,48 @@ export default function UserAddOrEditForm({ params }) {
   };
 
   /** LOAD USER FOR EDIT **/
+  // const loadExistingUser = async (id) => {
+  //   try {
+  //     const res = await fetch(`/api/v1/users/get?id=${id}`);
+  //     const json = await res.json();
+
+  //     if (json.success) {
+  //       setFormData({
+  //         ...json.data,
+  //         password: "",
+  //         conf_password: ""
+  //       });
+  //     } else {
+  //       toast("error", "Failed to load user data.");
+  //     }
+  //   } catch (err) {
+  //     toast("error", "Error loading user data.");
+  //   }
+  // };
+
   const loadExistingUser = async (id) => {
     try {
-      const res = await fetch(`/api/v1/users/get?id=${id}`);
-      const json = await res.json();
-
-      if (json.success) {
+      HttpClient({
+        url: '/users/get',
+        method: "GET",
+        params: { id: id },
+      }).then(res => {
+        if (res.success) {
         setFormData({
-          ...json.data,
+          ...res.data,
           password: "",
           conf_password: ""
         });
       } else {
         toast("error", "Failed to load user data.");
       }
+      }).catch(err => {
+        toast("error", "Error loading user data.");
+      }).finally(() => {
+        toggleProgressBar(false).then(() => {
+          toggleProgressBar(false);
+        })
+      })
     } catch (err) {
       toast("error", "Error loading user data.");
     }

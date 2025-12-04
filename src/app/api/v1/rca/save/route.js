@@ -65,9 +65,21 @@ export async function POST(req) {
                 console.error('Last record error:', lastErr);
             }
 
-            // Use default numbering - skip problematic settings table
-            const prefix = "RCA";
-            const digits = 4;
+            // TODO: Generate RCA No In Settings Table
+            const Setting = await DB_Fetch(sql`
+                SELECT * FROM settings WHERE setting_group = 'general' AND field_name = 'rca_id'
+            `);
+
+            // Example: value = "RCA,4"
+            const settingValue = Setting?.[0]?.value || "";  
+
+            // Split by comma
+            const [prefix, digits] = settingValue.split(',');
+
+            // Now you have:
+            // console.log("Prefix:", prefix);  // RCA
+            // console.log("Digits:", digits);  // 4
+
             const paddedId = String(rca_id).padStart(digits, '0');
             const rca_no = `${prefix}${paddedId}`;
             console.log('Generated RCA No:', rca_no);
