@@ -221,7 +221,6 @@ import { sql } from "drizzle-orm";
 import Validation from "@/helper/validation";
 
 export async function POST(req) {
-    alert("hello"); 
   try {
     const data = await req.json();
     const capa_actions = data.capa_actions || [];
@@ -359,10 +358,14 @@ export async function POST(req) {
     if (lastRecord.length > 0) {
       gap_analysis_id = Number(lastRecord[0].id) + 1;
     }
-
-    const prefix = "CAPA";
-    const currentYear = new Date().getFullYear();
-    const capa_no = `${prefix}/${currentYear}/${gap_analysis_id}`;
+    const Setting = await DB_Fetch(sql`
+                SELECT * FROM settings WHERE setting_group = 'general' AND field_name = 'capa_id'
+            `);
+    const settingValue = Setting?.[0]?.value || "";  
+    const [prefix, digits] = settingValue.split(',');
+    const paddedId = String(gap_analysis_id).padStart(digits, '0');
+    const capa_no = `${prefix}${paddedId}`;
+    
 
     const insertedGap = await DB_Insert(sql`
       INSERT INTO gap_analysis (capa_no)
