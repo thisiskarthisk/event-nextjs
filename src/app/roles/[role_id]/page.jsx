@@ -33,12 +33,12 @@ export default function RoleSheet() {
 
   /** View Role Sheet */
    const handleView = (id) => {
-    router.push(`/roles/${role_id}/rs/${id}/view`);
+    router.push(`/roles/${role_id}/rs/${encodeURLParam(id)}/view`);
   };
 
   /** Edit Role Sheet */
   const handleEdit = (id) => {
-    router.push(`/roles/${role_id}/rs/${id}/edit`);
+    router.push(`/roles/${role_id}/rs/${encodeURLParam(id)}/edit`);
   };
 
   /** Delete Role Sheet */
@@ -50,7 +50,7 @@ export default function RoleSheet() {
         label: "Yes, Delete",
         onClick: async () => {
           try {
-            const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/rs/${id}/delete`, {
+            const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/rs/${decodeURLParam(id)}/delete`, {
               method: "DELETE",
             });
   

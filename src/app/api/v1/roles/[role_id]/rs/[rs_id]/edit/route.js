@@ -6,9 +6,8 @@ export async function PUT(req, contextPromise) {
   try {
     const { params } = await contextPromise;
     const { role_id } = params;
-    const body = await req.json();
-    const { data } = body;
-
+    const data = await req.json();
+    
     if (!role_id || !data || !Array.isArray(data)) {
       return JsonResponse.error("Invalid payload", 400);
     }

@@ -7,6 +7,8 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FREQUENCY_TYPES, CHART_TYPES } from "@/constants";
 import AppIcon from "@/components/icon";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
+import { HttpClient } from "@/helper/http";
 
 export default function AddRoleSheetPage() {
   const { toggleProgressBar, toast, setPageTitle } = useAppLayoutContext();
@@ -50,14 +52,16 @@ export default function AddRoleSheetPage() {
       setPageTitle('Role Sheet Edit');
       
       try {
-        const res = await fetch(`/api/v1/roles/${role_id}/rs/${rs_id}`);
-        const json = await res.json();
+        const res =await HttpClient({
+          url: `/roles/${decodeURLParam(role_id)}/rs/${decodeURLParam(rs_id)}`,  
+          method: 'GET'
+        });
 
-        if (!res.ok || !json.success) {
-          throw new Error(json.message || "Failed to load role sheet");
+        if (res.success != true) {
+          throw new Error(res.message || "Failed to load role sheet");
         }
 
-        setForm(json.data?.roleSheet || []);
+        setForm(res.data?.roleSheet || []);
       } catch (error) {
         console.error("Error loading role sheet:", error);
         toast("error", "Failed to load role sheet");
@@ -168,26 +172,29 @@ export default function AddRoleSheetPage() {
     toggleProgressBar(true);
 
     try {
-      const url = rs_id
-        ? `/api/v1/roles/${role_id}/rs/${rs_id}/edit`
-        : `/api/v1/roles/${role_id}/rs/add`;
+      const url = decodeURLParam(rs_id)
+        ? `/roles/${decodeURLParam(role_id)}/rs/${decodeURLParam(rs_id)}/edit`
+        : `/roles/${decodeURLParam(role_id)}/rs/add`;
 
-      const method = rs_id ? "PUT" : "POST";
+      const method = decodeURLParam(rs_id) ? "PUT" : "POST";
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: form }),
+      const res = HttpClient({
+        url : url,
+        method : method, 
+        data: JSON.stringify(form),
+      }).then(res => {
+        if (res.success) {
+          
+          toast("success", rs_id ? "Role Sheet Updated!" : "Role Sheet Added!");
+          router.push(`/roles/${role_id}`);
+        } else {
+          toast('error', res.message || "Failed to save role sheet");
+        }
+      }).catch(err => {
+        toast('error', 'Network error. Please try again.');
+      }).finally(() => {
+        setLoading(false);
       });
-
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || "Failed to save role sheet");
-      }
-
-      toast("success", rs_id ? "Role Sheet Updated!" : "Role Sheet Added!");
-      router.push(`/roles/${role_id}`);
     } catch (error) {
       console.error("Error saving role sheet:", error);
       toast("error", "Failed to save role sheet");
@@ -404,7 +411,7 @@ export default function AddRoleSheetPage() {
               Cancel
             </button>
             <button type="submit" className="btn btn-success">
-              {rs_id ? "Update Role Sheet" : "Save Role Sheet"}
+              {decodeURLParam(rs_id) ? "Update Role Sheet" : "Save Role Sheet"}
             </button>
           </div>
         </form>
