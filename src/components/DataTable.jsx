@@ -29,18 +29,19 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
   const [ searchValue, setSearchValue ] = useState('');
   const [ filteredRecords, setFilteredRecords ] = useState(0);
   const txtSearchRef = useRef(null);
-
+  
   const filters = useMemo(() => ({
     'page': currentPageNo,
     'search': searchValue,
     'pageSize': pageSize,
     'order': orderBy,
     ...additionalRequestParams,
-  }), [currentPageNo, searchValue, pageSize, orderBy]);
+  }), [currentPageNo, searchValue, pageSize, orderBy, additionalRequestParams]);
 
   const [ hasFetchedOnce, setHasFetchedOnce ] = useState(false);
 
   const shouldFetch = paginationType === 'server' || !hasFetchedOnce;
+  
   const { data: response, error, isLoading, mutate: reFetchData } = useSWR([apiPath, filters], shouldFetch ? swrFetcher : null, {
     keepPreviousData: paginationType !== 'server',
     onSuccess: () => setHasFetchedOnce(true)
@@ -69,7 +70,7 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
 
     setFilteredRecords(filteredData.length);
     setTotalPages(Math.ceil(filteredData.length / pageSize));
-    setCurrentPageNo(1);
+    setCurrentPageNo( !(searchValue) ? currentPageNo : 1 );
 
     setData([
       ...filteredData.slice((currentPageNo * pageSize) - pageSize, currentPageNo * pageSize),
@@ -79,7 +80,7 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
   useEffect(() => {
     if (currentPageNo != prevPageNo) {
       if (paginationType == 'server') {
-        // reFetchData();
+        reFetchData();
       } else {
         renderClientSidePagination();
       }
@@ -97,7 +98,7 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
   useEffect(() => {
     if (searchValue != prevSearchValue) {
       if (paginationType == 'server') {
-        // reFetchData();
+        reFetchData();
       } else {
         renderClientSidePagination();
       }
@@ -109,7 +110,7 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
   useEffect(() => {
     if (orderBy != prevOrderBy) {
       if (paginationType == 'server') {
-        // reFetchData();
+        reFetchData();
       } else {
         renderClientSidePagination();
       }
@@ -121,7 +122,7 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
   useEffect(() => {
     if (pageSize != prevPageSize) {
       if (paginationType == 'server') {
-        // reFetchData();
+        reFetchData();
       } else {
         renderClientSidePagination();
       }
@@ -132,7 +133,7 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
 
   useImperativeHandle(ref, () => ({
     refreshTable() {
-      // reFetchData();
+      reFetchData();
     }
   }));
 
