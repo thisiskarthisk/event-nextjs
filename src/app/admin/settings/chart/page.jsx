@@ -7,6 +7,7 @@ import TextField from "@/components/form/TextField";
 import { useI18n } from "@/components/i18nProvider";
 import AppIcon from "@/components/icon";
 import { HttpClient } from "@/helper/http";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function ChartSettings() {
@@ -180,7 +181,7 @@ export default function ChartSettings() {
           </div>
 
           {/* SAVE/CANCEL BUTTONS */}
-          {isEditing && (
+          {/* {isEditing && (
             <div className="text-end mt-3">
                <button 
                 className="btn btn-secondary me-2" 
@@ -196,7 +197,25 @@ export default function ChartSettings() {
                 <AppIcon ic="save" /> {t("Save")}
               </button>
             </div>
-          )}
+          )} */}
+          <div className="row mt-3">
+            {isEditing && (
+              <div className="col-12 flex-space-between">
+                <Link 
+                    href="#" 
+                    className="btn btn-secondary"
+                    onClick = {() => {setEditing(false);
+                      loadSettings();
+                    }}>
+                  Cancel
+                </Link>
+
+                <button className="btn btn-primary" type="submit" onClick={ChartSettingsSave}>
+                  <AppIcon ic="check" /> Save
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </AuthenticatedPage>
