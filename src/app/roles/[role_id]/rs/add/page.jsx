@@ -7,6 +7,10 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FREQUENCY_TYPES, CHART_TYPES } from "@/constants";
 import AppIcon from "@/components/icon";
+import TextArea from "@/components/form/TextArea";
+import TextField from "@/components/form/TextField";
+import SelectPicker from "@/components/form/SelectPicker";
+import Link from "next/link";
 
 export default function AddRoleSheetPage() {
   const { toggleProgressBar, toast, setPageTitle } = useAppLayoutContext();
@@ -77,17 +81,43 @@ export default function AddRoleSheetPage() {
     setForm(updated);
   };
 
-  const handleRoleChange = (e, objIdx, roleIdx) => {
+  const handleRoleChange = (e, objIdx, roleIdx, field) => {
+    let value;
+
+    // Case 1: Standard input event → use e.target
+    if (e && e.target) {
+      value = e.target.value;
+    } 
+    // Case 2: Custom TextField sends only primitive value → use directly
+    else {
+      value = e;
+    }
+
     const updated = [...form];
-    updated[objIdx].roles[roleIdx][e.target.name] = e.target.value;
+    updated[objIdx].roles[roleIdx][field] = value;
+
     setForm(updated);
   };
 
-  const handleKpiChange = (e, objIdx, roleIdx, kpiIdx) => {
+
+  const handleKpiChange = (e, objIdx, roleIdx, kpiIdx, field) => {
+    let value;
+
+    // Case 1 — Normal event from HTML input
+    if (e && e.target) {
+      value = e.target.value;
+    } 
+    // Case 2 — Custom TextField passes only the value
+    else {
+      value = e;
+    }
+
     const updated = [...form];
-    updated[objIdx].roles[roleIdx].kpis[kpiIdx][e.target.name] = e.target.value;
+    updated[objIdx].roles[roleIdx].kpis[kpiIdx][field] = value;
+
     setForm(updated);
   };
+
 
   const handleAddRole = (objIdx) => {
     const updated = [...form];
@@ -218,7 +248,8 @@ export default function AddRoleSheetPage() {
                 <button
                   type="button"
                   className="btn btn-light btn-sm ms-auto"
-                  onClick={() => router.push(`/roles/${role_id}`)}
+                  // onClick={() => router.push(`/roles/${role_id}`)}
+                  onClick={() => router.push("/roles")}
                 >
                   Back
                 </button>
@@ -226,9 +257,9 @@ export default function AddRoleSheetPage() {
 
               <div className="card-body">
                 <div className="mb-3">
-                  <label className="form-label fw-bold">Objective</label>
-                  <textarea
-                    className="form-control"
+                  <TextArea
+                    label="Objective"
+                    name="objective"
                     rows="3"
                     value={objective.objective}
                     onChange={(e) => handleObjectiveChange(e, objIdx)}
@@ -259,12 +290,11 @@ export default function AddRoleSheetPage() {
 
                     <div className="card-body">
                       <div className="mb-3">
-                        <label className="form-label">Role</label>
-                        <input
-                          className="form-control"
+                        <TextField
+                          label="Role"  
                           name="role"
                           value={role.role}
-                          onChange={(e) => handleRoleChange(e, objIdx, roleIdx)}
+                          onChange={(e) => handleRoleChange(e, objIdx, roleIdx, "role")}
                           required
                         />
                       </div>
@@ -292,81 +322,55 @@ export default function AddRoleSheetPage() {
 
                           <div className="row">
                             <div className="col-md-3 mb-3">
-                              <label className="form-label">KPI</label>
-                              <input
-                                className="form-control"
+                              <TextField
+                                label="KPI"
                                 name="kpi"
                                 value={kpi.kpi}
-                                onChange={(e) =>
-                                  handleKpiChange(e, objIdx, roleIdx, kpiIdx)
-                                }
+                                onChange={(e) => handleKpiChange(e, objIdx, roleIdx, kpiIdx , "kpi")}
                                 required
                               />
                             </div>
 
                             <div className="col-md-2 mb-3">
-                              <label className="form-label">Measure</label>
-                              <input
-                                className="form-control"
+                              <TextField
+                                label="Measure"
                                 name="measure"
                                 value={kpi.measure}
-                                onChange={(e) =>
-                                  handleKpiChange(e, objIdx, roleIdx, kpiIdx)
-                                }
+                                onChange={(e) => handleKpiChange(e, objIdx, roleIdx, kpiIdx , "measure")}
+                                required
                               />
                             </div>
 
                             <div className="col-md-3 mb-3">
-                              <label className="form-label">
-                                Operational Definition
-                              </label>
-                              <textarea
-                                className="form-control"
-                                rows="1"
+                              <TextArea
+                                label="Operational Definition"
                                 name="operation_definition"
+                                rows="1"
                                 value={kpi.operation_definition}
+                                onChange={(e) => handleKpiChange(e, objIdx, roleIdx, kpiIdx, "operation_definition")}
+                              />
+                            </div>
+
+                            <div className="col-md-2 mb-3">
+                              <SelectPicker
+                                label="Freq"
+                                options={Object.values(FREQUENCY_TYPES)}
+                                value={kpi.frequency_of_measurement}
                                 onChange={(e) =>
-                                  handleKpiChange(e, objIdx, roleIdx, kpiIdx)
+                                  handleKpiChange(e, objIdx, roleIdx, kpiIdx , "frequency_of_measurement")
                                 }
                               />
                             </div>
 
                             <div className="col-md-2 mb-3">
-                              <label className="form-label">Freq</label>
-                              <select
-                                className="form-select"
-                                name="frequency_of_measurement"
-                                value={kpi.frequency_of_measurement}
-                                onChange={(e) =>
-                                  handleKpiChange(e, objIdx, roleIdx, kpiIdx)
-                                }
-                              >
-                                <option value="">-</option>
-                                {Object.values(FREQUENCY_TYPES).map((f) => (
-                                  <option key={f} value={f}>
-                                    {f.charAt(0).toUpperCase() + f.slice(1).toLowerCase()}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="col-md-2 mb-3">
-                              <label className="form-label">Chart Type</label>
-                              <select
-                                className="form-select"
-                                name="vcs"
+                              <SelectPicker
+                                label="Chart Type"
+                                options={Object.values(CHART_TYPES)}
                                 value={kpi.vcs}
                                 onChange={(e) =>
-                                  handleKpiChange(e, objIdx, roleIdx, kpiIdx)
+                                  handleKpiChange(e, objIdx, roleIdx, kpiIdx , "vcs")
                                 }
-                              >
-                                <option value="">-</option>
-                                {Object.values(CHART_TYPES).map((c) => (
-                                  <option key={c} value={c}>
-                                    {c.charAt(0).toUpperCase() + c.slice(1)}
-                                  </option>
-                                ))}
-                              </select>
+                              />
                             </div>
                           </div>
                         </div>
@@ -394,18 +398,16 @@ export default function AddRoleSheetPage() {
             </div>
           ))}
 
-          <hr />
-          <div className="text-end">
-            <button
-              type="button"
-              className="btn btn-secondary me-2"
-              onClick={() => router.push(`/roles/${role_id}`)}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-success">
-              {rs_id ? "Update Role Sheet" : "Save Role Sheet"}
-            </button>
+          <div className="row mt-3">
+            <div className="col-12 flex-space-between">
+              <Link href={`/roles`} className="btn btn-secondary">
+                Cancel
+              </Link>
+
+              <button className="btn btn-primary" type="submit">
+                <AppIcon ic="check" /> {rs_id ? "Save" : "Add"} Role Sheet
+              </button>
+            </div>
           </div>
         </form>
       </div>

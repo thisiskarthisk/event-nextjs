@@ -84,9 +84,7 @@ export default function UserAddOrEditForm({ params }) {
       }).catch(err => {
         toast("error", "Error loading user data.");
       }).finally(() => {
-        toggleProgressBar(false).then(() => {
-          toggleProgressBar(false);
-        })
+        toggleProgressBar(false);
       })
     } catch (err) {
       toast("error", "Error loading user data.");

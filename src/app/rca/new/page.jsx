@@ -9,6 +9,8 @@ import TextField from "@/components/form/TextField";
 import SelectPicker from "@/components/form/SelectPicker";
 import TextArea from "@/components/form/TextArea";
 import { HttpClient } from "@/helper/http";
+import Link from "next/link";
+import AppIcon from "@/components/icon";
 
 export default function RcaForm({ params }) {
     const { setPageTitle, modal, closeModal, toast, toggleProgressBar , confirm } = useAppLayoutContext();
@@ -228,7 +230,6 @@ export default function RcaForm({ params }) {
         }
     }, [form.gap_analysis_id, cpActionsList]);
 
-    const handleCancel = () => router.push("/rca");
 
     return (
         <AuthenticatedPage>
@@ -426,7 +427,7 @@ export default function RcaForm({ params }) {
                                 </div>
 
                                 {/* Buttons */}
-                               <div className="mt-4 text-end">
+                               {/* <div className="mt-4 text-end">
                                     <button 
                                         type="button" 
                                         className="btn btn-secondary me-2" 
@@ -441,8 +442,18 @@ export default function RcaForm({ params }) {
                                     >
                                         {id ? 'Update RCA' : 'Save RCA'}
                                     </button>
-                                </div>
+                                </div> */}
+                            </div>
+                        </div>
+                        <div className="row mt-3">
+                            <div className="col-12 flex-space-between">
+                            <Link href="/rca" className="btn btn-secondary">
+                                Cancel
+                            </Link>
 
+                            <button className="btn btn-primary" type="submit">
+                                <AppIcon ic="check" /> {id ? "Update" : "Save"} RCA
+                            </button>
                             </div>
                         </div>
                     </form>
