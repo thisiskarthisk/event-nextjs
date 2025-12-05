@@ -11,6 +11,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
+
 export default function RoleSheet() {
   const { toggleProgressBar, toast, modal, setPageTitle } = useAppLayoutContext();
   
@@ -23,11 +25,6 @@ export default function RoleSheet() {
     toggleProgressBar(false);
   }, [locale, role_id]);
 
-
-  /** View Responses Sheet */
-  const handleViewResponses = () => {
-    router.push(`/roles/${role_id}/responses`);
-  };
 
   /** Add New Role Sheet */
   const handleAddNewRole = () => {
@@ -53,7 +50,7 @@ export default function RoleSheet() {
         label: "Yes, Delete",
         onClick: async () => {
           try {
-            const res = await fetch(`/api/v1/roles/${role_id}/rs/${id}/delete`, {
+            const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/rs/${id}/delete`, {
               method: "DELETE",
             });
   
@@ -189,7 +186,7 @@ export default function RoleSheet() {
               }));
   
               try {
-                const res = await fetch(`/api/v1/roles/${role_id}/rs/upload`, {
+                const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/rs/upload`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ data: finalData }),
@@ -241,10 +238,7 @@ export default function RoleSheet() {
           <div className="card mt-4">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Role Sheet</h5>
-              <button className="btn btn-warning ms-auto me-2" onClick={handleViewResponses}>
-                <AppIcon ic="sitemap-outline" className="text-black"/> Record Responses
-              </button>
-              <button className="btn btn-primary me-2" onClick={handleAddNewRole}>
+              <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewRole}>
                 <AppIcon ic="plus" className="text-info"/> Add New Role
               </button>
               <button className="btn btn-outline-success " onClick={handleOpenCsvModal}>
@@ -253,7 +247,7 @@ export default function RoleSheet() {
             </div>
             <div className="card-body">
               <DataTable
-                apiPath={`/roles/${role_id}`}
+                apiPath={`/roles/${decodeURLParam(role_id)}`}
                 dataKeyFromResponse="roles"
                 columns={[
                   { column: "name", label: "Objective" },

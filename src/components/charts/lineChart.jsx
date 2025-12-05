@@ -63,18 +63,56 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
     }
   };
 
-  const TabsComponent = ({ list = [], capalist = [], rcaRef, capaRef }) => {
+  const submitResponses = async (response_id, rcaRef=null, capaRef = null, user_id, kpi_id) => {
+    const final_rca_id = rcaRef.current || null;
+    const final_capa_id = capaRef.current || null;
+
+    const formData = { response_id, rca_id: final_rca_id, capa_id: final_capa_id, user_id, kpi_id };
+    
+    console.log("FormData  : ", formData);
+     
+    try {
+      const res = await fetch(`/api/v1/roles/${role_id}/responses/edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+
+      toast("success", "Updated successfully");
+      closeModal();
+    } catch (err) {
+      toast("error", "Failed to update");
+    }
+  }
+
+  const TabsComponent = ({ responseId,  list = [], capalist = [], rcaRef, capaRef }) => {
     const [tab, setTab] = useState("RCA");
-
     const selected = list.find((x) => x.id == rcaRef.current);
-    const showCapa = (selected?.gap_analysis_id != null || !rcaRef.current);
+    const showCapa = selected?.gap_analysis_id != null || !rcaRef.current;
     const selectedCAPA = capalist.find((x) => x.ga_id == capaRef.current) || {};
-
-    console.log("Selcted Values : ", capaRef.current, capalist, selected, showCapa, selectedCAPA); 
 
     useEffect(() => {
       if (!showCapa && tab === "CAPA") setTab("RCA");
     }, [showCapa, tab]);
+
+    const assign = async () => {
+      await submitResponses(responseId, rcaRef, capaRef, user_id, kpi_id);
+    };
+
+    const remove = async () => {
+      if (tab === "RCA") {
+        rcaRef.current = null;
+      }
+
+      if (tab === "CAPA") {
+        capaRef.current = null;
+      }
+
+      await submitResponses(responseId, rcaRef, capaRef, user_id, kpi_id);
+    };
 
     return (
       <>
@@ -103,29 +141,40 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
         {tab === "RCA" && (
           <>
             {rcaRef.current == null ? (
-              <div className="mb-3 text-start">
-                <strong>Select Existing RCA</strong>
-                <select
-                  className="form-control mt-2"
-                  onChange={(e) => (rcaRef.current = e.target.value)}
-                >
-                  <option value="">-- Select an RCA --</option>
-                  {list.map((item, index) => (
-                    <option key={`${item.id}-${index}`} value={item.id}>
-                      {`${item.rca_no} - ${item.department} - (${formatDate(
-                        item.date_of_report
-                      )})`}
-                    </option>
-                  ))}
-                </select>
+              <>
+                <div className="mb-3 text-start">
+                  <strong>Select Existing RCA</strong>
+                  <select
+                    className="form-control mt-2"
+                    onChange={(e) => (rcaRef.current = e.target.value)}
+                  >
+                    <option value="">-- Select an RCA --</option>
+                    {list.map((item, index) => (
+                      <option key={`${item.id}-${index}`} value={item.id}>
+                        {`${item.rca_no} - ${item.department} - (${formatDate(
+                          item.date_of_report
+                        )})`}
+                      </option>
+                    ))}
+                  </select>
 
-                <Link
-                  href="/rca/new"
-                  className="btn btn-outline-primary w-100 mt-3"
-                >
-                  <AppIcon ic="plus" /> Create New RCA
-                </Link>
-              </div>
+                  <Link
+                    href="/rca/new"
+                    className="btn btn-outline-primary w-100 mt-3"
+                  >
+                    <AppIcon ic="plus" /> Create New RCA
+                  </Link>
+                </div>
+
+                <div className="d-flex justify-content-center gap-2 mt-2">
+                  <button className="btn btn-success px-3" onClick={assign}>
+                    Assign
+                  </button>
+                  <button className="btn btn-secondary px-3" onClick={closeModal}>
+                    Close
+                  </button>
+                </div>
+              </>
             ) : (
               <>
                 <h4 className="text-success text-center">
@@ -137,6 +186,12 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
                     <AppIcon ic="open-in-new" />
                   </Link>
                 </h4>
+
+                <div className="d-flex justify-content-center mt-2">
+                  <button className="btn btn-danger px-4" onClick={remove}>
+                    Remove
+                  </button>
+                </div>
               </>
             )}
           </>
@@ -145,20 +200,38 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
         {tab === "CAPA" && showCapa && (
           <>
             {capaRef.current == null ? (
-              <div className="mb-3 text-start">
-                <strong>Select Existing CAPA</strong>
-                <select
-                  className="form-control mt-2"
-                  onChange={(e) => (capaRef.current = e.target.value)}
-                >
-                  <option value="">-- Select CAPA --</option>
-                  {capalist.map((item, index) => (
-                    <option key={`${item.ga_id}-${index}`} value={item.ga_id}>
-                      {`${item.capa_no}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div className="mb-3 text-start">
+                  <strong>Select Existing CAPA</strong>
+                  <select
+                    className="form-control mt-2"
+                    onChange={(e) => (capaRef.current = e.target.value)}
+                  >
+                    <option value="">-- Select CAPA --</option>
+                    {capalist.map((item, index) => (
+                      <option key={`${item.ga_id}-${index}`} value={item.ga_id}>
+                        {`${item.capa_no}`}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Link
+                    href="/capai/new"
+                    className="btn btn-outline-primary w-100 mt-3"
+                  >
+                    <AppIcon ic="plus" /> Create New CAPA
+                  </Link>
+                </div>
+
+                <div className="d-flex justify-content-center gap-2 mt-2">
+                  <button className="btn btn-success px-3" onClick={assign}>
+                    Assign
+                  </button>
+                  <button className="btn btn-secondary px-3" onClick={closeModal}>
+                    Close
+                  </button>
+                </div>
+              </>
             ) : (
               <>
                 <h4 className="text-success text-center">
@@ -170,7 +243,12 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
                     <AppIcon ic="open-in-new" />
                   </Link>
                 </h4>
-                <p className="m-0 text-center">{selectedCAPA?.title}</p>
+
+                <div className="d-flex justify-content-center mt-2">
+                  <button className="btn btn-danger px-4" onClick={remove}>
+                    Remove
+                  </button>
+                </div>
               </>
             )}
           </>
@@ -190,44 +268,15 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
       title: "Link RCA / CAPA",
       body: (
         <TabsComponent
+          responseId = {response_id}
           list={list}
           capalist={capalist}
           rcaRef={rcaRef}
           capaRef={capaRef}
         />
       ),
-      okBtn: {
-        label: "Assign",
-        onClick: async () => {
-          const final_rca_id = rcaRef.current || null;
-          const final_capa_id = capaRef.current || null;
-
-          const formData = {
-            response_id,
-            rca_id: final_rca_id,
-            capa_id: final_capa_id,
-            user_id,
-            kpi_id,
-          };
-
-          try {
-            const res = await fetch(`/api/v1/roles/${role_id}/responses/edit`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(formData),
-            });
-
-            const data = await res.json();
-            if (!data.success) throw new Error(data.message);
-
-            toast("success", "Updated successfully");
-            closeModal();
-          } catch (err) {
-            toast("error", "Failed to update");
-          }
-        },
-      },
-      cancelBtn: { label: "Cancel" },
+      okBtn: null,
+      cancelBtn: null
     });
   };
 
@@ -247,6 +296,14 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
 
   useEffect(() => {
     (async () => {
+      const targetValues = categories.map(cat => {
+        const chartData = dataSeries?.[0]?.chart_data || [];
+        const row = chartData.find(r => r?.label === cat);
+        return row?.target ?? null;
+      });
+      
+      const hasTargetValues = targetValues.some(v => v !== null && v !== undefined);
+
       if (chartRef.current && chartRef.current.destroy) {
         chartRef.current.destroy();
         chartRef.current = null;
@@ -256,17 +313,33 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
         type: 'line',
         data: {
           labels: categories,
-          datasets: dataSeries.map(d => {
-            return {
-              ...d,
-              borderColor: getColorOfDataPoint(0),
-              tension: 0.4,
-              pointBackgroundColor: (ctx) => (shouldHighlightDataPoint(ctx) ? OUTLIER_DATA_POINT_COLOR : getColorOfDataPoint(0)),
-              pointBorderColor: (ctx) => (shouldHighlightDataPoint(ctx) ? OUTLIER_DATA_POINT_COLOR : getColorOfDataPoint(0)),
-              pointRadius: (ctx) => (shouldHighlightDataPoint(ctx) ? 6 : 3),
-              pointHoverRadius: (ctx) => (shouldHighlightDataPoint(ctx) ? 8 : 4),
-            };
-          }),
+          datasets: [
+            ...dataSeries.map(d => {
+              return {
+                ...d,
+                borderColor: getColorOfDataPoint(0),
+                tension: 0.4,
+                pointBackgroundColor: (ctx) => (shouldHighlightDataPoint(ctx) ? OUTLIER_DATA_POINT_COLOR : getColorOfDataPoint(0)),
+                pointBorderColor: (ctx) => (shouldHighlightDataPoint(ctx) ? OUTLIER_DATA_POINT_COLOR : getColorOfDataPoint(0)),
+                pointRadius: (ctx) => (shouldHighlightDataPoint(ctx) ? 6 : 3),
+                pointHoverRadius: (ctx) => (shouldHighlightDataPoint(ctx) ? 8 : 4),
+              };
+            }),
+            ...(hasTargetValues
+              ? [
+                  {
+                    label: "Targets",
+                    data: targetValues,
+                    tension: 0.4,
+                    spanGaps: true,
+                    borderColor: getColorOfDataPoint(4),
+                    pointBackgroundColor: (ctx) => (shouldHighlightDataPoint(ctx) ? getColorOfDataPoint(3) : getColorOfDataPoint(4)),
+                    pointBorderColor: (ctx) => (shouldHighlightDataPoint(ctx) ? getColorOfDataPoint(3) : getColorOfDataPoint(4)),
+                  }
+                ]
+              : []
+            )
+          ]
         },
         options: {
           scales: {

@@ -36,6 +36,11 @@ export default function TextField({
   const onFieldChanged = (e) => {
     let newValue = e.target.value;
 
+    if (type === "file") {
+      const file = e.target.files?.[0] || null;
+      onChange(file);
+      return;
+    }
     if (type == 'tel') {
       if (subType == 'mobile') {
         newValue = newValue.replace(/[^0-9]/g, '').substr(0, 10);

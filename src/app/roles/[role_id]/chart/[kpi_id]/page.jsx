@@ -13,6 +13,7 @@ import PieChart from "@/components/charts/pieChart";
 
 import Link from "next/link";
 import AppIcon from "@/components/icon";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 
 export default function KPIResponseChart({ params }) {
   const { data: session, status } = useSession();
@@ -41,7 +42,7 @@ export default function KPIResponseChart({ params }) {
   const fetchKPIDetails = async () => {
     toggleProgressBar(true);
     try {
-      const res = await fetch(`/api/v1/roles/${role_id}/responses/${kpi_id}`);
+      const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/responses/${decodeURLParam(kpi_id)}`);
       const json = await res.json();
 
       if (json.data.kpi_details?.length > 0) {
@@ -80,7 +81,7 @@ export default function KPIResponseChart({ params }) {
   const fetchKPIResponses = async () => {
     toggleProgressBar(true);
     try {
-      const res = await fetch(`/api/v1/roles/${role_id}/responses/${kpi_id}/${user_id}/chart?filterData=${filterData || ''}`);
+      const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/responses/${decodeURLParam(kpi_id)}/${decodeURLParam(user_id)}/chart?filterData=${filterData || ''}`);
       const json = await res.json();
       setData(json.data.kpi_chart_responses);
     } catch (error) {

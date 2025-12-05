@@ -22,6 +22,7 @@ export async function GET(req, context) {
           'response_id', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.id,
           'label', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.label,
           'value', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.value,
+          'target', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.target,
           'rca_id', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.rca_id,
           'gap_analysis_id', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.gap_analysis_id
         )
