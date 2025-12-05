@@ -4,14 +4,32 @@ import AppIcon from "./icon";
 import { useI18n } from "./i18nProvider";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
 import { usePathname } from "next/navigation";
+
+import { useSession } from "next-auth/react";
+
 
 export default function AppSidebar() {
   const pathName = usePathname();
+  const { data: session, status } = useSession();
+  const UserType = session.user.user_type;
 
   const { t } = useI18n();
   const [roles, setRoles] = useState([]);
+
+  const [open, setOpen] = useState(true); // Initial open state for Dashboard menu
+  const [reportOpen, setReportOpen] = useState(true); // Initial open state for Dashboard menu
+
+  const toggleMenu = (e) => {
+      e.preventDefault();
+      setReportOpen(!reportOpen);
+  };
+
+  const toggleSettings = (e) => {
+    e.preventDefault();
+    setOpen(!open);
+  };
+
 
   return (
     <aside className="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
@@ -37,6 +55,7 @@ export default function AppSidebar() {
                 <p>{t('Manage Users')}</p>
               </Link>
             </li>
+       
             <li className="nav-item">
               <Link href="/roles" className={"nav-link " + (pathName == '/roles' ? 'active' : '')}>
                 <AppIcon ic="chart-line" className="nav-icon" />
@@ -57,6 +76,51 @@ export default function AppSidebar() {
                 <p>{t('RCA')}</p>
               </Link>
             </li>
+
+            {/* Admin Settings */}
+            {/* {UserType == 'Admin' && */}
+              <li className={`nav-item ${open ? "menu-open" : ""}`}>
+                <Link href="/" className={"nav-link " + (pathName == '/settings' ? 'active' : '')} onClick={toggleSettings}>
+                  <AppIcon ic="cog" className="nav-icon" />
+                  <p>{t('Settings')}</p>
+                </Link>
+                {open && (
+                    <ul className="nav nav-treeview">
+                        <li className="nav-item">
+                            <Link href="/admin/settings/general" className={"nav-link " + (pathName == '/settings/general' ? 'active' : '')}>
+                                <AppIcon ic="file-cog" className="nav-icon bi bi-journal-bookmark-fill"></AppIcon>
+                                <p>{t('General Setting')}</p>
+                            </Link>
+                        </li>
+                        <li className="nav-item">
+                            <Link href="/admin/settings/chart" className={"nav-link " + (pathName == '/settings/chart' ? 'active' : '')}>
+                                <AppIcon ic="chart-bar" className="nav-icon bi bi-journal-bookmark-fill"></AppIcon>
+                                <p>{t('Chart Setting')}</p>
+                            </Link>
+                        </li>
+                    </ul>
+                )}
+              </li>
+            {/* } */}
+            <li className={`nav-item ${reportOpen ? "menu-open" : ""}`}>
+              <Link href="#" className="nav-link active" onClick={toggleMenu}>
+                  <AppIcon className="nav-icon bi bi-journal mdi mdi-chart-box-multiple"></AppIcon>
+                  <p>
+                      Reports
+                      <AppIcon className="nav-arrow bi bi-chevron-right"></AppIcon>
+                  </p>
+              </Link>
+              {reportOpen && (
+                  <ul className="nav nav-treeview">
+                      <li className="nav-item">
+                          <Link href="/reports/abnormalities-report" className="nav-link active">
+                              <AppIcon className="nav-icon bi bi-journal-bookmark-fill mdi mdi-file-chart-outline"></AppIcon>
+                              <p>Abnormalities Report</p>
+                          </Link>
+                      </li>
+                  </ul>
+              )}
+          </li>
           </ul>
         </nav>
       </div>

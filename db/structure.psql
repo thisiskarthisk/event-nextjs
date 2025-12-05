@@ -283,6 +283,18 @@ CREATE INDEX IF NOT EXISTS idx_cp_actions_gap_analysis_id ON cp_actions(gap_anal
 
 COMMENT ON TABLE cp_actions IS 'Transactional: RCA records. capa_no should follow format RCA/{YEAR}/{SL_NO}';
 
+CREATE TABLE IF NOT EXISTS settings (
+  id              BIGSERIAL PRIMARY KEY,
+  field_name      CHARACTER VARYING (255) NOT NULL,
+  value           CHARACTER VARYING (255) DEFAULT NULL,
+  setting_group   CHARACTER VARYING (255) NOT NULL,
+  active          BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by      BIGINT,
+  updated_at      TIMESTAMPTZ DEFAULT NULL,
+  updated_by      BIGINT DEFAULT NULL
+);
+
 -- ======================================================
 -- End of schema
 -- ======================================================
