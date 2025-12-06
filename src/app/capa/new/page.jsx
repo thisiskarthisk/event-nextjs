@@ -11,7 +11,7 @@ import TextArea from "@/components/form/TextArea";
 import SelectPicker from "@/components/form/SelectPicker";
 
 export default function CAPAForm({ params }) {
-    const { setPageTitle,toggleProgressBar } = useAppLayoutContext();
+    const { setPageTitle, toast, toggleProgressBar } = useAppLayoutContext();
     const { t, locale } = useI18n();
     const router = useRouter();
     const { id } = use(params);
@@ -178,16 +178,16 @@ export default function CAPAForm({ params }) {
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(result.message || "Deleted successfully!");
+                    toast("success", result.message || "Deleted successfully!");
 
                     const newActions = form.capa_actions.filter((_, i) => i !== index);
                     setForm({ ...form, capa_actions: newActions });
                 } else {
-                    alert(result.message || "Failed to delete CAPA");
+                    toast("error", result.message || "Failed to delete CAPA");
                 }
             } catch (err) {
                 console.error("Error:", err);
-                alert("Something went wrong.");
+                toast("error","Something went wrong.");
             }
         } else {
             const newActions = form.capa_actions.filter((_, i) => i !== index);
@@ -209,10 +209,10 @@ export default function CAPAForm({ params }) {
             const result = await res.json();
 
             if (result.success) {
-                alert(result.message || "Saved successfully!");
+                toast( "success", result.message || "Saved successfully!" )
                 router.push("/capa");
             } else {
-                alert(result.message || "Failed to save CAPA");
+                toast( "error", result.message || "Failed to save CAPA" )
 
                 const formErrors = result.data?.errors || [];
                 if (Array.isArray(formErrors) && formErrors.length > 0) {
@@ -227,7 +227,7 @@ export default function CAPAForm({ params }) {
             }
         } catch (err) {
             console.error("Error:", err);
-            alert("Something went wrong.");
+            toast( "error", "Something went wrong." );
         }
     };
 
@@ -253,8 +253,8 @@ export default function CAPAForm({ params }) {
                                             label="CAPA No"
                                             name="capa_no"
                                             value={form.capa_no}
-                                            readOnly
-                                            style={{ backgroundColor: "lightgray", color: "black" }}
+                                            disabled
+                                            style={{ backgroundColor: "lightgray" }}
                                         />
                                     </div>
                                 </div>}
@@ -354,7 +354,11 @@ export default function CAPAForm({ params }) {
                                                         <div className="col-md-4">
                                                             <SelectPicker
                                                                 label="Select Status"
-                                                                options={["planned", "in-progress", "implemented"]}
+                                                                options={[
+                                                                    { value: "planned", label: "Planned"},
+                                                                    { value: "in-progress", label:"In-Progress" },
+                                                                    { value: "implemented", label: "Implemented"}
+                                                                ]}
                                                                 value={action.corrective.status}
                                                                 onChange={(e) => handleActionChange(e, idx, "corrective", "status")}
                                                                 className={`form-control ${errors[idx]?.errors?.corrective?.status ? "is-invalid" : ""}`}
@@ -433,7 +437,11 @@ export default function CAPAForm({ params }) {
                                                             <SelectPicker
                                                                 label="Status"
                                                                 name="status"
-                                                                options={["planned", "in-progress", "implemented"]}
+                                                                options={[
+                                                                    { value: "planned", label: "Planned" },
+                                                                    { value: "in-progress", label: "In-Progress" },
+                                                                    { value: "implemented", label: "Implemented" }
+                                                                ]}
                                                                 value={action.preventive.status}
                                                                 onChange={(e) => handleActionChange(e, idx, "preventive", "status")}
                                                                 className={`form-control ${errors[idx]?.errors?.preventive?.status ? "is-invalid" : ""}`}

@@ -3,7 +3,7 @@
 import { useAppLayoutContext } from "@/components/appLayout";
 import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import AppIcon from "../../components/icon";
 import DataTable from "@/components/DataTable";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ export default function Capa() {
     const { setPageTitle, toast, toggleProgressBar, confirm ,closeModal} = useAppLayoutContext();
     const { t, locale } = useI18n();
     const router = useRouter();
+    const tableRef = useRef(null);
 
     const columns = [
         { column: 'capa_no', label: 'CAPA No' },
@@ -43,6 +44,7 @@ export default function Capa() {
                         toast('success', res.message || 'The User record has been deleted successfully.');
                         toggleProgressBar(false);
                         closeModal();
+                        tableRef.current?.refreshTable();
                     }).catch(err => {
                         closeModal();
                         toggleProgressBar(false);
@@ -58,7 +60,6 @@ export default function Capa() {
             },
         });
     };
-
 
     const renderActions = (rowData) => (
         <>
@@ -87,18 +88,20 @@ export default function Capa() {
         <AuthenticatedPage>
             <div className="row">
                 <div className="col-12">
+                    <div className="card-header d-flex justify-content-between align-items-center">
+                        <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewCAPA}>
+                            <AppIcon ic="plus" className="text-info" /> Add New CAPA
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div className="row">
+                <div className="col-12">
                     <div className="card">
                         <div className="card-body">
-                            <div className="card-header d-flex justify-content-between align-items-center">
-                                <h5 className="mb-0">CAPA</h5>
-
-                                <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewCAPA}>
-                                    <AppIcon ic="plus" className="text-info" /> Add New CAPA
-                                </button>
-                            </div>
-
                             <DataTable
                                 apiPath="/capa/list"
+                                ref = { tableRef }
                                 dataKeyFromResponse="gap_analysis"
                                 columns={columns}
                                 actionColumnFn={renderActions}
