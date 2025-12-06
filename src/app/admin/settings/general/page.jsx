@@ -9,6 +9,7 @@ import { useI18n } from "@/components/i18nProvider";
 
 import { useEffect, useState } from "react";
 import { HttpClient } from "@/helper/http";
+import Link from "next/link";
 
 export default function GeneralSettings() {
   // Mock context hooks
@@ -295,7 +296,7 @@ export default function GeneralSettings() {
         </div>
       </div>
 
-      <div className="row">
+      {/* <div className="row">
         <div className="col-12">
           {isEditing && (
             <div className="text-end mt-3">
@@ -318,6 +319,25 @@ export default function GeneralSettings() {
             </div>
           )}
         </div>
+      </div> */}
+
+      <div className="row mt-3">
+        {isEditing && (
+          <div className="col-12 flex-space-between">
+            <Link href="#" 
+              onClick={() => {
+                setEditing(false);
+                loadSettings();
+              }} 
+              className="btn btn-secondary">
+              Cancel
+            </Link>
+
+            <button className="btn btn-primary" type="submit" onClick={GeneralSettingsSave}>
+              <AppIcon ic="check" /> Save
+            </button>
+          </div>
+        )}
       </div>
     </AuthenticatedPage>
   );

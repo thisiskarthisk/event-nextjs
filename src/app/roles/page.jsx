@@ -13,9 +13,10 @@ import Papa from "papaparse";
 
 import { useSession } from "next-auth/react";
 import { HttpClient } from "@/helper/http";
+import Link from "next/link";
 
 export default function RolesPage() {
-  const { toggleProgressBar, toast, modal, setPageTitle } = useAppLayoutContext();
+  const { toggleProgressBar, toast, modal, setPageTitle , confirm , setAppBarMenuItems ,  } = useAppLayoutContext();
   const { data: session, status } = useSession();
   const { locale } = useI18n();
   const { role_id } = useParams();
@@ -28,6 +29,7 @@ export default function RolesPage() {
     if (status == 'authenticated') {
       setPageTitle('Role Sheet');
       toggleProgressBar(false);
+      setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Role Sheet", className: "text-primary", onClick: handleOpenCsvModal }]);
 
       // fetch(`/api/v1/roles?user_id=${session.user.id}`).then((res) => res.json()).then((data) => {
       //   if (data.success && data.data.roles) {
@@ -56,6 +58,7 @@ export default function RolesPage() {
     }
   };
 
+
   /** Add New Role Sheet */
   const handleAddNewRole = () => {
     router.push(`/roles/${roleId}/rs/add`);
@@ -70,6 +73,8 @@ export default function RolesPage() {
   const handleEdit = (id) => {
     router.push(`/roles/${roleId}/rs/${id}/edit`);
   };
+
+
 
   /** Delete Role Sheet */
   const handleDelete = async (id) => {
@@ -264,39 +269,36 @@ export default function RolesPage() {
   
   return (
     <AuthenticatedPage>
-      <div className="app-content">
-        <div className="container-fluid">
-          <div className="card mt-4">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Role Sheet</h5>
-              <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewRole}>
-                <AppIcon ic="plus" className="text-info"/> Add New Role
-              </button>
-              <button className="btn btn-outline-success " onClick={handleOpenCsvModal}>
-                <AppIcon ic="upload" className="text-success" /> Upload Role File (CSV)
-              </button>
+            <div className="row mb-3">
+                <div className="col-12 text-right">
+                    <Link href={`/roles/${role_id}/rs/add`} className="btn btn-primary ms-auto me-2">
+                      <AppIcon ic="plus" className="text-info" /> Add New Role
+                    </Link>
+                </div>
             </div>
-            <div className="card-body">
-              {
-                status == 'authenticated' &&
-                <DataTable
-                  apiPath={`/roles`}
-                  additionalRequestParams={{
-                    'user_id': session.user.id,
-                  }}
-                  dataKeyFromResponse="roles"
-                  columns={[
-                    { column: "name", label: "Objective" },
-                  ]}
-                  paginationType="client"
-                  actionColumnFn={renderActions}
-                />
-              }
-
+            <div className="row">
+                <div className="col-12">
+                    <div className="card">
+                        <div className="card-body">
+                           {
+                            status == 'authenticated' &&
+                             <DataTable
+                                apiPath={`/roles`}
+                                additionalRequestParams={{
+                                  'user_id': session.user.id,
+                                }}
+                                dataKeyFromResponse="roles"
+                                columns={[
+                                  { column: "name", label: "Objective" },
+                                ]}
+                                paginationType="client"
+                                actionColumnFn={renderActions}
+                              />
+                          }
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </AuthenticatedPage>
+        </AuthenticatedPage>
   );
 }

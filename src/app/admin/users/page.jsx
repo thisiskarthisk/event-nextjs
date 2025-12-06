@@ -7,12 +7,11 @@ import AppIcon from "@/components/icon";
 import { HttpClient } from "@/helper/http";
 import { encodeURLParam } from "@/helper/utils";
 import Link from "next/link";
-import { use, useEffect , useState} from "react";
-import { useRouter } from "next/navigation";
+import { use, useEffect , useState , useRef} from "react";
 
 export default function UsersListPage() {
   const columns = [
-    { 'column': 'employee_id', 'label': 'ID' },
+    { 'column': 'employee_id', 'label': 'Employee ID' },
     { 'column': 'first_name', 'label': 'First Name' },
     { 'column': 'last_name', 'label': 'Last Name' },
     { 'column': 'email', 'label': 'Email Address' },
@@ -20,7 +19,7 @@ export default function UsersListPage() {
   ];
 
   const { setPageTitle, toggleProgressBar, confirm, toast ,closeModal ,modal, setAppBarMenuItems } = useAppLayoutContext();
-  const router = useRouter();
+  const tableRef = useRef(null);
 
   useEffect(() => {
     setPageTitle('Users');
@@ -45,6 +44,7 @@ export default function UsersListPage() {
             toast('success', res.message || 'The User record has been deleted successfully.');
             toggleProgressBar(false);
             closeModal();
+            tableRef.current?.refreshTable();
           }).catch(err => {
             closeModal();
             toggleProgressBar(false);
@@ -224,25 +224,33 @@ function UploadUsers({ onChange, errorMessage }) {
               const formData = new FormData();
               formData.append("file", selectedFile);
 
-              const res = await fetch("/api/v1/users/upload", {
+              toggleProgressBar(true);
+
+              // ✅ Use HttpClient instead of fetch
+              const res = await HttpClient({
+                url: "/users/upload",
                 method: "POST",
-                body: formData,
+                data: formData,
+                headers: {
+                  "Content-Type": "multipart/form-data"
+                }
               });
 
-              const result = await res.json();
+              toggleProgressBar(false);
+
+              const result = res || {};
               const validationWrapper = result?.errors || result?.data || null;
 
-              if (!res.ok && validationWrapper?.type === "validation_errors") {
+              // ❌ Validation errors (CSV issues)
+              if (validationWrapper?.type === "validation_errors") {
                 errorMessage = formatUploadErrors(validationWrapper);
                 openDialog();
-                toast(
-                  "error",
-                  "Validation errors found in CSV. See modal."
-                );
+                toast("error", "Validation errors found in CSV. See modal.");
                 return;
               }
 
-              if (!res.ok || !result.success) {
+              // ❌ General upload failure
+              if (!result.success) {
                 const msg = result?.message || "Upload failed.";
                 errorMessage = escapeHtml(msg).replace(/\n/g, "<br>");
                 openDialog();
@@ -250,15 +258,24 @@ function UploadUsers({ onChange, errorMessage }) {
                 return;
               }
 
+              // ✅ Success
               toast("success", result.message || "Upload successful.");
               closeModal();
-              // reload users list if needed
-              // loadUsers();
+              tableRef.current?.refreshTable();
+
             } catch (err) {
+              toggleProgressBar(false);
+
               console.error("Upload exception:", err);
-              toast("error", "Server error while uploading file.");
+
+              let msg =
+                err?.response?.message ||
+                err?.response?.data?.message ||
+                "Server error while uploading file.";
+
+              toast("error", msg);
             }
-          },
+          }
         },
         cancelBtn: { label: "Close" },
       });
@@ -288,8 +305,8 @@ function UploadUsers({ onChange, errorMessage }) {
         <div className="col-12">
           <div className="card">
             <div className="card-body">
-
               <DataTable
+                  ref={tableRef}
                   apiPath="/users/list"
                   dataKeyFromResponse="users"
                   columns={columns}
