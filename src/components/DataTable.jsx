@@ -131,9 +131,32 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
     }
   }, [pageSize]);
 
+  // useImperativeHandle(ref, () => ({
+  //   refreshTable() {
+  //     reFetchData();
+  //   }
+  // }));
+
   useImperativeHandle(ref, () => ({
-    refreshTable() {
-      reFetchData();
+    refreshTable: async () => {
+      if (paginationType === 'server') {
+        try {
+          await reFetchData();
+        } catch (e) {
+          console.error("refreshTable (server) error:", e);
+        }
+        return;
+      }
+
+      try {
+        const fresh = await swrFetcher([apiPath, filters]);
+
+        await reFetchData(fresh, false);
+
+        setHasFetchedOnce(true);
+      } catch (e) {
+        console.error("refreshTable (client) error:", e);
+      }
     }
   }));
 
