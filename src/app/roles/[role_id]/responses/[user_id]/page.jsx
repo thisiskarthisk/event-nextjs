@@ -223,18 +223,21 @@ export default function KPIResponses({ params }) {
         frequency
       };
 
-      const res = await fetch(`/api/v1/roles/${kpi_role_id}/responses/save`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      HttpClient({
+          url: `/roles/${kpi_role_id}/responses/save`,
+          method: "POST",
+          data: JSON.stringify(payload),
+      }).then(res => {
+          toggleProgressBar(false);
+          fetchKPIResponses()
+          closeModal();
+          toast('success', res.message || 'The KPI Responses Saved successfully.');
+      }).catch(err => {
+          closeModal();
+          toggleProgressBar(false);
+          toast("error", "Something went wrong while saving chart data.");
       });
 
-      if (!res.ok) throw new Error("Failed to save chart data");
-
-      const result = await res.json();
-      fetchKPIResponses();
-      closeModal();
-      toast("success", result.message);
     } catch (error) {
       toast("error", "Something went wrong while saving chart data.");
     } finally {
@@ -343,7 +346,7 @@ export default function KPIResponses({ params }) {
 
   const onUploadFormSubmitted = (frequency, user_id, chartType, role_id, record_id, existingChartData) => {
     const currentData = latestUploadFormData.current;
-    handleFileUpload(user_id, currentData.file, chartType, role_id, record_id, existingChartData, currentData.periodDate, frequency);
+    handleFileUpload(user_id, currentData.file[0], chartType, role_id, record_id, existingChartData, currentData.periodDate, frequency);
   };
 
   const handleModalFileUpload = (frequency, user_id, chartType, role_id, record_id, existingChartData) => {
