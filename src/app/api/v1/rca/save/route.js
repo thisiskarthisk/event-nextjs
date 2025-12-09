@@ -76,9 +76,12 @@ export async function POST(req) {
             // Split by comma
             const [prefix, digits] = settingValue.split(',');
 
-            // Now you have:
-            // console.log("Prefix:", prefix);  // RCA
-            // console.log("Digits:", digits);  // 4
+            if (!prefix || !digits) {
+                return NextResponse.json({
+                    success: false,
+                    message: "RCA ID is not configured. Please set RCA ID in Settings page."
+                }, { status: 400 });
+            }
 
             const paddedId = String(rca_id).padStart(digits, '0');
             const rca_no = `${prefix}${paddedId}`;

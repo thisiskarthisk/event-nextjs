@@ -25,6 +25,7 @@ export default function TextField({
   placeholder = '',
   name = '',
   autoComplete = null,
+  accept = null,
 }) {
   const [ isPasswordVisible, togglePassword ] = useState(false);
 
@@ -37,6 +38,12 @@ export default function TextField({
   };
 
   const onFieldChanged = (e) => {
+
+    if (type === "file") {
+      // 👇 Return file(s)
+      return onChange(e.target.files);
+    }
+
     let newValue = e.target.value;
 
     if (type == 'tel') {
@@ -63,13 +70,15 @@ export default function TextField({
       <input
         className={"form-control" + (error ? ' is-invalid' : '')}
         type={isPasswordVisible ? 'text' : (TextFieldTypes.includes(type) ? type : 'text')}
-        value={value}
+        // value={value}
+        value={type === "file" ? undefined : value}
         onChange={onFieldChanged}
         autoFocus={autoFocus}
         required={isRequired}
         placeholder={placeholder}
         name={name}
         autoComplete={autoComplete}
+        accept={accept}
         disabled={disabled} />
     </FieldWrapper>
   );

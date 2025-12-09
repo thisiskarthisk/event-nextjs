@@ -3,7 +3,7 @@
 import { useAppLayoutContext } from "@/components/appLayout";
 import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
-import { useEffect, useState } from "react";
+import { useEffect, useState , useRef} from "react";
 import Papa from "papaparse";
 import AppIcon from "../../components/icon";
 import { useRouter } from "next/navigation";
@@ -12,10 +12,11 @@ import { HttpClient } from "@/helper/http";
 import Link from "next/link";
 
 export default function Rca() {
-    const { setPageTitle, modal, toast, closeModal, toggleProgressBar , confirm ,setAppBarMenuItems} = useAppLayoutContext();
+    const { setPageTitle, modal, toast, closeModal, toggleProgressBar, confirm, setAppBarMenuItems } = useAppLayoutContext();
     const { t, locale } = useI18n();
     const [data, setData] = useState([]);
     const router = useRouter();
+    const tableRef = useRef(null);
 
     const columns = [
         { 'column': 'rca_no', 'label': 'RCA No' },
@@ -23,8 +24,6 @@ export default function Rca() {
         { 'column': 'date_of_report', 'label': 'Date of Report' },
     ];
 
-
-    /** Edit RCA */
     const handleEdit = (id) => {
         router.push(`/rca/edit/${id}`);
     };
@@ -40,73 +39,61 @@ export default function Rca() {
         </>
     );
 
-    // RCA List
-    const fetchRCAList = () => {
-        HttpClient({
-            url: "/rca/list",
-            method: "GET",
-        }).then(res => {
-            if (res.success) {
-                setData(res.data.root_cause_analysis || []);
-            } else {
-                console.error("Error fetching data:", res.message);
-            }
-        }).catch(err => console.error("API Error:", err));
-    }
     
-
     useEffect(() => {
         setPageTitle(t('RCA'));
-
         toggleProgressBar(false);
-
-        fetchRCAList();
-        setAppBarMenuItems([{ icon: "upload", tooltip: "Upload RCA", className: "text-primary", onClick: handleOpenCsvModal }]);
+        setAppBarMenuItems([
+            { icon: "upload", tooltip: "Upload RCA", className: "text-primary", onClick: handleOpenCsvModal }
+        ]);
     }, [locale]);
 
+    // --------------------------------------------------------------------------------------------------
+    // ⬇️ CSV UPLOAD MODAL (UPDATED WITH ERROR BOX)
+    // --------------------------------------------------------------------------------------------------
 
+    const uploadedFiles = () => {
+        return(
+            <div>
+                <button 
+                  type="button"
+                  onClick={() => window._tempDownloadFn && window._tempDownloadFn()}
+                  className="btn btn-outline-secondary mt-2 w-100"
+                >
+                  Download Sample Template
+                </button>
 
+                <div className="mb-3 mt-3">
+                  <label className="form-label">Select CSV File</label>
+                  <input type="file" id="csvFileInput" accept=".csv" className="form-control" />
+                </div>
+
+                <div id="csvErrorBox"></div>
+            </div>
+        )
+    }
     const handleOpenCsvModal = () => {
-        /** Store reference to download function */
-        const downloadFn = () => {
-            handleDownloadTemplate();
-        };
-
-        /** Make it globally accessible */
-        window._tempDownloadFn = downloadFn;
+        window._tempDownloadFn = () => handleDownloadTemplate();
 
         modal({
             title: "Upload RCA (CSV)",
-            body: `
-            <button 
-              type="button"
-              onclick="window._tempDownloadFn && window._tempDownloadFn(); return false;"
-              class="btn btn-outline-secondary mt-2 w-100"
-            >
-              Download Sample Template
-            </button>
-    
-    
-            <div class="mb-3 mt-3">
-              <label class="form-label">Select CSV File</label>
-              <input type="file" id="csvFileInput" accept=".csv" class="form-control" />
-            </div>
-          `,
+            body: uploadedFiles(),
             okBtn: {
                 label: "Upload",
                 onClick: async () => {
                     const fileInput = document.getElementById("csvFileInput");
                     if (!fileInput || !fileInput.files.length) {
-                        toast("error", "Select a CSV file first");
+                        showModalError("Select a CSV file first");
                         return false;
                     }
+
                     const file = fileInput.files[0];
+
                     Papa.parse(file, {
                         header: true,
                         skipEmptyLines: false,
                         complete: async (results) => {
                             const rows = results.data;
-
                             const grouped = [];
                             let current = null;
 
@@ -131,6 +118,7 @@ export default function Rca() {
 
                                 if (hasMainFields) {
                                     if (current) grouped.push(current);
+
                                     current = {
                                         rca_no: "",
                                         department: clean(row["Department"]),
@@ -152,50 +140,52 @@ export default function Rca() {
                                 }
                             });
 
-                            // Push the last RCA group if any
                             if (current && current.rca_whys.length > 0) grouped.push(current);
 
-                            if (grouped && grouped.length > 0) {
-                                let lastIndex = 0;
+                            if (grouped.length === 0) {
+                                showModalError("CSV file is empty or invalid.");
+                                return;
+                            }
 
-                                // ✅ Collect all questions from all groups
-                                const allQuestions = grouped.flatMap(group =>
-                                    group.rca_whys.map(q => q.question?.trim().toLowerCase()).filter(Boolean)
+                            // Duplicate question check
+                            const allQuestions = grouped.flatMap(group =>
+                                group.rca_whys.map(q => q.question?.trim().toLowerCase()).filter(Boolean)
+                            );
+
+                            const duplicates = [...new Set(allQuestions.filter((q, i) => allQuestions.indexOf(q) !== i))];
+
+                            if (duplicates.length > 0) {
+                                showModalError(
+                                    `Duplicate questions found:<br>${duplicates.join("<br>")}<br><br>Please remove duplicates and try again.`
                                 );
+                                return;
+                            }
 
-                                // ✅ Find duplicates
-                                const duplicates = allQuestions.filter((q, i) => allQuestions.indexOf(q) !== i);
-                                const uniqueDuplicates = [...new Set(duplicates)];
+                            // Uploading group by group
+                            for (const group of grouped) {
+                                try {
+                                    const response = await fetch("/api/v1/rca/import", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify(group),
+                                    });
 
-                                // ✅ If duplicates exist, stop here
-                                if (uniqueDuplicates.length > 0) {
-                                    alert(`⚠️ Duplicate questions found in CSV:\n\n${uniqueDuplicates.join("\n")}\n\nPlease remove duplicates and try again.`);
-                                    return;
-                                }
+                                    const result = await response.json();
 
-                                for (const [index, group] of grouped.entries()) {
-                                    lastIndex = index;
-                                    try {
-                                        const response = await fetch("/api/v1/rca/import", {
-                                            method: "POST",
-                                            headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify(group),
-                                        });
-
-                                        const result = await response.json();
-                                        if (!result.success) throw new Error(result.message || "Upload failed");
-
-                                        closeModal();
-                                        toast("success", "RCA data uploaded successfully!");
-                                        fetchRCAList();
-
-                                        // Cleanup
-                                        delete window._tempDownloadFn;
-
-                                    } catch (err) {
-                                        console.error("Upload error:", err);
-                                        toast("error", "Failed to upload KPI CSV");
+                                    if (!result.success) {
+                                        showModalError(result.message || "Upload failed.");
+                                        return;
                                     }
+
+                                    // Success
+                                    closeModal();
+                                    toast("success", "RCA data uploaded successfully!");
+                                    tableRef.current?.refreshTable();
+                                    delete window._tempDownloadFn;
+
+                                } catch (err) {
+                                    console.error("Upload error:", err);
+                                    showModalError("Server error while uploading CSV.");
                                 }
                             }
                         },
@@ -204,17 +194,26 @@ export default function Rca() {
             },
             cancelBtn: {
                 label: "Cancel",
-                onClick: () => {
-                    // Cleanup on cancel
-                    delete window._tempDownloadFn;
-                }
+                onClick: () => delete window._tempDownloadFn
             },
         });
     };
 
+    // SHOW ERROR INSIDE MODAL
+    const showModalError = (msg) => {
+        const box = document.getElementById("csvErrorBox");
+        if (box) {
+            box.innerHTML = `
+                <div class="alert alert-danger mt-3">
+                    <strong>Error:</strong>&nbsp;${msg}
+                </div>
+            `;
+        }
+    };
 
-
-    // ✅ Handle Download Template
+    // --------------------------------------------------------------------------------------------------
+    // CSV TEMPLATE DOWNLOAD
+    // --------------------------------------------------------------------------------------------------
     const handleDownloadTemplate = () => {
         const headers = [
             "Department",
@@ -228,82 +227,75 @@ export default function Rca() {
             "Answer",
         ];
 
-        const sample = [
-            {
-                Department: "Production",
-                "Reported By": "Karthi",
-                "Date of Report": "22/05/25",
-                "Date of Occurrence": "30/10/25",
-                Impact: "Production",
-                "Problem Description": "Production 100 need it ..but 50",
-                "Immediate Action Taken": "Production lane 2 produced extra 50 item",
-                Question: "why only 50 produced in lane 1 ?",
-                Answer: "machine repair",
-            },
-        ];
+        const sample = [{
+            Department: "Production",
+            "Reported By": "Karthi",
+            "Date of Report": "22/05/25",
+            "Date of Occurrence": "30/10/25",
+            Impact: "Production",
+            "Problem Description": "Production 100 need it ..but 50",
+            "Immediate Action Taken": "Produced 50 items extra",
+            Question: "Why only 50 produced?",
+            Answer: "Machine breakdown",
+        }];
 
         const csv = Papa.unparse(sample, { columns: headers });
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
+
         const a = document.createElement("a");
         a.href = url;
         a.download = "RCA_Template.csv";
         a.click();
+
         URL.revokeObjectURL(url);
     };
 
-    // Delete Function
+    // --------------------------------------------------------------------------------------------------
+    // DELETE FUNCTION
+    // --------------------------------------------------------------------------------------------------
     const handleDelete = (id) => {
-        console.log("RCA handleDelete called with ID: " + id);
-        if (document.activeElement) document.activeElement.blur();
-
         confirm({
             title: "Delete RCA",
             message: "Are you sure you want to Delete the RCA?",
             positiveBtnOnClick: () => {
                 toggleProgressBar(true);
-                try {
-                    HttpClient({
-                        url: `/rca/delete/${id}`,
-                        method: "POST",
-                        data: { id },
-                    }).then(res => {
-                        console.log(res);
-                        toast('success', res.message || 'The RCA record has been deleted successfully.');
-                        closeModal();
-                        toggleProgressBar(false);
-                    }).catch(err => {
-                        closeModal();
-                        let message = 'Error occurred when trying to delete the RCA.';
-                        if (err.response?.data?.message) {
-                            message = err.response.data.message;
-                        }
-                        toast('error', message);
-                        toggleProgressBar(false);
-                    });
-                } catch (error) {
-                    toast('error', 'Error occurred when trying to delete the RCA data.');
-                }
+
+                HttpClient({
+                    url: `/rca/delete/${id}`,
+                    method: "POST",
+                    data: { id },
+                }).then(res => {
+                    toast('success', res.message || 'RCA record deleted successfully.');
+                    closeModal();
+                    toggleProgressBar(false);
+                    tableRef.current?.refreshTable();
+                }).catch(err => {
+                    closeModal();
+                    toast('error', err.response?.data?.message || "Delete failed.");
+                    toggleProgressBar(false);
+                });
             },
         });
     };
-    // Delete Function
-
 
     return (
         <AuthenticatedPage>
             <div className="row mb-3">
                 <div className="col-12 text-right">
                     <Link href="/rca/new" className="btn btn-primary">
-                        <AppIcon ic="plus" />&nbsp;Add RCA
+                        <AppIcon ic="plus" /> Add RCA
                     </Link>
                 </div>
             </div>
+
             <div className="row">
                 <div className="col-12">
                     <div className="card">
                         <div className="card-body">
                             <DataTable
+                                title="RCA List"
+                                ref={tableRef}
                                 apiPath="/rca/list"
                                 dataKeyFromResponse="root_cause_analysis"
                                 columns={columns}

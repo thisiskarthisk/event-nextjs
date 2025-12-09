@@ -3,6 +3,7 @@
 import { useAppLayoutContext } from "@/components/appLayout";
 import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import DataTable from "@/components/DataTable";
+import TextField from "@/components/form/TextField";
 import AppIcon from "@/components/icon";
 import { HttpClient } from "@/helper/http";
 import { encodeURLParam } from "@/helper/utils";
@@ -152,8 +153,8 @@ function UploadUsers({ onChange, errorMessage }) {
             </a>
           </div>
           <div>
-            <label className="form-label">Select a CSV File</label>
-            <input
+            <TextField
+              label="Select a CSV File"
               type="file"
               name="file"
               className="form-control mb-3"
@@ -190,9 +191,11 @@ function UploadUsers({ onChange, errorMessage }) {
         body: (
           <UploadUsers
             errorMessage={errorMessage}
-            onChange={(e) => {
+            onChange={(files) => {
               try {
-                const file = e.target.files?.[0];
+                // const file = e.target.files?.[0];
+                const file = files?.[0];
+
                 if (!file) {
                   toast("error", "Please select a file.");
                   return;
