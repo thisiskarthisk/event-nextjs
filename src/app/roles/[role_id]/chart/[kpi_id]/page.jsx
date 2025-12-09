@@ -14,6 +14,7 @@ import PieChart from "@/components/charts/pieChart";
 import Link from "next/link";
 import AppIcon from "@/components/icon";
 import { decodeURLParam, encodeURLParam } from "@/helper/utils";
+import { HttpClient } from "@/helper/http";
 
 export default function KPIResponseChart({ params }) {
   const { data: session, status } = useSession();
@@ -42,35 +43,44 @@ export default function KPIResponseChart({ params }) {
   const fetchKPIDetails = async () => {
     toggleProgressBar(true);
     try {
-      const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/responses/${decodeURLParam(kpi_id)}`);
-      const json = await res.json();
+      HttpClient({
+        url: `/roles/${decodeURLParam(role_id)}/responses/${decodeURLParam(kpi_id)}`,
+        method: 'GET'
+      }).then(res => {
+        if (res.success) {
+          if (res.data.kpi_details?.length > 0) {
+            const year = new Date().getFullYear();
+            const month = String(new Date().getMonth() + 1).padStart(2, "0");
 
-      if (json.data.kpi_details?.length > 0) {
-        
-        const year = new Date().getFullYear();
-        const month = String(new Date().getMonth() + 1).padStart(2, "0");
-
-        json.data.kpi_details.forEach((data) => {
-          switch (data.frequency) {
-            case "daily":
-              setFilterData(`${year}-${month}`)
-              setFrequency(data.frequency)
-              break; 
-            case "monthly":
-              setFilterData(`${year}`)
-              setFrequency(data.frequency)
-              break;
-            case "weekly":
-              const weeksCount = noOfWeeksInMonth(year, month);
-              setWeeks([...Array(weeksCount)].map((_, i) => i + 1));
-              setFilterData(`${year}-${month}-${selectedWeek}W`)
-              setFrequency(data.frequency)
-              break;
-            default:
-              return null
+            res.data.kpi_details.forEach((data) => {
+              switch (data.frequency) {
+                case "daily":
+                  setFilterData(`${year}-${month}`)
+                  setFrequency(data.frequency)
+                  break; 
+                case "monthly":
+                  setFilterData(`${year}`)
+                  setFrequency(data.frequency)
+                  break;
+                case "weekly":
+                  const weeksCount = noOfWeeksInMonth(year, month);
+                  setWeeks([...Array(weeksCount)].map((_, i) => i + 1));
+                  setFilterData(`${year}-${month}-${selectedWeek}W`)
+                  setFrequency(data.frequency)
+                  break;
+                default:
+                  return null
+              }
+            });
           }
-        });
-      }
+        } else {
+          toast('error', res.message || "Failed to save role sheet");
+        }
+      }).catch(err => {
+        toast('error', 'Network error. Please try again.');
+      }).finally(() => {
+        toggleProgressBar(false);
+      });
     } catch (error) {
       toast("error", "Something went wrong while fetching KPI responses.");
     } finally {
@@ -79,11 +89,24 @@ export default function KPIResponseChart({ params }) {
   }
 
   const fetchKPIResponses = async () => {
+  
     toggleProgressBar(true);
     try {
-      const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/responses/${decodeURLParam(kpi_id)}/${decodeURLParam(user_id)}/chart?filterData=${filterData || ''}`);
-      const json = await res.json();
-      setData(json.data.kpi_chart_responses);
+      HttpClient({
+        url: `/roles/${decodeURLParam(role_id)}/responses/${decodeURLParam(kpi_id)}/${decodeURLParam(user_id)}/chart`,
+        method: 'GET',
+        params: { filterData : filterData || ""},
+      }).then(res => {
+        if (res.success) {
+          setData(res.data?.kpi_chart_responses);
+        } else {
+          toast('error', res.message || "Failed to save role sheet");
+        }
+      }).catch(err => {
+        toast('error', 'Network error. Please try again.');
+      }).finally(() => {
+        toggleProgressBar(false);
+      });
     } catch (error) {
       toast("error", "Something went wrong while fetching KPI responses.");
     } finally {
@@ -206,7 +229,7 @@ export default function KPIResponseChart({ params }) {
             console.log('response:', response);
 
             const categories = generateCategoriesForChart(response.frequency, filterData);
-
+            
             const data = categories.map((c, cI) => {
               let value = null;
 

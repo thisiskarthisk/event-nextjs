@@ -6,17 +6,21 @@ export async function POST(req, contextPromise) {
   try {
     const { params } = await contextPromise;
     const { role_id } = params;
-    const body = await req.json();
-    const { data } = body;
-
+    const data = await req.json();
+    
     if (!role_id || !data || !Array.isArray(data)) {
       return JsonResponse.error("Invalid payload", 400);
     }
 
     const existingObjectives = await DB_Fetch(sql`
-      SELECT name FROM ${sql.identifier(Tables.TBL_ROLE_OBJECTIVES)}
-      WHERE role_id = ${role_id}
+      SELECT 
+        name 
+      FROM 
+        ${sql.identifier(Tables.TBL_ROLE_OBJECTIVES)}
+      WHERE 
+        role_id = ${role_id}
     `);
+
     const existingObjectiveNames = new Set(existingObjectives.map(o => o.name));
 
     for (const objective of data) {
@@ -31,7 +35,8 @@ export async function POST(req, contextPromise) {
       
       /* Insert or Skip Objective */
       await DB_Insert(sql`
-        INSERT INTO ${sql.identifier(Tables.TBL_ROLE_OBJECTIVES)}
+        INSERT INTO 
+          ${sql.identifier(Tables.TBL_ROLE_OBJECTIVES)}
           (role_id, name, description)
         VALUES
           (${role_id}, ${objective.objective}, ${objective.objective})
@@ -40,8 +45,12 @@ export async function POST(req, contextPromise) {
 
       /* Fetch objective id (works safely) */
       const existingObjective = await DB_Fetch(sql`
-        SELECT id FROM ${sql.identifier(Tables.TBL_ROLE_OBJECTIVES)}
-        WHERE role_id = ${role_id} AND name = ${objective.objective}
+        SELECT 
+          id 
+        FROM 
+          ${sql.identifier(Tables.TBL_ROLE_OBJECTIVES)}
+        WHERE role_id = ${role_id} 
+        AND name = ${objective.objective}
         LIMIT 1
       `);
 
@@ -53,7 +62,8 @@ export async function POST(req, contextPromise) {
       /* Insert Role Sheets */
       for (const role of objective.roles || []) {
         await DB_Insert(sql`
-          INSERT INTO ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
+          INSERT INTO 
+            ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
             (role_objective_id, title, description)
           VALUES
             (${role_objective_id}, ${role.role}, ${role.description || role.role})
@@ -62,8 +72,14 @@ export async function POST(req, contextPromise) {
 
         /* Fetch sheet id properly */
         const existingSheet = await DB_Fetch(sql`
-          SELECT id FROM ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
-          WHERE role_objective_id = ${role_objective_id} AND title = ${role.role}
+          SELECT 
+            id 
+          FROM 
+            ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
+          WHERE 
+            role_objective_id = ${role_objective_id} 
+          AND 
+            title = ${role.role}
           LIMIT 1
         `);
 
@@ -75,7 +91,8 @@ export async function POST(req, contextPromise) {
         /* Insert KPIs */
         for (const kpi of role.kpis || []) {
           await DB_Insert(sql`
-            INSERT INTO ${sql.identifier(Tables.TBL_KPIS)}
+            INSERT INTO 
+              ${sql.identifier(Tables.TBL_KPIS)}
               (role_sheet_id, name, measurement, op_definition, frequency, chart_type)
             VALUES
               (
@@ -90,8 +107,14 @@ export async function POST(req, contextPromise) {
           `);
 
           const existingKpi = await DB_Fetch(sql`
-            SELECT id FROM ${sql.identifier(Tables.TBL_KPIS)}
-            WHERE role_sheet_id = ${role_sheet_id} AND name = ${kpi.kpi}
+            SELECT 
+              id 
+            FROM 
+              ${sql.identifier(Tables.TBL_KPIS)}
+            WHERE 
+              role_sheet_id = ${role_sheet_id} 
+            AND 
+              name = ${kpi.kpi}
             LIMIT 1
           `);
 

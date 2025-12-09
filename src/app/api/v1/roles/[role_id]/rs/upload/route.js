@@ -2,11 +2,12 @@ import { DB_Insert, DB_Fetch, Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
 import { sql } from "drizzle-orm";
 
-export async function POST(req, { params }) {
+export async function POST(req, contextPromise) {
   try {
+    const { params } = await contextPromise;
     const { role_id } = params;
-    const body = await req.json();
-    const { data } = body;
+    const data = await req.json();
+    
 
     if (!role_id || !data || !Array.isArray(data)) {
       return JsonResponse.error("Invalid payload", 400);
@@ -15,7 +16,7 @@ export async function POST(req, { params }) {
     let insertedCount = { objectives: 0, sheets: 0, kpis: 0 };
 
     for (const objective of data) {
-      /** Insert or skip duplicate objective */
+      
       await DB_Insert(sql`
         INSERT INTO ${sql.identifier(Tables.TBL_ROLE_OBJECTIVES)}
           (role_id, name, description)
@@ -38,7 +39,7 @@ export async function POST(req, { params }) {
       /** Insert each role sheet */
       for (const role of objective.roles || []) {
         await DB_Insert(sql`
-          INSERT INTO ${sql.identifier(Tables.TBL_ROLE_SHEET)}
+          INSERT INTO ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
             (role_objective_id, title, description)
           VALUES
             (${role_objective_id}, ${role.role}, ${role.description || role.role})
@@ -46,7 +47,7 @@ export async function POST(req, { params }) {
         `);
 
         const [existingSheet] = await DB_Fetch(sql`
-          SELECT id FROM ${sql.identifier(Tables.TBL_ROLE_SHEET)}
+          SELECT id FROM ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
           WHERE role_objective_id = ${role_objective_id} AND title = ${role.role}
           LIMIT 1
         `);

@@ -200,14 +200,15 @@ export default function AddRoleSheetPage() {
     }
 
     toggleProgressBar(true);
+    
 
     try {
       const url = decodeURLParam(rs_id)
         ? `/roles/${decodeURLParam(role_id)}/rs/${decodeURLParam(rs_id)}/edit`
         : `/roles/${decodeURLParam(role_id)}/rs/add`;
-
+        
       const method = decodeURLParam(rs_id) ? "PUT" : "POST";
-
+       
       const res = HttpClient({
         url : url,
         method : method, 
@@ -255,8 +256,8 @@ export default function AddRoleSheetPage() {
                 <button
                   type="button"
                   className="btn btn-light btn-sm ms-auto"
-                  // onClick={() => router.push(`/roles/${role_id}`)}
-                  onClick={() => router.push("/roles")}
+                  onClick={() => router.push(`/roles/${role_id}`)}
+                  // onClick={() => router.push("/roles")}
                 >
                   Back
                 </button>
@@ -361,7 +362,7 @@ export default function AddRoleSheetPage() {
                             <div className="col-md-2 mb-3">
                               <SelectPicker
                                 label="Freq"
-                                options={Object.values(FREQUENCY_TYPES)}
+                                options={FREQUENCY_TYPES}
                                 value={kpi.frequency_of_measurement}
                                 onChange={(e) =>
                                   handleKpiChange(e, objIdx, roleIdx, kpiIdx , "frequency_of_measurement")
@@ -372,7 +373,7 @@ export default function AddRoleSheetPage() {
                             <div className="col-md-2 mb-3">
                               <SelectPicker
                                 label="Chart Type"
-                                options={Object.values(CHART_TYPES)}
+                                options={CHART_TYPES}
                                 value={kpi.vcs}
                                 onChange={(e) =>
                                   handleKpiChange(e, objIdx, roleIdx, kpiIdx , "vcs")

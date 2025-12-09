@@ -15,7 +15,7 @@ export async function GET(req, context) {
       AND ${Tables.TBL_KPIS}.active = TRUE
   `);
 
-  let message = "Fetch KPI Details Details Successfully !";
+  let message = "Fetch KPI Details Successfully !";
 
   return JsonResponse.success({
     kpi_details: result,

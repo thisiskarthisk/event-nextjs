@@ -14,6 +14,7 @@ import TextField from "@/components/form/TextField";
 import SelectPicker from "@/components/form/SelectPicker";
 import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 import DatePicker from "@/components/form/DatePicker";
+import { HttpClient } from "@/helper/http";
 
 const initialUploadFormData = {
   periodDate: '',
@@ -21,47 +22,71 @@ const initialUploadFormData = {
 };
 
 function UploadResponseForm({ frequency, onChange }) {
-  const [ formData, setFormData ] = useState({ ...initialUploadFormData });
+  const [formData, setFormData] = useState({ ...initialUploadFormData });
   const [weeksList, setWeeksList] = useState([]);
 
   const onPeriodFieldChanged = (value, name) => {
     let newValue = value;
 
-    if (name === 'file' && value && value.target && value.target.files) {
+    if (name === 'file' && value?.target?.files) {
       newValue = value.target.files[0] || null;
     }
-    
-    if (frequency === 'weekly' && name === 'month') {
-      const [year, month] = newValue.split("-").map(Number)
 
+    if (frequency === 'weekly' && name === 'month') {
+      const [year, month] = newValue.split('-').map(Number);
       setWeeksList(noOfWeeksInMonth(year, month));
     }
 
-    setFormData(prevData => {
-      let key = name === 'file' ? name : 'periodDate';
-      
-      return {
-        ...prevData,
-        [key]: newValue,
+    setFormData(prev => {
+      const value = name === 'month' ? `${newValue}-01` : newValue;
+
+      if (name === 'file') {
+        return { ...prev, file: newValue };
+      }
+
+      if (frequency === 'daily') {
+        if (name === 'month') {
+          return {
+            ...prev,
+            periodDate: value
+          };
+        }
+      }
+
+      if (frequency === 'weekly') {
+        if (name === 'month') {
+          return { 
+            ...prev, 
+            periodDate: { ...prev.periodDate, month: newValue } 
+          };
+        }
+        if (name === 'week') {
+          return { 
+            ...prev, 
+            periodDate: { ...prev.periodDate, week: newValue } 
+          };
+        }
+      }
+
+      return { 
+        ...prev, 
+        periodDate: newValue 
       };
     });
   };
 
-
   const noOfWeeksInMonth = (year, month) => {
     const lastOfMonth = new Date(year, month, 0);
     let weeks = 0;
-
     for (let d = 0; d < lastOfMonth.getDate(); d++) {
       const date = new Date(year, month - 1, d + 1);
       if (date.getDay() === 1) weeks++;
     }
-
-    return Array.from({ length: weeks }, (_, i) => ({ 
-        label: `Week ${i + 1}`, 
-        value: i + 1 
+    return Array.from({ length: weeks }, (_, i) => ({
+      label: `Week ${i + 1}`,
+      value: i + 1
     }));
-  }
+  };
 
   useEffect(() => {
     onChange(formData);
@@ -71,65 +96,68 @@ function UploadResponseForm({ frequency, onChange }) {
     <>
       <span className="badge bg-success text-white mb-3">Uploading new data will overwrite existing data.</span>
 
-      {
-        (frequency === 'daily' || frequency === 'weekly') &&
+      {(frequency === 'daily' || frequency === 'weekly') && (
         <div className="mb-3">
           <DatePicker
             type="month"
+            name="month"
             label="Select Month"
             format="Y-m"
             id="month"
-            value={formData.periodDate}
+            value={frequency === 'weekly' ? formData.periodDate?.month : formData.periodDate}
             onChange={(v) => onPeriodFieldChanged(v, 'month')}
-            isRequired={true} />
+            isRequired
+          />
         </div>
-      }
+      )}
 
-      {
-        frequency === 'monthly' &&
+      {frequency === 'monthly' && (
         <div className="mb-3">
           <DatePicker
             type="number"
             label="Enter Year"
-            placeholder="YYYY"
+            id="year"
             name="year"
-            format ="Y"
+            format="Y"
             value={formData.periodDate}
             onChange={(v) => onPeriodFieldChanged(v, 'year')}
-            isRequired={true} />
+            isRequired
+          />
         </div>
-      }
+      )}
 
-      {
-        
-        frequency === 'weekly' &&
+      {frequency === 'weekly' && (
         <div className="mb-3">
           <SelectPicker
             label="Select Week"
+            name="week"
             options={weeksList}
-            value={formData.periodDate}
-            isRequired={true}
-            onChange={(v) => onPeriodFieldChanged(v, 'week')} />
+            value={formData.periodDate?.week}
+            isRequired
+            onChange={(v) => onPeriodFieldChanged(v, 'week')}
+          />
         </div>
-      }
+      )}
 
       <div className="mb-3 mt-3">
         <TextField
-            type="file"
-            label="Choose File"
-            name="file"
-            onChange={(v) => onPeriodFieldChanged(v, 'file')}
-            isRequired={true} />
+          type="file"
+          label="Choose File"
+          name="file"
+          onChange={(v) => onPeriodFieldChanged(v, 'file')}
+          isRequired
+        />
       </div>
     </>
   );
 }
 
+
 export default function KPIResponses({ params }) {
   const { data: session, status } = useSession();
   const { role_id, user_id } = use(params);
 
-  const { setPageTitle, toggleProgressBar, toast, modal, closeModal} = useAppLayoutContext();
+  const { setPageTitle, toggleProgressBar, toast, modal, closeModal, setAppBarMenuItems} = useAppLayoutContext();
   const { t, locale } = useI18n();
   const [data, setData] = useState([]);
 
@@ -158,8 +186,20 @@ export default function KPIResponses({ params }) {
   const fetchKPIResponses = () => {
     toggleProgressBar(true);
     try {
-      fetch(`/api/v1/roles/${decodeURLParam(role_id)}/responses`).then((res)=> res.json()).then((data)=> {
-        setData(data.data.kpi_responses)
+      HttpClient({
+        url: `/roles/${decodeURLParam(role_id)}/responses`,
+        method: 'GET',
+        params: { user_id: decodeURLParam(user_id) }
+      }).then(res => {
+        if (res.success) {
+          setData(res.data?.kpi_responses);
+        } else {
+          toast('error', res.message || "Failed to save role sheet");
+        }
+      }).catch(err => {
+        toast('error', 'Network error. Please try again.');
+      }).finally(() => {
+        toggleProgressBar(false);
       });
     } catch (error) {
       toast("error", "Something went wrong while fetching KPI responses.");
@@ -168,8 +208,9 @@ export default function KPIResponses({ params }) {
     }
   };
   
-  const saveChartData = async (user_id, kpi_role_id, chartType, chartData, kpi_record_id, ucl, lcl, periodDate) => {
+  const saveChartData = async (user_id, kpi_role_id, chartType, chartData, kpi_record_id, ucl, lcl, periodDate, frequency) => {
     toggleProgressBar(true);
+    
     try {
       const payload = {
         user_id: decodeURLParam(user_id),
@@ -178,7 +219,8 @@ export default function KPIResponses({ params }) {
         ...(ucl !== undefined && lcl !== undefined ? { ucl, lcl } : {}),
         kpi_record_id,
         chartData,
-        periodDate
+        periodDate,
+        frequency
       };
 
       const res = await fetch(`/api/v1/roles/${kpi_role_id}/responses/save`, {
@@ -215,7 +257,7 @@ export default function KPIResponses({ params }) {
     link.click();
   };
 
-  const handleFileUpload = (user_id, file, chartType, role_id, record_id, existingChartData, periodDate) => {
+  const handleFileUpload = (user_id, file, chartType, role_id, record_id, existingChartData, periodDate, frequency) => {
     if (!file) return;
 
     Papa.parse(file, {
@@ -294,18 +336,18 @@ export default function KPIResponses({ params }) {
           toast("error", "Errors found in uploaded file. Check validation_error_list.txt.");
           return;
         }
-
-        saveChartData(user_id, role_id, chartType, chartData, record_id, ucl, lcl, periodDate);
+        saveChartData(user_id, role_id, chartType, chartData, record_id, ucl, lcl, periodDate, frequency);
       },
     });
   };
 
   const onUploadFormSubmitted = (frequency, user_id, chartType, role_id, record_id, existingChartData) => {
     const currentData = latestUploadFormData.current;
-    handleFileUpload(user_id, currentData.file, chartType, role_id, record_id, existingChartData, currentData.periodDate);
+    handleFileUpload(user_id, currentData.file, chartType, role_id, record_id, existingChartData, currentData.periodDate, frequency);
   };
 
   const handleModalFileUpload = (frequency, user_id, chartType, role_id, record_id, existingChartData) => {
+    
     setUploadFormData({ ...initialUploadFormDataParent });
     
     modal({
@@ -337,7 +379,7 @@ export default function KPIResponses({ params }) {
   useEffect(() => {
     if(status === 'authenticated'){
       setPageTitle(t('KPI Responses - Role: '+ decodeURLParam(role_id)));
-
+      setAppBarMenuItems([]);
       fetchKPIResponses();
       toggleProgressBar(false);
     }

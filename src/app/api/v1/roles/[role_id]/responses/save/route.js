@@ -5,10 +5,15 @@ import { sql } from "drizzle-orm";
 export async function POST(req) {
   try {
     const data = await req.json();
-    const { user_id, kpi_role_id, chartType, ucl, lcl, kpi_record_id, chartData, periodDate } = data;
-   
+    const { user_id, kpi_role_id, chartType, ucl, lcl, kpi_record_id, chartData, frequency } = data;
+
+    let { periodDate } = data;
     let result, kpi_response_id;
-    
+
+    if (frequency === 'weekly') {
+      const { month, week } = periodDate;
+      periodDate = `${month}-${week}W`;
+    }
     /* --------------------------------------------
      * Fetching KPI Details
      * Abinash
@@ -21,6 +26,7 @@ export async function POST(req) {
         ${sql.identifier(Tables.TBL_KPI_RESPONSES)}
       WHERE 
         kpi_id = ${kpi_record_id}
+        AND user_id = ${user_id}
     `);
 
     /* --------------------------------------------
@@ -33,12 +39,12 @@ export async function POST(req) {
         UPDATE 
           ${sql.identifier(Tables.TBL_KPI_RESPONSES)}
         SET
-          user_id = ${user_id ?? null},
           period_date = ${periodDate},
           ucl = ${ucl ?? null},
           lcl = ${lcl ?? null}
         WHERE 
           kpi_id = ${kpi_record_id}
+          AND user_id = ${user_id}
       `);
     } else {
       /* --------------------------------------------
@@ -51,7 +57,7 @@ export async function POST(req) {
           ${sql.identifier(Tables.TBL_KPI_RESPONSES)}
           (kpi_id, user_id, period_date, ucl, lcl)
         VALUES
-          (${kpi_record_id}, ${user_id ?? null}, ${periodDate}, ${ucl ?? null}, ${lcl ?? null})
+          (${kpi_record_id}, ${user_id}, ${periodDate}, ${ucl ?? null}, ${lcl ?? null})
       `);
     }
 

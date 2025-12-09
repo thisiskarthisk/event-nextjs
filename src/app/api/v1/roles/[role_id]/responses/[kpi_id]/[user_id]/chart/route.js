@@ -3,10 +3,9 @@ import { JsonResponse } from "@/helper/api";
 
 export async function GET(req, context) {
   const { role_id, kpi_id, user_id } = await context.params;
-
   const searchParams = req.nextUrl.searchParams;
   const filterData = searchParams.get('filterData') || '';
-  
+
   const result = await DB_Fetch(`
     SELECT 
       ${Tables.TBL_KPIS}.chart_type,
@@ -54,7 +53,7 @@ export async function GET(req, context) {
       ${Tables.TBL_KPI_RESPONSES}.period_date;
   `);
 
-  let message = "Fetch KPI Charts Resposne Details Successfully !";
+  let message = "Fetch KPI Charts Response Details Successfully !";
 
   return JsonResponse.success({
     kpi_chart_responses: result,

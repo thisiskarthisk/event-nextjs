@@ -13,6 +13,7 @@ export default {
   TBL_RCA: 'root_cause_analysis',
   TBL_RCA_WHYS: 'rca_whys',
   TBL_KPI_RESPONSE: 'kpi_responses',
+  
   PublicFields: {
     'users': [
       'id', 'user_type', 'employee_id', 'first_name', 'last_name', 'email', 'mobile_no'
