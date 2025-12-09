@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 export async function GET(req, context) {
     const data = await context.params;
-
+    const capaId = atob(data.id);
     const result = await DB_Fetch(`
         SELECT
             ga.id AS ga_id,
@@ -15,7 +15,7 @@ export async function GET(req, context) {
             gap_analysis ga
         LEFT JOIN cp_actions cpa
         ON ga.id = cpa.gap_analysis_id
-        WHERE ga.id = ${data.id};
+        WHERE ga.id = ${capaId};
     `);
 
     return JsonResponse.success({

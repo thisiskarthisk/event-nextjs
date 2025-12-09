@@ -24,7 +24,7 @@ export default function Capa() {
 
     const handleView = (id) => router.push(`/capa/view/${id}`);
 
-    const handleEdit = (id) => router.push(`/capa/edit/${id}`);
+    const handleEdit = (id) => router.push(`/capa/edit/${btoa(id)}`);
 
     const handleDelete = (id) => {
         console.log("handleDelete called with ID: " + id);
