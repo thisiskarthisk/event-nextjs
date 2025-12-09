@@ -33,3 +33,15 @@ export async function DB_Insert(query, idCol = 'id') {
 export async function DB_Fetch(query) {
   return (await DB.execute(typeof(query) === 'object' ? sql`${query}` : query)).rows;
 }
+
+export async function DB_Init() {
+  return DB.execute("BEGIN");
+}
+
+export async function DB_Commit() {
+  return DB.execute("COMMIT");
+}
+
+export async function DB_Rollback() {
+  return DB.execute("ROLLBACK");
+}

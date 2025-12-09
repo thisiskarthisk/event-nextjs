@@ -2,87 +2,64 @@ import { DB_Fetch, Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
 
 export async function GET(req) {
-    let page = Number(req.nextUrl.searchParams.get("page")) || 1;
-    let pageSize = Number(req.nextUrl.searchParams.get("pageSize")) || 10;
-
-    const kpi = req.nextUrl.searchParams.get("kpi") || "";
-    const startDate = req.nextUrl.searchParams.get("startDate") || "";
-    const endDate = req.nextUrl.searchParams.get("endDate") || "";
-    const searchValue = req.nextUrl.searchParams.get("search");
-    const userId = req.nextUrl.searchParams.get("user");
+    const userId = req.nextUrl.searchParams.get("user") || "";
+    const kpiId = req.nextUrl.searchParams.get("kpi") || "";
+    const year = req.nextUrl.searchParams.get("year") || "";
     const exportRecord = req.nextUrl.searchParams.get("export") || false;
-    const offset = (page - 1) * pageSize;
-    let where = " WHERE kr.ucl IS NOT NULL AND kr.lcl IS NOT NULL ";
-    let pagination = `LIMIT ${pageSize} OFFSET ${offset}`;
-    if (kpi) where += ` AND k.id = ${kpi}`;
-    if (startDate) where += ` AND kr.period_date >= '${startDate}'::date `;
-    if (endDate) where += ` AND kr.period_date <= '${endDate}'::date `;
-    if (userId) where += ` AND kr.user_id = '${userId}'`;
-    
-    if (exportRecord) pagination = ``;
 
+    let where = ` WHERE kr.ucl IS NOT NULL AND kr.lcl IS NOT NULL `;
 
-    // GLOBAL SEARCH
-    if (searchValue) {
-        const safeSearch = searchValue.replace(/'/g, "''");
-        where += `
-            AND (
-                k.name ILIKE '%${safeSearch}%'
-                OR krcd.label ILIKE '%${safeSearch}%'
-                OR CAST(krcd.value AS TEXT) ILIKE '%${safeSearch}%'
-                OR CAST(kr.period_date AS TEXT) ILIKE '%${safeSearch}%'
-                OR CAST(kr.ucl AS TEXT) ILIKE '%${safeSearch}%'
-                OR CAST(kr.lcl AS TEXT) ILIKE '%${safeSearch}%'
-            )
-        `;
-    }
+    if (userId) where += ` AND kr.user_id = ${userId}`;
+    if (kpiId) where += ` AND kr.kpi_id = ${kpiId}`;
+    if (year) where += ` AND EXTRACT(YEAR FROM kr.period_date) = ${year}`;
 
-    let sql = `
-        SELECT 
-            *,
-            COUNT(*) OVER() AS total_records
-        FROM (
-            SELECT
-                kr.kpi_id,
-                kr.user_id,
-                kr.period_date, 
-                k.name,
-                kr.ucl,
-                kr.lcl,
-                krcd.label,
-                ROUND(krcd.value::numeric, 2) AS value,
-                CASE
-                    WHEN krcd.value < kr.lcl THEN 'lower'
-                    WHEN krcd.value < kr.ucl THEN 'boundary'
-                    ELSE 'upper'
-                END AS type,
-                CASE
-                    WHEN krcd.value < kr.lcl THEN CONCAT('LAL:', (kr.lcl)::INT)
-                    WHEN krcd.value < kr.ucl THEN 'boundary'
-                    ELSE CONCAT('UAL:', (kr.ucl)::INT)
-                END AS limit
-            FROM ${Tables.TBL_KPIS} k
-            LEFT JOIN ${Tables.TBL_KPI_RESPONSE} kr ON k.id = kr.kpi_id
-            LEFT JOIN ${Tables.TBL_KPI_RESPONSE_CHART_DATA} krcd ON kr.id = krcd.kpi_response_id 
-            ${where}
-        ) t
-        WHERE t.type != 'boundary'
-        ORDER BY t.label
-        ${pagination};
+    // Step 1: Base monthly aggregation (COUNT instead of AVG)
+    const monthlySql = `
+        SELECT
+            k.name AS kpi_name,
+            TO_CHAR(kr.period_date, 'Mon') AS month,
+            COUNT(krcd.value) AS value
+        FROM ${Tables.TBL_KPIS} k
+        LEFT JOIN ${Tables.TBL_KPI_RESPONSE} kr ON k.id = kr.kpi_id
+        LEFT JOIN ${Tables.TBL_KPI_RESPONSE_CHART_DATA} krcd ON kr.id = krcd.kpi_response_id
+        ${where}
+        AND krcd.value IS NOT NULL
+        GROUP BY k.name, month
+        HAVING COUNT(krcd.value) > 0
+        ORDER BY k.name, month
     `;
 
-    const rows = await DB_Fetch(sql);
+    const monthRows = await DB_Fetch(monthlySql);
 
-    const totalRecords = rows.length > 0 ? Number(rows[0].total_records) : 0;
+    if (monthRows.length === 0) {
+        return JsonResponse.success({ row: [] });
+    }
 
-    const totalPages = Math.ceil(totalRecords / pageSize);
+    // Step 2: Pivot → KPI rows with 12 month columns
+    const pivotSql = `
+        SELECT
+            kpi_name,
+            MAX(value) FILTER (WHERE month = 'Jan') AS "Jan",
+            MAX(value) FILTER (WHERE month = 'Feb') AS "Feb",
+            MAX(value) FILTER (WHERE month = 'Mar') AS "Mar",
+            MAX(value) FILTER (WHERE month = 'Apr') AS "Apr",
+            MAX(value) FILTER (WHERE month = 'May') AS "May",
+            MAX(value) FILTER (WHERE month = 'Jun') AS "Jun",
+            MAX(value) FILTER (WHERE month = 'Jul') AS "Jul",
+            MAX(value) FILTER (WHERE month = 'Aug') AS "Aug",
+            MAX(value) FILTER (WHERE month = 'Sep') AS "Sep",
+            MAX(value) FILTER (WHERE month = 'Oct') AS "Oct",
+            MAX(value) FILTER (WHERE month = 'Nov') AS "Nov",
+            MAX(value) FILTER (WHERE month = 'Dec') AS "Dec"
+        FROM (${monthlySql}) m
+        GROUP BY kpi_name
+        ORDER BY kpi_name;
+    `;
+
+    const pivotRows = await DB_Fetch(pivotSql);
 
     return JsonResponse.success({
-        row: rows,
-        total: totalRecords,
-        page: page,
-        pageSize: pageSize,
-        filtered: totalRecords,
-        totalPages: totalPages,
+        row: pivotRows,
+        total: pivotRows.length
     });
 }
