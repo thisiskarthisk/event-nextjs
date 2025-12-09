@@ -68,10 +68,6 @@ export default function AbnormalitiesReport() {
         setSelectedKpi(kpi_id);
 
         if (!user_id || !kpi_id) return;
-
-        
-
-        if (years.success) setYearsList(years.data);
     };
 
     /** -------------------------------------------------------

@@ -9,6 +9,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { HttpClient } from "@/helper/http";
 
 export default function CapaAnalysis({ params }) {
     const { setPageTitle, toggleProgressBar } = useAppLayoutContext();
@@ -21,22 +22,23 @@ export default function CapaAnalysis({ params }) {
         setPageTitle(t('MP/CP GAP Analysis'));
 
         toggleProgressBar(false);
-
-        fetch(`/api/v1/capa/${id}`)
-            .then((res) => res.json())
-            .then((response) => {
-                if (response.success) {
-                    const data = response.data.gap_analysis;
-                    if (data.length > 0) {
-                        setData(data);
-                    } else {
-                        setData([]);
-                    }
+        HttpClient({
+            url: `/capa/${decodeURIComponent(id)}`,
+            method:"GET"
+        })
+        .then(async(response) => {
+            if (response.success) {
+                const data = response.data.gap_analysis;
+                if (data.length > 0) {
+                    setData(data);
                 } else {
-                    console.error("Error fetching data:", response.message);
+                    setData([]);
                 }
-            })
-            .catch((err) => console.error("API Error:", err));
+            } else {
+                console.error("Error fetching data:", response.message);
+            }
+        })
+        .catch((err) => console.error("API Error:", err));
     }, [locale, id]);
 
     const handleDownloadPdf = () => {
