@@ -33,18 +33,20 @@ export default function Tooltip({
   const initializeTooltip = (title) => {
     disposeTooltip();
 
-    tooltipClassRef.current = new window.bootstrap.Tooltip(linkElementRef.current, {
+    /* tooltipClassRef.current = new window.bootstrap.Tooltip(linkElementRef.current, {
       'container': linkElementRef.current,
       'trigger': 'manual',
       'placement': 'bottom',
       'title': title,
-    });
+    }); */
   };
 
   const onMouseEntered = (e) => {
     initializeTooltip(title);
 
-    tooltipClassRef.current.show();
+    if (tooltipClassRef.current) {
+      tooltipClassRef.current.show();
+    }
   };
 
   const onMouseLeave = (e) => {
@@ -54,10 +56,12 @@ export default function Tooltip({
   useEffect(() => {
     initializeTooltip(title);
 
-    if (linkElementRef.current.matches(':hover')) {
-      tooltipClassRef.current.show();
-    } else {
-      tooltipClassRef.current.hide();
+    if (linkElementRef.current && tooltipClassRef.current) {
+      if (linkElementRef.current.matches(':hover')) {
+        tooltipClassRef.current.show();
+      } else {
+        tooltipClassRef.current.hide();
+      }
     }
   }, [title]);
 
