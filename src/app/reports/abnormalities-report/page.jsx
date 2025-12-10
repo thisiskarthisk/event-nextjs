@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { HttpClient } from "@/helper/http";
 import AppIcon from "@/components/icon";
+import SelectPicker from "@/components/form/SelectPicker";
 
 export default function AbnormalitiesReport() {
 
@@ -75,7 +76,6 @@ export default function AbnormalitiesReport() {
     ---------------------------------------------------------*/
     const applyFilter = async (e) => {
         e.preventDefault();
-        console.log(selectedYear,selectedUser);
         if(selectedUser && selectedYear ){
             const response = await HttpClient({
                 url: "/reports/abnormalities-report",
@@ -182,7 +182,7 @@ export default function AbnormalitiesReport() {
 
                             {/* USER DROPDOWN */}
                             <div className="col-md-3 required-field">
-                                <label className="form-label fw-bold">User</label>
+                                {/*<label className="form-label fw-bold">User</label>
                                 <select className="form-select"
                                     value={selectedUser}
                                     onChange={(e) => onUserChange(e.target.value)}
@@ -191,12 +191,19 @@ export default function AbnormalitiesReport() {
                                     {usersList.map(u => (
                                         <option key={u.id} value={u.id}>{u.full_name}</option>
                                     ))}
-                                </select>
+                                </select> */}
+                                <SelectPicker  
+                                    label="User"
+                                    options={usersList} 
+                                    value={selectedUser} 
+                                    onChange={(value) => onUserChange(value)}   // value is already the selected ID
+                                    className={`form-control`} 
+                                /> 
                             </div>
 
                             {/* KPI DROPDOWN */}
                             <div className="col-md-3">
-                                <label className="form-label fw-bold">KPI</label>
+                                {/* <label className="form-label fw-bold">KPI</label>
                                 <select className="form-select"
                                     value={selectedKpi}
                                     onChange={(e) => onKpiChange(selectedUser, e.target.value)}
@@ -205,7 +212,14 @@ export default function AbnormalitiesReport() {
                                     {kpiList.map(k => (
                                         <option key={k.kpi_id} value={k.kpi_id}>{k.name}</option>
                                     ))}
-                                </select>
+                                </select> */}
+                                <SelectPicker  
+                                    label="KPI"
+                                    options={kpiList} 
+                                    value={selectedKpi} 
+                                    onChange={(value) => onKpiChange(selectedUser,value)}   // value is already the selected ID
+                                    className={`form-control`} 
+                                /> 
                             </div>
 
                             {/* BUTTONS */}

@@ -11,14 +11,40 @@ export async function GET(req) {
 
     if (userId) where += ` AND kr.user_id = ${userId}`;
     if (kpiId) where += ` AND kr.kpi_id = ${kpiId}`;
-    if (year) where += ` AND EXTRACT(YEAR FROM kr.period_date) = ${year}`;
+    if (year) where += ` AND EXTRACT(YEAR FROM
+                                CASE
+                                    WHEN kr.period_date ~ '^\\d{4}-\\d{2}-[1-5]W$' THEN
+                                        TO_DATE(
+                                            SUBSTRING(kr.period_date, 1, 8) ||
+                                            ((CAST(SUBSTRING(kr.period_date, 9, 1) AS INT) - 1) * 7 + 1),
+                                            'YYYY-MM-DD'
+                                        )
+                                    ELSE
+                                        kr.period_date::date
+                                END
+                            ) = ${year}`;
 
     // Step 1: Base monthly aggregation (COUNT instead of AVG)
     const monthlySql = `
         SELECT
             k.name AS kpi_name,
-            TO_CHAR(kr.period_date, 'Mon') AS month,
+
+            TO_CHAR(
+                CASE
+                    WHEN kr.period_date ~ '^\\d{4}-\\d{2}-[1-5]W$' THEN
+                        TO_DATE(
+                            SUBSTRING(kr.period_date, 1, 8) ||
+                            ((CAST(SUBSTRING(kr.period_date, 9, 1) AS INT) - 1) * 7 + 1),
+                            'YYYY-MM-DD'
+                        )
+                    ELSE
+                        kr.period_date::date
+                END,
+                'Mon'
+            ) AS month,
+
             COUNT(krcd.value) AS value
+
         FROM ${Tables.TBL_KPIS} k
         LEFT JOIN ${Tables.TBL_KPI_RESPONSE} kr ON k.id = kr.kpi_id
         LEFT JOIN ${Tables.TBL_KPI_RESPONSE_CHART_DATA} krcd ON kr.id = krcd.kpi_response_id
@@ -26,7 +52,6 @@ export async function GET(req) {
         AND krcd.value IS NOT NULL
         GROUP BY k.name, month
         HAVING COUNT(krcd.value) > 0
-        ORDER BY k.name, month
     `;
 
     const monthRows = await DB_Fetch(monthlySql);

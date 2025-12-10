@@ -9,8 +9,8 @@ export async function GET(req, context) {
     }
     const kpiList = await DB_Fetch(`
         SELECT DISTINCT
-            kr.kpi_id,
-            kpi.name,
+            kr.kpi_id as value,
+            kpi.name as label,
             kpi.measurement,
             kpi.frequency,
             kpi.chart_type
