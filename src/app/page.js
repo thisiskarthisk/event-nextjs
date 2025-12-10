@@ -10,6 +10,7 @@ import Link from "next/link";
 import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { HttpClient } from "@/helper/http";
 
 /* Dynamically import chart */
 const Tree = dynamic(() => import("react-organizational-chart").then((mod) => mod.Tree), { ssr: false });
@@ -25,7 +26,7 @@ const cardContainerStyle = {
   marginTop: "12px",
   width: "100%",
   maxWidth: "100%",
-  maxHeight: "660px",
+  maxHeight: "790px",
   overflow: "auto",
   WebkitOverflowScrolling: "touch",
 };
@@ -56,13 +57,6 @@ const orgNodeHeaderStyle = {
   cursor: "pointer",
 };
 
-const orgNodeBodyStyle = {
-  padding: "22px 0px 16px 0px",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-};
-
 const orgNodeFooterStyle = {
   borderTop: "1px solid #eee",
   padding: "10px 0 0 0",
@@ -85,7 +79,7 @@ function OrgChartCard({
   onDeleteUser,
 }) {
   const userList = role.users || [];
-  // console.log('role:', role, 'userList:', userList);
+  const validUsers = userList.filter(u => u && u.id);
 
   return (
     <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
@@ -137,37 +131,36 @@ function OrgChartCard({
 
         {/* Body */}
         <div className="list-group text-left mb-3 mx-1">
-          {
-            userList.length > 0 &&
-            userList.map((user) => (
-              <div key={user.id} className="list-group-item flex-space-between flex-valign-center">
-                <span className="flex-column">
-                  <span className="badge bg-secondary rounded-pill mb-2"><AppIcon ic="badge-account" />&nbsp;{ user.employee_id }</span>
-                  <span>{ user.first_name } {user.last_name || '' }</span>
-                </span>
+          { 
+            validUsers.length > 0 ? (
+              validUsers.map((user) => (
+                <div key={user.id} className="list-group-item flex-space-between flex-valign-center">
+                  <span className="flex-column">
+                    <span className="badge bg-secondary rounded-pill mb-2"><AppIcon ic="badge-account" />&nbsp;{ user.employee_id }</span>
+                    <span>{ user.first_name } {user.last_name || '' }</span>
+                  </span>
 
-                <span className="">
-                  <Link href={`/roles/${encodeURLParam(role.id)}/responses/${encodeURLParam(user.id)}`} className="text-success">
-                    <AppIcon ic="speedometer" size="large" />
-                  </Link>
-                  &nbsp;|&nbsp;
-                  <Link href={`/admin/users/edit/${encodeURLParam(user.id)}?from=${encodeURLParam('/')}`} className="text-primary">
-                    <AppIcon ic="pencil" size="large" />
-                  </Link>
-                  &nbsp;|&nbsp;
-                  <a href="#" className="text-danger fs-large" onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteUser(role.id, user);
-                    }}>
-                    <AppIcon ic="delete" />
-                  </a>
-                </span>
-              </div>
-            ))
-          }
-
-          {
-            userList.length == 0 && <div className="list-group-item text-secondary">No users assigned</div>
+                  <span className="">
+                    <Link href={`/roles/${encodeURLParam(role.id)}/responses/${encodeURLParam(user.id)}`} className="text-success">
+                      <AppIcon ic="speedometer" size="large" />
+                    </Link>
+                    &nbsp;|&nbsp;
+                    <Link href={`/admin/users/edit/${encodeURLParam(user.id)}?from=${encodeURLParam('/')}`} className="text-primary">
+                      <AppIcon ic="pencil" size="large" />
+                    </Link>
+                    &nbsp;|&nbsp;
+                    <a href="#" className="text-danger fs-large" onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteUser(role.id, user);
+                      }}>
+                      <AppIcon ic="delete" />
+                    </a>
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="list-group-item text-secondary text-center">No users assigned</div>
+            )
           }
         </div>
 
@@ -255,12 +248,11 @@ function UploadOrgChartWidget({ onChange, errorMessage }) {
 
 /* -------------------- Main Component -------------------- */
 export default function OrganizationChartPage() {
-  const { setPageTitle, toggleProgressBar, setAppBarMenuItems, modal, closeModal, toast } =
+  const { setPageTitle, toggleProgressBar, setAppBarMenuItems, modal, closeModal, toast , confirm } =
     useAppLayoutContext();
   const { t } = useI18n?.() ?? {};
   const [roles, setRoles] = useState([]);
   const [expandedNodes, setExpandedNodes] = useState({});
-  const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
 
@@ -285,17 +277,27 @@ export default function OrganizationChartPage() {
       }
     }
   }, [status]);
-
+  
   async function loadRoles() {
-    setLoading(true);
+    toggleProgressBar(true);
     try {
-      const res = await fetch("/api/v1/organizationChart/list");
-      const data = await res.json();
-      if (data.success) setRoles(data.data.roles || []);
+      HttpClient({
+        url: "/organizationChart/list",
+        method: "GET",
+      })
+        .then((data) => {
+          if (data.success) setRoles(data.data.roles || []);
+        })
+        .catch((e) => {
+          console.error("Error loading roles:", e);
+          toast("error", "Failed to load organization chart roles.");
+        })
+        .finally(() => {
+          toggleProgressBar(false);
+        });
     } catch (e) {
       console.error(e);
-    } finally {
-      setLoading(false);
+      toggleProgressBar(false);
     }
   }
 
@@ -312,73 +314,96 @@ function openFormModal(type, payload = {}) {
   /* -------------------- DELETE MODAL -------------------- */
   if (type.startsWith("delete")) {
     const isRole = type === "deleteRole";
-    const nameLabel = isRole ? payload.name || "(unnamed)" : payload.user || "(unknown)";
-    const idField = payload.role_id || payload.id;
+    const nameLabel = isRole 
+      ? payload.name || "(unnamed)" 
+      : payload.user?.first_name + " " + payload.user?.last_name;
 
-    modal({
+    const roleId = payload.role_id || payload.id;
+    const userId = payload.user?.id || null;
+
+    confirm({
       title: `Delete ${isRole ? "Role" : "User"} "${nameLabel}"?`,
-      body: <p>Are you sure you want to delete this {isRole ? "role" : "user"}?</p>,
-      okBtn: {
-        label: "Delete",
-        variant: "danger",
-        onClick: async () => {
-          const finalPayload = {
-            type,
-            role_id: idField,
-            user: payload.user || null,
-          };
+      message: <p>Are you sure you want to delete this {isRole ? "role" : "user"}?</p>,
+      positiveBtnOnClick: async () => {
+        const finalPayload = {
+          type,
+          role_id: roleId,
+          user_id: userId,
+        };
 
-          const res = await fetch(`/api/v1/organizationChart/delete`, {
+        toggleProgressBar(true);
+
+        try {
+          const res = await HttpClient({
+            url: "/organizationChart/delete",
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(finalPayload),
+            data: JSON.stringify(finalPayload),
           });
-
-          const result = await res.json();
-          toast(result.success ? "success" : "error", result.message);
+          if (!res.success) {
+            toast("error", res.message || "Delete failed.");
+            toggleProgressBar(false);
+            closeModal();
+            return;
+          }
+          toast("success", res.message || "Deleted successfully.");
+          toggleProgressBar(false);
           closeModal();
-          if (result.success) loadRoles();
-        },
-      },
-      cancelBtn: { label: "Cancel" },
+          if (res.success) loadRoles();
+        } catch (err) {
+          console.error("Delete error:", err);
+          toggleProgressBar(false);
+          closeModal();
+          if (res.success) loadRoles();
+          if(err.response && err.response.data && err.response.data.message){
+              let message = err.response?.data?.message;
+              toast("error", message);
+          }
+          toast("error", message || "Error occurred when trying to delete.");}
+      }
     });
+
     return;
   }
+  
+
 
   /* -------------------- ADD USER MODAL -------------------- */
   if (type === "addUser") {
     let selectedUser = payload.user_id || null;
-    console.log('selectedUser:',selectedUser);
     let users = [];
 
     (async () => {
-      try {
-        const res = await fetch("/api/v1/users/list");
-        const data = await res.json();
-        const list = data?.data?.users ?? data?.data ?? [];
+      HttpClient({
+        url: "/users/list",
+        method: "GET",
+      })
+        .then((res) => {
+          const list = res?.data?.users ?? res?.data ?? [];
 
-        if (Array.isArray(list)) {
-          users = list;
-          const select = document.getElementById("userDropdown");
-          if (select) {
-            select.innerHTML = `<option value="">-- Select User --</option>`;
-            users.forEach((u) => {
-              const opt = document.createElement("option");
-              opt.value = u.id;
-              opt.textContent = `${u.first_name || ""} ${u.last_name || ""}`.trim() || "(Unnamed)";
+          if (Array.isArray(list)) {
+            users = list;
+            const select = document.getElementById("userDropdown");
+            if (select) {
+              select.innerHTML = `<option value="">-- Select User --</option>`;
+              users.forEach((u) => {
+                const opt = document.createElement("option");
+                opt.value = u.id;
+                opt.textContent = `${u.first_name || ""} ${u.last_name || ""}`.trim() || "(Unnamed)";
 
-              if (selectedUser == u.id) {
-                opt.selected = true;
-              }
+                if (selectedUser == u.id) {
+                  opt.selected = true;
+                }
 
-              select.appendChild(opt);
-            });
+                select.appendChild(opt);
+              });
+            }
           }
-        }
-      } catch (err) {
-        console.error("Failed to load users:", err);
-        toast("error", "Failed to load user list.");
-      }
+        })
+        .catch((err) => {
+          console.error("Failed to load users:", err);
+          toast("error", "Failed to load user list.");
+        });
     })();
 
     modal({
@@ -421,25 +446,29 @@ function openFormModal(type, payload = {}) {
               user_id: selectedUser,
             };
 
-            const res = await fetch(`/api/v1/organizationChart/save`, {
+            HttpClient({
+              url: '/organizationChart/save',
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(finalPayload),
+              data: JSON.stringify(finalPayload),
+            }).then(res => {
+                console.log('res:',res);
+                if (!res.success) {
+                  toast('error', res.message || 'Failed to assign the User.');
+                  return; // ⛔ keep modal open
+                }
+                toast('success', res.message || 'The User has been assigned successfully.');
+                closeModal();
+                loadRoles();
+            }).catch(err => {
+                let message = 'Error occurred when trying to assign the User.';
+                if (err.response && err.response.data && err.response.data.message) {
+                  message = err.response.data.message;
+                }
+                toast('error', message);
             });
-
-            const result = await res.json();
-
-            if (!res.ok || !result.success) {
-              toast("error", result.message || "Failed to assign user");
-              return; // ⛔ keep modal open
-            }
-
-            toast("success", result.message || "User assigned successfully");
-            closeModal();
-            loadRoles();
-          } catch (err) {
-            console.error("Error assigning user:", err);
-            toast("error", "Unexpected error while assigning user.");
+          } catch (error) {
+            toast('error', 'Error occurred when trying to assign the User.');
           }
         },
       },
@@ -461,7 +490,7 @@ function openFormModal(type, payload = {}) {
           className="form-control mt-2"
           defaultValue={name}
           onChange={(e) => (name = e.target.value)}
-          placeholder="Enter name"
+          placeholder="Enter a role name"
         />
       </div>
     ),
@@ -478,23 +507,31 @@ function openFormModal(type, payload = {}) {
           reporting_to: payload.reporting_to || null,
         };
 
-        const res = await fetch(`/api/v1/organizationChart/save`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(finalPayload),
-        });
-
-        const result = await res.json();
-        
-        // Handle explicit duplicate role error from manual save
-        if (!res.ok && res.status === 409) {
-            toast("error", result.message || "Duplicate active role name.");
-            return; // keep modal open
+        try {
+          HttpClient({
+            url: '/organizationChart/save',
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            data: JSON.stringify(finalPayload),
+          }).then(res => {
+              console.log('res:',res);
+              if (!res.success) {
+                toast('error', res.message || 'Failed to save the Role.');
+                return; // ⛔ keep modal open
+              }
+              toast('success', res.message || 'The Role has been saved successfully.');
+              closeModal();
+              loadRoles();
+          }).catch(err => {
+              let message = 'Error occurred when trying to save the Role.';
+              if (err.response && err.response.data && err.response.data.message) {
+                message = err.response.data.message;
+              }
+              toast('error', message);
+          });
+        } catch (error) {
+          toast('error', 'Error occurred when trying to save the Role.');
         }
-
-        toast(result.success ? "success" : "error", result.message);
-        closeModal();
-        if (result.success) loadRoles();
       },
     },
     cancelBtn: { label: "Cancel" },
@@ -634,38 +671,43 @@ const showUploadDialog = () => {
             const formData = new FormData();
             formData.append("file", selectedFile);
 
-            const res = await fetch("/api/v1/organizationChart/upload", {
+            // use HttpClient helper
+            HttpClient({
+              url: "/organizationChart/upload",
               method: "POST",
-              body: formData,
+              data: formData,
+            }).then((result) => {
+              // NORMALIZE where validation payload might sit (some servers use `data`, others use `errors`)
+              const validationWrapper = result?.errors || result?.data || null;
+
+              // Validation errors returned as structured payload: wrapper.type === "validation_errors"
+              if (validationWrapper?.type === "validation_errors") {
+                // validationWrapper has shape: { type: "validation_errors", errors: { roleNotAssigned:[], missingUsers:[], ... } }
+                errorMessage = formatUploadErrors(validationWrapper); // formatUploadErrors expects the wrapper (it looks at wrapper.errors)
+                openDialog(); // reopen modal with error details
+                toast("error", "Validation errors found in CSV. See modal.");
+                return;
+              }
+              
+
+              // generic error fallback
+              if (!result.success) {
+                const msg = result?.message || "Upload failed.";
+                errorMessage = escapeHtml(msg).replace(/\n/g, "<br>");
+                openDialog();
+                toast("error", msg);
+                return;
+              }
+
+              // success
+              toast("success", result.message || "Upload successful.");
+              closeModal();
+              loadRoles();
+            })
+            .catch((err) => {
+              console.error("Upload exception:", err);
+              toast("error", "Server error while uploading file.");
             });
-
-            const result = await res.json();
-
-            // NORMALIZE where validation payload might sit (some servers use `data`, others use `errors`)
-            const validationWrapper = result?.errors || result?.data || null;
-
-            // Validation errors returned as structured payload: wrapper.type === "validation_errors"
-            if (!res.ok && validationWrapper?.type === "validation_errors") {
-              // validationWrapper has shape: { type: "validation_errors", errors: { roleNotAssigned:[], missingUsers:[], ... } }
-              errorMessage = formatUploadErrors(validationWrapper); // formatUploadErrors expects the wrapper (it looks at wrapper.errors)
-              openDialog(); // reopen modal with error details
-              toast("error", "Validation errors found in CSV. See modal.");
-              return;
-            }
-
-            // generic error fallback
-            if (!res.ok || !result.success) {
-              const msg = result?.message || "Upload failed.";
-              errorMessage = escapeHtml(msg).replace(/\n/g, "<br>");
-              openDialog();
-              toast("error", msg);
-              return;
-            }
-
-            // success
-            toast("success", result.message || "Upload successful.");
-            closeModal();
-            loadRoles();
           } catch (err) {
             console.error("Upload exception:", err);
             toast("error", "Server error while uploading file.");
@@ -678,15 +720,6 @@ const showUploadDialog = () => {
 
   openDialog();
 };
-
-
-  /* -------------------- Render -------------------- */
-  if (loading)
-    return (
-      <AuthenticatedPage>
-        <div>Loading roles...</div>
-      </AuthenticatedPage>
-    );
 
   const tree = buildTree(roles);
 

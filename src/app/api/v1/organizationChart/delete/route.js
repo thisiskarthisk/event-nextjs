@@ -10,7 +10,7 @@ import { sql } from "drizzle-orm";
  */
 export async function POST(req) {
   try {
-    const { type, role_id, user } = await req.json();
+    const { type, role_id, user_id } = await req.json();
 
     if (!type) return JsonResponse.error("Missing delete type", 400);
 
@@ -41,20 +41,10 @@ export async function POST(req) {
        DELETE USER FROM ROLE
     ===================================================== */
     if (type === "deleteUser") {
-      if (!role_id || !user) return JsonResponse.error("Missing role_id or user", 400);
+      if (!role_id || !user_id)
+        return JsonResponse.error("Missing role_id or user_id", 400);
 
-      // Find user id by name
-      const userRec = await DB_Fetch(sql`
-        SELECT id FROM users
-        WHERE LOWER(first_name) = LOWER(${user})
-        LIMIT 1
-      `);
-
-      if (userRec.length === 0)
-        return JsonResponse.error("User not found", 404);
-
-      const user_id = userRec[0].id;
-
+      
       // Soft delete mapping
       await DB_Fetch(sql`
         UPDATE role_users
@@ -62,7 +52,7 @@ export async function POST(req) {
         WHERE role_id = ${role_id} AND user_id = ${user_id}
       `);
 
-      return JsonResponse.success({}, "User removed from role successfully");
+      return JsonResponse.success({}, "The user role has been removed successfully");
     }
 
     return JsonResponse.error("Invalid delete request type", 400);
