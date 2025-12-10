@@ -9,6 +9,7 @@ import { exists } from "drizzle-orm";
 import TextField from "@/components/form/TextField";
 import TextArea from "@/components/form/TextArea";
 import SelectPicker from "@/components/form/SelectPicker";
+import { HttpClient } from "@/helper/http";
 
 export default function CAPAForm({ params }) {
     const { setPageTitle, toast, toggleProgressBar } = useAppLayoutContext();
@@ -28,14 +29,14 @@ export default function CAPAForm({ params }) {
                     description: "",
                     target_date: "",
                     status: "",
-                    responsibility: "", // ✅ Corrective Responsibility
+                    responsibility: "",
                 },
                 preventive: {
                     counter_measure: "",
                     description: "",
                     target_date: "",
                     status: "",
-                    responsibility: "", // ✅ Preventive Responsibility
+                    responsibility: "",
                 },
             },
         ],
@@ -48,29 +49,14 @@ export default function CAPAForm({ params }) {
         setPageTitle(id ? t("CAPA Details") : t("CAPA New"));
         toggleProgressBar(false);
 
-        if (!id) return; // no call when creating new
-
-        fetch(`/api/v1/capa/${id}`)
-            .then(async (res) => {
-            if (!res.ok) {
-                // optional: log status/text for debugging
-                const text = await res.text();
-                console.error("CAPA GET failed:", res.status, text);
-                return null;
-            }
-
-            // handle empty body safely
-            const text = await res.text();
-            if (!text) return null;
-
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error("Invalid JSON from /api/v1/capa/:id", e, text);
-                return null;
-            }
-            })
-            .then((response) => {
+        if (!id) return;
+        console.log(id);
+        HttpClient({
+            url: `/capa/${decodeURIComponent(id)}`,
+            method: "GET",
+            data: { id: id },
+        })
+        .then((response) => {
             if (!response || !response.success) return;
 
             const data = response.data?.gap_analysis || [];
@@ -114,12 +100,11 @@ export default function CAPAForm({ params }) {
         let name = field;
         let value;
 
-        // Case 1: it is a normal HTML event
+        
         if (e && e.target) {
             name = e.target.name;
             value = e.target.value;
         }
-        // Case 2: Select or custom inputs send only the value
         else {
             value = e;
         }
@@ -169,22 +154,23 @@ export default function CAPAForm({ params }) {
         if (!window.confirm("Are you sure want to delete this record?")) return;
         if (capa_action_id) {
             try {
-                const response = await fetch(`/api/v1/capa/${capa_action_id}`, {
+                HttpClient({
+                    url: `/capa/${capa_action_id}`,
                     method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: {},
-                });
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    data:{}
+                }).then((result)=>{
+                    if (result.success) {
+                        toast("success", result.message || "Deleted successfully!");
 
-                const result = await response.json();
-
-                if (result.success) {
-                    toast("success", result.message || "Deleted successfully!");
-
-                    const newActions = form.capa_actions.filter((_, i) => i !== index);
-                    setForm({ ...form, capa_actions: newActions });
-                } else {
-                    toast("error", result.message || "Failed to delete CAPA");
-                }
+                        const newActions = form.capa_actions.filter((_, i) => i !== index);
+                        setForm({ ...form, capa_actions: newActions });
+                    } else {
+                        toast("error", result.message || "Failed to delete CAPA");
+                    }
+                })
             } catch (err) {
                 console.error("Error:", err);
                 toast("error","Something went wrong.");
@@ -200,31 +186,32 @@ export default function CAPAForm({ params }) {
         e.preventDefault();
 
         try {
-            const res = await fetch("/api/v1/capa/save", {
+            HttpClient({
+                url : "/capa/save",
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form), // ✔ FIXED
-            });
-
-            const result = await res.json();
-
-            if (result.success) {
-                toast( "success", result.message || "Saved successfully!" )
-                router.push("/capa");
-            } else {
-                toast( "error", result.message || "Failed to save CAPA" )
-
-                const formErrors = result.data?.errors || [];
-                if (Array.isArray(formErrors) && formErrors.length > 0) {
-                    const errorMap = [];
-                    formErrors.forEach((err) => {
-                        errorMap[err.index] = err;
-                    });
-                    setErrors(errorMap);
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                data:JSON.stringify(form)
+            }).then((res)=>{
+                if (res.success) {
+                    toast( "success", res.message || "Saved successfully!" )
+                    router.push("/capa");
                 } else {
-                    setErrors([]);
+                    toast( "error", res.message || "Failed to save CAPA" )
+
+                    const formErrors = res.data?.errors || [];
+                    if (Array.isArray(formErrors) && formErrors.length > 0) {
+                        const errorMap = [];
+                        formErrors.forEach((err) => {
+                            errorMap[err.index] = err;
+                        });
+                        setErrors(errorMap);
+                    } else {
+                        setErrors([]);
+                    }
                 }
-            }
+            })            
         } catch (err) {
             console.error("Error:", err);
             toast( "error", "Something went wrong." );

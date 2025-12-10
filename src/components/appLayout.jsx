@@ -104,6 +104,8 @@ export default function AppLayout({ children }) {
 
     if (okBtn && okBtn.label) {
       options['confirmButtonText'] = okBtn.label;
+    } else if (!okBtn) {
+      options['showConfirmButton'] = false;
     }
 
     if (cancelBtn && cancelBtn.label) {
@@ -150,7 +152,9 @@ export default function AppLayout({ children }) {
           </div>
         }
         {children}
-          <ToastContainer />
+
+        <ToastContainer />
+        
       </AppLayoutContext.Provider>
     </SessionProvider>
   );

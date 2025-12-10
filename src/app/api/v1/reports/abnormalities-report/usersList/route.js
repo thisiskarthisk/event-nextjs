@@ -4,8 +4,8 @@ import { JsonResponse } from "@/helper/api";
 export async function GET(req, context) {
     const usersList = await DB_Fetch(`
         SELECT
-            id,
-            first_name || ' ' || COALESCE(last_name, '') AS full_name
+            id as value,
+            first_name || ' ' || COALESCE(last_name, '') AS label
         FROM users
         WHERE active = true
     `);

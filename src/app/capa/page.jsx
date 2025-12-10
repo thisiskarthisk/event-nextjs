@@ -22,7 +22,7 @@ export default function Capa() {
 
     const handleAddNewCAPA = () => router.push(`/capa/new`);
 
-    const handleView = (id) => router.push(`/capa/view/${id}`);
+    const handleView = (id) => router.push(`/capa/view/${btoa(id)}`);
 
     const handleEdit = (id) => router.push(`/capa/edit/${btoa(id)}`);
 

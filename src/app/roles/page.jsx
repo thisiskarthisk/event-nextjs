@@ -13,6 +13,7 @@ import Papa from "papaparse";
 
 import { useSession } from "next-auth/react";
 import { HttpClient } from "@/helper/http";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 import Link from "next/link";
 
 export default function RolesPage() {
@@ -61,17 +62,17 @@ export default function RolesPage() {
 
   /** Add New Role Sheet */
   const handleAddNewRole = () => {
-    router.push(`/roles/${roleId}/rs/add`);
+    router.push(`/roles/${decodeURLParam(roleId)}/rs/add`);
   };
 
   /** View Role Sheet */
    const handleView = (id) => {
-    router.push(`/roles/${roleId}/rs/${id}/view`);
+    router.push(`/roles/${decodeURLParam(roleId)}/rs/${decodeURLParam(id)}/view`);
   };
 
   /** Edit Role Sheet */
   const handleEdit = (id) => {
-    router.push(`/roles/${roleId}/rs/${id}/edit`);
+    router.push(`/roles/${decodeURLParam(roleId)}/rs/${decodeURLParam(id)}/edit`);
   };
 
 
@@ -85,10 +86,9 @@ export default function RolesPage() {
         label: "Yes, Delete",
         onClick: async () => {
           try {
-            const res = await fetch(`/api/v1/roles/${roleId}/rs/${id}/delete`, {
-              method: "DELETE",
-            });
-  
+
+            const res = await HttpClient({url :`/roles/${roleId}/rs/${id}/delete`, method: 'DELETE', params : {}});
+
             const data = await res.json();
             if (!data.success) throw new Error(data.message || "Failed to delete");
   
@@ -221,7 +221,7 @@ export default function RolesPage() {
               }));
   
               try {
-                const res = await fetch(`/api/v1/roles/${roleId}/rs/upload`, {
+                const res = await fetch(`/api/v1/roles/${encodeURLParam(roleId)}/rs/upload`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ data: finalData }),
@@ -269,36 +269,36 @@ export default function RolesPage() {
   
   return (
     <AuthenticatedPage>
-            <div className="row mb-3">
-                <div className="col-12 text-right">
-                    <Link href={`/roles/${role_id}/rs/add`} className="btn btn-primary ms-auto me-2">
-                      <AppIcon ic="plus" className="text-info" /> Add New Role
-                    </Link>
-                </div>
+        <div className="row mb-3">
+            <div className="col-12 text-right">
+                <Link href={`/roles/${decodeURLParam(role_id)}/rs/add`} className="btn btn-primary ms-auto me-2">
+                    <AppIcon ic="plus" className="text-info" /> Add New Role
+                </Link>
             </div>
-            <div className="row">
-                <div className="col-12">
-                    <div className="card">
-                        <div className="card-body">
-                           {
-                            status == 'authenticated' &&
-                             <DataTable
-                                apiPath={`/roles`}
-                                additionalRequestParams={{
-                                  'user_id': session.user.id,
-                                }}
-                                dataKeyFromResponse="roles"
-                                columns={[
-                                  { column: "name", label: "Objective" },
-                                ]}
-                                paginationType="client"
-                                actionColumnFn={renderActions}
-                              />
-                          }
-                        </div>
+        </div>
+        <div className="row">
+            <div className="col-12">
+                <div className="card">
+                    <div className="card-body">
+                        {
+                        status == 'authenticated' &&
+                            <DataTable
+                            apiPath={`/roles`}
+                            additionalRequestParams={{
+                                'user_id': session.user.id,
+                            }}
+                            dataKeyFromResponse="roles"
+                            columns={[
+                                { column: "name", label: "Objective" },
+                            ]}
+                            paginationType="client"
+                            actionColumnFn={renderActions}
+                            />
+                        }
                     </div>
                 </div>
             </div>
-        </AuthenticatedPage>
+        </div>
+    </AuthenticatedPage>
   );
 }
