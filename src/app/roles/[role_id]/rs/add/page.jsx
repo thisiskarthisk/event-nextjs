@@ -7,6 +7,8 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FREQUENCY_TYPES, CHART_TYPES } from "@/constants";
 import AppIcon from "@/components/icon";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
+import { HttpClient } from "@/helper/http";
 import TextArea from "@/components/form/TextArea";
 import TextField from "@/components/form/TextField";
 import SelectPicker from "@/components/form/SelectPicker";
@@ -54,14 +56,16 @@ export default function AddRoleSheetPage() {
       setPageTitle('Role Sheet Edit');
       
       try {
-        const res = await fetch(`/api/v1/roles/${role_id}/rs/${rs_id}`);
-        const json = await res.json();
+        const res =await HttpClient({
+          url: `/roles/${decodeURLParam(role_id)}/rs/${decodeURLParam(rs_id)}`,  
+          method: 'GET'
+        });
 
-        if (!res.ok || !json.success) {
-          throw new Error(json.message || "Failed to load role sheet");
+        if (res.success != true) {
+          throw new Error(res.message || "Failed to load role sheet");
         }
 
-        setForm(json.data?.roleSheet || []);
+        setForm(res.data?.roleSheet || []);
       } catch (error) {
         console.error("Error loading role sheet:", error);
         toast("error", "Failed to load role sheet");
@@ -196,28 +200,32 @@ export default function AddRoleSheetPage() {
     }
 
     toggleProgressBar(true);
+    
 
     try {
-      const url = rs_id
-        ? `/api/v1/roles/${role_id}/rs/${rs_id}/edit`
-        : `/api/v1/roles/${role_id}/rs/add`;
-
-      const method = rs_id ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: form }),
+      const url = decodeURLParam(rs_id)
+        ? `/roles/${decodeURLParam(role_id)}/rs/${decodeURLParam(rs_id)}/edit`
+        : `/roles/${decodeURLParam(role_id)}/rs/add`;
+        
+      const method = decodeURLParam(rs_id) ? "PUT" : "POST";
+       
+      const res = HttpClient({
+        url : url,
+        method : method, 
+        data: JSON.stringify(form),
+      }).then(res => {
+        if (res.success) {
+          
+          toast("success", rs_id ? "Role Sheet Updated!" : "Role Sheet Added!");
+          router.push(`/roles/${role_id}`);
+        } else {
+          toast('error', res.message || "Failed to save role sheet");
+        }
+      }).catch(err => {
+        toast('error', 'Network error. Please try again.');
+      }).finally(() => {
+        setLoading(false);
       });
-
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || "Failed to save role sheet");
-      }
-
-      toast("success", rs_id ? "Role Sheet Updated!" : "Role Sheet Added!");
-      router.push(`/roles/${role_id}`);
     } catch (error) {
       console.error("Error saving role sheet:", error);
       toast("error", "Failed to save role sheet");
@@ -248,8 +256,8 @@ export default function AddRoleSheetPage() {
                 <button
                   type="button"
                   className="btn btn-light btn-sm ms-auto"
-                  // onClick={() => router.push(`/roles/${role_id}`)}
-                  onClick={() => router.push("/roles")}
+                  onClick={() => router.push(`/roles/${role_id}`)}
+                  // onClick={() => router.push("/roles")}
                 >
                   Back
                 </button>
@@ -354,7 +362,7 @@ export default function AddRoleSheetPage() {
                             <div className="col-md-2 mb-3">
                               <SelectPicker
                                 label="Freq"
-                                options={Object.values(FREQUENCY_TYPES)}
+                                options={FREQUENCY_TYPES}
                                 value={kpi.frequency_of_measurement}
                                 onChange={(e) =>
                                   handleKpiChange(e, objIdx, roleIdx, kpiIdx , "frequency_of_measurement")
@@ -365,7 +373,7 @@ export default function AddRoleSheetPage() {
                             <div className="col-md-2 mb-3">
                               <SelectPicker
                                 label="Chart Type"
-                                options={Object.values(CHART_TYPES)}
+                                options={CHART_TYPES}
                                 value={kpi.vcs}
                                 onChange={(e) =>
                                   handleKpiChange(e, objIdx, roleIdx, kpiIdx , "vcs")

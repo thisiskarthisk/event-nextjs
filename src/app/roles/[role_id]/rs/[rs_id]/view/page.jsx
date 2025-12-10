@@ -10,6 +10,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 
 const vcsDisplayNames = {
   "bar-chart": "Bar Chart",
@@ -39,8 +40,8 @@ export default function RoleSheetView() {
     const fetchData = async () => {
       try {
         setPageTitle('Role Sheet View');
-
-        const res = await fetch(`/api/v1/roles/${role_id}/rs/${rs_id}`);
+        
+        const res = await fetch(`/api/v1/roles/${decodeURLParam(role_id)}/rs/${decodeURLParam(rs_id)}`);
         const data = await res.json();
 
         if (data.success && Array.isArray(data.data?.roleSheet)) {

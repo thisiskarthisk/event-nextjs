@@ -54,3 +54,7 @@ export function decodeURLParam(encData) {
     return null;
   }
 }
+
+export function random(n) {
+  return Math.floor( Math.random() * n );
+}

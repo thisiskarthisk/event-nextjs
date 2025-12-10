@@ -3,17 +3,21 @@
 import { useAppLayoutContext } from "@/components/appLayout";
 import AuthenticatedPage from "@/components/auth/authPageWrapper";
 import { useI18n } from "@/components/i18nProvider";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
+import { HttpClient } from "@/helper/http";
+
+import Papa from "papaparse";
 import AppIcon from "@/components/icon";
 import DataTable from "@/components/DataTable";
-
-import { useParams } from "next/navigation";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Papa from "papaparse";
+import Link from "next/link";
 
 export default function RoleSheet() {
-  const { toggleProgressBar, toast, modal, setPageTitle } = useAppLayoutContext();
-  
+  const { toggleProgressBar, toast, modal, setPageTitle, setAppBarMenuItems, closeModal } = useAppLayoutContext();
+  const { data: session, status } = useSession();
+
   const { locale } = useI18n();
   const { role_id } = useParams();
   const router = useRouter();
@@ -21,21 +25,18 @@ export default function RoleSheet() {
   useEffect(() => {
     setPageTitle('Role Sheet');
     toggleProgressBar(false);
-  }, [locale, role_id,]);
+    setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Role Sheet", className: "text-primary", onClick: handleOpenCsvModal }]);
+  }, [locale, role_id]);
 
-  /** Add New Role Sheet */
-  const handleAddNewRole = () => {
-    router.push(`/roles/${role_id}/rs/add`);
-  };
-
+  
   /** View Role Sheet */
    const handleView = (id) => {
-    router.push(`/roles/${role_id}/rs/${id}/view`);
+    router.push(`/roles/${role_id}/rs/${encodeURLParam(id)}/view`);
   };
 
   /** Edit Role Sheet */
   const handleEdit = (id) => {
-    router.push(`/roles/${role_id}/rs/${id}/edit`);
+    router.push(`/roles/${role_id}/rs/${encodeURLParam(id)}/edit`);
   };
 
   /** Delete Role Sheet */
@@ -47,14 +48,22 @@ export default function RoleSheet() {
         label: "Yes, Delete",
         onClick: async () => {
           try {
-            const res = await fetch(`/api/v1/roles/${role_id}/rs/${id}/delete`, {
-              method: "DELETE",
+            HttpClient({
+              url : `/roles/${decodeURLParam(role_id)}/rs/${id}/delete`,
+              method : 'DELETE', 
+              params: {},
+            }).then(res => {
+              if (res.success) {
+                toast('success', 'Role sheet deleted successfully!');
+                closeModal();
+              } else {
+                toast('error', res.message || "Failed to save role sheet");
+              }
+            }).catch(err => {
+              toast('error', 'Network error. Please try again.');
+            }).finally(() => {
+              setLoading(false);
             });
-  
-            const data = await res.json();
-            if (!data.success) throw new Error(data.message || "Failed to delete");
-  
-            toast('success', 'Role sheet deleted successfully!');
           } catch (err) {
             console.error("Delete error:", err);
             toast('error', 'Error deleting role sheet');
@@ -183,18 +192,23 @@ export default function RoleSheet() {
               }));
   
               try {
-                const res = await fetch(`/api/v1/roles/${role_id}/rs/upload`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ data: finalData }),
+                HttpClient({
+                  url : `/roles/${decodeURLParam(role_id)}/rs/upload`,
+                  method : 'POST', 
+                  data: JSON.stringify(finalData),
+                }).then(res => {
+                  if (res.success) {
+                    toast("success", "KPI data uploaded successfully!");
+                    closeModal();
+                    delete window._tempDownloadFn;
+                  } else {
+                    toast("error", "Failed to upload KPI CSV");
+                  }
+                }).catch(err => {
+                  toast('error', err.message || 'Network error. Please try again.');
+                }).finally(() => {
+                  setLoading(false);
                 });
-  
-                const data = await res.json();
-                if (!data.success) throw new Error(data.message || "Upload failed");
-  
-                toast("success", "KPI data uploaded successfully!");
-                // Cleanup
-                delete window._tempDownloadFn;
               } catch (err) {
                 console.error("Upload error:", err);
                 toast("error", "Failed to upload KPI CSV");
@@ -230,33 +244,36 @@ export default function RoleSheet() {
   
   return (
     <AuthenticatedPage>
-      <div className="app-content">
-        <div className="container-fluid">
-          <div className="card mt-4">
-          <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Role Sheet</h5>
-              <button className="btn btn-primary ms-auto me-2" onClick={handleAddNewRole}>
-                <AppIcon ic="plus" className="text-info"/> Add New Role
-              </button>
-              <button className="btn btn-outline-success " onClick={handleOpenCsvModal}>
-                <AppIcon ic="upload" className="text-success" /> Upload Role File (CSV)
-              </button>
-            </div>
-            <div className="card-body">
-              <DataTable
-                apiPath={`/roles/${role_id}`}
-                dataKeyFromResponse="roles"
-                columns={[
-                  { column: "name", label: "Objective" },
-                ]}
-                paginationType="client"
-                actionColumnFn={renderActions}
-              />
-
+        <div className="row mb-3">
+          <div className="col-12 text-right">
+            <Link href={`/roles/${role_id}/rs/add`} className="btn btn-primary ms-auto me-2">
+              <AppIcon ic="plus" className="text-info" /> Add New Role
+            </Link>
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-body">
+                {
+                  status == 'authenticated' &&
+                  <DataTable
+                    apiPath={`/roles`}
+                    additionalRequestParams={{
+                        'user_id': session.user.id,
+                    }}
+                    dataKeyFromResponse="roles"
+                    columns={[
+                        { column: "name", label: "Objective" },
+                    ]}
+                    paginationType="client"
+                    actionColumnFn={renderActions}
+                  />
+                }
+              </div>
             </div>
           </div>
         </div>
-      </div>
     </AuthenticatedPage>
   );
 }

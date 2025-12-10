@@ -56,12 +56,12 @@ export default function AppSidebar() {
               </Link>
             </li>
        
-            <li className="nav-item">
+            {/* <li className="nav-item">
               <Link href="/roles" className={"nav-link " + (pathName == '/roles' ? 'active' : '')}>
                 <AppIcon ic="chart-line" className="nav-icon" />
                 <p>{t('Role Sheet')}</p>
               </Link>
-            </li>
+            </li> */}
 
             <li className="nav-item">
               <Link href="/capa" className={"nav-link " + (pathName == '/capa' ? 'active' : '')}>

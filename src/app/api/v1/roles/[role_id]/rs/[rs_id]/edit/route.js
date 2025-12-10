@@ -6,9 +6,8 @@ export async function PUT(req, contextPromise) {
   try {
     const { params } = await contextPromise;
     const { role_id } = params;
-    const body = await req.json();
-    const { data } = body;
-
+    const data = await req.json();
+    
     if (!role_id || !data || !Array.isArray(data)) {
       return JsonResponse.error("Invalid payload", 400);
     }
@@ -60,7 +59,7 @@ export async function PUT(req, contextPromise) {
         let existingSheet = [];
         if (sheet_id) {
           existingSheet = await DB_Fetch(sql`
-            SELECT id FROM ${sql.identifier(Tables.TBL_ROLE_SHEET)}
+            SELECT id FROM ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
             WHERE id = ${sheet_id} AND role_objective_id = ${role_objective_id}
             LIMIT 1
           `);
@@ -69,7 +68,7 @@ export async function PUT(req, contextPromise) {
         if (existingSheet?.length) {
           /* Update sheet */
           await DB_Insert(sql`
-            UPDATE ${sql.identifier(Tables.TBL_ROLE_SHEET)}
+            UPDATE ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
             SET title = ${role.role},
                 description = ${role.description || role.role},
                 updated_at = NOW()
@@ -78,7 +77,7 @@ export async function PUT(req, contextPromise) {
         } else {
           /* Insert new sheet and fetch its id */
           const insertedSheet = await DB_Fetch(sql`
-            INSERT INTO ${sql.identifier(Tables.TBL_ROLE_SHEET)}
+            INSERT INTO ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
               (role_objective_id, title, description)
             VALUES
               (${role_objective_id}, ${role.role}, ${role.description || role.role})

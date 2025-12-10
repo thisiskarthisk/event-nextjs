@@ -26,7 +26,7 @@ export async function GET(request, { params }) {
     /* Fetch Role Sheets for this objective */
     const sheets = await DB_Fetch(sql`
       SELECT id, role_objective_id, title AS role, description
-      FROM ${sql.identifier(Tables.TBL_ROLE_SHEET)}
+      FROM ${sql.identifier(Tables.TBL_ROLE_SHEETS)}
       WHERE role_objective_id = ${rs_id}
       ORDER BY id ASC
     `);
