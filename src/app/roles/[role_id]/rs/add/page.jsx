@@ -209,12 +209,14 @@ export default function AddRoleSheetPage() {
         
       const method = decodeURLParam(rs_id) ? "PUT" : "POST";
        
-      const res = HttpClient({
+      HttpClient({
         url : url,
         method : method, 
         data: JSON.stringify(form),
       }).then(res => {
+        console.log("Save response:", res);
         if (res.success) {
+          console.log("Role sheet saved:", res.data);
           
           toast("success", rs_id ? "Role Sheet Updated!" : "Role Sheet Added!");
           router.push(`/roles/${role_id}`);
