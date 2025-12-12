@@ -12,45 +12,62 @@ export async function GET(req) {
     if (userId) where += ` AND kr.user_id = ${userId}`;
     if (kpiId) where += ` AND kr.kpi_id = ${kpiId}`;
     if (year) where += ` AND EXTRACT(YEAR FROM
-                                CASE
-                                    WHEN kr.period_date ~ '^\\d{4}-\\d{2}-[1-5]W$' THEN
-                                        TO_DATE(
-                                            SUBSTRING(kr.period_date, 1, 8) ||
-                                            ((CAST(SUBSTRING(kr.period_date, 9, 1) AS INT) - 1) * 7 + 1),
-                                            'YYYY-MM-DD'
-                                        )
-                                    ELSE
-                                        kr.period_date::date
-                                END
-                            ) = ${year}`;
+                            CASE
+                                WHEN kr.period_date ~ '^\\d{4}$' THEN
+                                    TO_DATE(kr.period_date || '-01-01', 'YYYY-MM-DD')
+                                WHEN kr.period_date ~ '^\\d{4}-\\d{2}-[1-5]W$' THEN
+                                    TO_DATE(
+                                        SUBSTRING(kr.period_date, 1, 8) ||
+                                        ((CAST(SUBSTRING(kr.period_date, 9, 1) AS INT) - 1) * 7 + 1),
+                                        'YYYY-MM-DD'
+                                    )
+                                ELSE
+                                    kr.period_date::date
+                            END
+                        ) = ${year}`;
 
     // Step 1: Base monthly aggregation (COUNT instead of AVG)
     const monthlySql = `
         SELECT
             k.name AS kpi_name,
-
-            TO_CHAR(
-                CASE
-                    WHEN kr.period_date ~ '^\\d{4}-\\d{2}-[1-5]W$' THEN
-                        TO_DATE(
-                            SUBSTRING(kr.period_date, 1, 8) ||
-                            ((CAST(SUBSTRING(kr.period_date, 9, 1) AS INT) - 1) * 7 + 1),
-                            'YYYY-MM-DD'
-                        )
-                    ELSE
-                        kr.period_date::date
-                END,
-                'Mon'
-            ) AS month,
-
-            COUNT(krcd.value) AS value
+            CASE
+                WHEN k.frequency = 'monthly' THEN
+                    krcd.label
+                ELSE
+                    TO_CHAR(
+                        CASE
+                            WHEN kr.period_date ~ '^\\d{4}$' THEN
+                                TO_DATE(kr.period_date || '-01-01', 'YYYY-MM-DD')
+                            WHEN kr.period_date ~ '^\\d{4}-\\d{2}-[1-5]W$' THEN
+                                TO_DATE(
+                                    SUBSTRING(kr.period_date, 1, 8) ||
+                                    ((CAST(SUBSTRING(kr.period_date, 9, 1) AS INT) - 1) * 7 + 1),
+                                    'YYYY-MM-DD'
+                                )
+                            ELSE
+                                kr.period_date::date
+                        END,
+                        'Mon'
+                    )
+            END AS month,
+             CASE
+                WHEN k.frequency = 'monthly' THEN
+                    COUNT(krcd.value)                 -- group by chart_data label
+                ELSE
+                    COUNT(krcd.value)                 -- normal behavior
+            END AS value
 
         FROM ${Tables.TBL_KPIS} k
         LEFT JOIN ${Tables.TBL_KPI_RESPONSE} kr ON k.id = kr.kpi_id
         LEFT JOIN ${Tables.TBL_KPI_RESPONSE_CHART_DATA} krcd ON kr.id = krcd.kpi_response_id
         ${where}
         AND krcd.value IS NOT NULL
-        GROUP BY k.name, month
+        AND (krcd.value NOT BETWEEN kr.lcl AND kr.ucl)
+
+        GROUP BY 
+            k.name, 
+            month,
+            k.frequency
         HAVING COUNT(krcd.value) > 0
     `;
 

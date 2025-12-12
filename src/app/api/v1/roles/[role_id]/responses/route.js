@@ -28,16 +28,16 @@ export async function GET(req, context) {
     LEFT JOIN (
       SELECT
         ${Tables.TBL_KPI_RESPONSES}.kpi_id,
-        ${Tables.TBL_KPI_RESPONSES}.period_date,
-        ${Tables.TBL_KPI_RESPONSES}.ucl,
-        ${Tables.TBL_KPI_RESPONSES}.lcl,
         CASE 
           WHEN COUNT(${Tables.TBL_KPI_RESPONSE_CHART_DATA}.id) > 0 THEN 
             JSON_AGG(
               JSON_BUILD_OBJECT(
                 'response_id', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.id,
-                'label', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.label,
-                'value', ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.value
+                'label',       ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.label,
+                'value',       ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.value,
+                'period_date', ${Tables.TBL_KPI_RESPONSES}.period_date,
+                'ucl',         ${Tables.TBL_KPI_RESPONSES}.ucl,
+                'lcl',         ${Tables.TBL_KPI_RESPONSES}.lcl
               )
             )
           ELSE NULL
@@ -46,15 +46,14 @@ export async function GET(req, context) {
         ${Tables.TBL_KPI_RESPONSES}
       LEFT JOIN ${Tables.TBL_KPI_RESPONSE_CHART_DATA} 
         ON ${Tables.TBL_KPI_RESPONSE_CHART_DATA}.kpi_response_id = ${Tables.TBL_KPI_RESPONSES}.id
+
       WHERE 
         ${Tables.TBL_KPI_RESPONSES}.user_id = ${user_id}
         AND ${Tables.TBL_KPI_RESPONSES}.active = TRUE
+
       GROUP BY 
-        ${Tables.TBL_KPI_RESPONSES}.kpi_id,
-        ${Tables.TBL_KPI_RESPONSES}.period_date,
-        ${Tables.TBL_KPI_RESPONSES}.ucl,
-        ${Tables.TBL_KPI_RESPONSES}.lcl
-    ) AS chart_data_sub 
+        ${Tables.TBL_KPI_RESPONSES}.kpi_id
+  ) AS chart_data_sub 
       ON chart_data_sub.kpi_id = ${Tables.TBL_KPIS}.id
     LEFT JOIN ${Tables.TBL_ROLE_USERS}
       ON ${Tables.TBL_ROLE_USERS}.role_id = ${role_id}
