@@ -260,7 +260,7 @@ export default function RoleSheet() {
                   <DataTable
                     apiPath={`/roles`}
                     additionalRequestParams={{
-                        'user_id': session.user.id,
+                        'role_id': decodeURLParam(role_id),
                     }}
                     dataKeyFromResponse="roles"
                     columns={[
