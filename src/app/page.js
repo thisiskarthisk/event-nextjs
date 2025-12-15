@@ -115,7 +115,7 @@ function OrgChartCard({
             <AppIcon ic="plus" />
           </span>
 
-          <Link style={{ marginLeft: "10px", color: "#fff" }} href={`/roles/${encodeURLParam(role.id)}`} onClick={() => toggleProgressBar(true)}>
+          <Link style={{ marginLeft: "10px", color: "#fff" }} href={`/roles/${encodeURLParam(role.id)}`} onClick={(e) => { e.stopPropagation(); }}>
             <AppIcon ic="chart-bar" />
           </Link>
         </div>
@@ -468,6 +468,7 @@ function openFormModal(type, payload = {}) {
                 toast('error', message);
             });
           } catch (error) {
+            console.error("Assign user error:", error);
             toast('error', 'Error occurred when trying to assign the User.');
           }
         },
