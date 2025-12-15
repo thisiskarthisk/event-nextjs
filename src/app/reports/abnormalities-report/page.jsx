@@ -194,7 +194,10 @@ export default function AbnormalitiesReport() {
                                 </select> */}
                                 <SelectPicker  
                                     label="User"
-                                    options={usersList} 
+                                    options={[
+                                        { value: "", label: "-- All Users --" },
+                                        ...usersList
+                                    ]}
                                     value={selectedUser} 
                                     onChange={(value) => onUserChange(value)}   // value is already the selected ID
                                     className={`form-control`} 
@@ -215,7 +218,10 @@ export default function AbnormalitiesReport() {
                                 </select> */}
                                 <SelectPicker  
                                     label="KPI"
-                                    options={kpiList} 
+                                    options={[
+                                        { value: "", label: "-- All KPIs --" },
+                                        ...kpiList
+                                    ]} 
                                     value={selectedKpi} 
                                     onChange={(value) => onKpiChange(selectedUser,value)}   // value is already the selected ID
                                     className={`form-control`} 
@@ -273,7 +279,7 @@ export default function AbnormalitiesReport() {
                                 <tr >
                                     <th className="text-left col-40">Total</th>
                                     {months.map(col => (
-                                        <th>{totals[col] != 0 ? totals[col] : '-'}</th>
+                                        <td><b>{totals[col] != 0 ? totals[col] : '-'}</b></td>
                                     ))}
                                 </tr>
                             </tfoot>

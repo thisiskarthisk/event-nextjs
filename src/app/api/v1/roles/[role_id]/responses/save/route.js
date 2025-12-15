@@ -27,6 +27,7 @@ export async function POST(req) {
       WHERE 
         kpi_id = ${kpi_record_id}
         AND user_id = ${user_id}
+        AND period_date = ${periodDate}
     `);
 
     /* --------------------------------------------
@@ -46,6 +47,20 @@ export async function POST(req) {
           kpi_id = ${kpi_record_id}
           AND user_id = ${user_id}
       `);
+      /* --------------------------------------------
+      * Delete The Already exisit KPI Chart Details
+      * Abinash
+      * --------------------------------------------
+      * Modified By Ajay : 12-12-2025
+      * If kpi_response already exist then remove chart_data
+      * otherwise create a new response  
+      */
+      await DB_Insert(sql`
+        DELETE FROM 
+          ${sql.identifier(Tables.TBL_KPI_RESPONSE_CHART_DATA)}
+        WHERE 
+          kpi_response_id = ${kpi_response_id}
+      `);
     } else {
       /* --------------------------------------------
       * Insert The New KPI Records
@@ -61,17 +76,7 @@ export async function POST(req) {
       `);
     }
 
-    /* --------------------------------------------
-     * Delete The Already exisit KPI Chart Details
-     * Abinash
-     * --------------------------------------------
-    */
-    await DB_Insert(sql`
-      DELETE FROM 
-        ${sql.identifier(Tables.TBL_KPI_RESPONSE_CHART_DATA)}
-      WHERE 
-        kpi_response_id = ${kpi_response_id}
-    `);
+    
 
     /* --------------------------------------------
      * Insert the KPI Chart Details
