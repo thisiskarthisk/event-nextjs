@@ -42,8 +42,8 @@ export default function AbnormalitiesReport() {
         const users = await HttpClient({ url: "/reports/abnormalities-report/usersList", method: "GET" });
         if (users.success) setUsersList(users.data);
 
-        const kpi = await HttpClient({ url: "/reports/abnormalities-report/kpiList", method: "GET" });
-        if (kpi.success) setKpiList(kpi.data);
+        /* const kpi = await HttpClient({ url: "/reports/abnormalities-report/kpiList", method: "GET" });
+        if (kpi.success) setKpiList(kpi.data); */
     };
 
     /** -------------------------------------------------------
@@ -59,7 +59,8 @@ export default function AbnormalitiesReport() {
             params: { user_id }
         });
 
-        if (kpi.success) setKpiList(kpi.data);
+        if (kpi.success)
+            setKpiList(kpi.data);
     };
 
     /** -------------------------------------------------------
@@ -195,7 +196,6 @@ export default function AbnormalitiesReport() {
                                 <SelectPicker  
                                     label="User"
                                     options={[
-                                        { value: "", label: "-- All Users --" },
                                         ...usersList
                                     ]}
                                     value={selectedUser} 
@@ -219,7 +219,7 @@ export default function AbnormalitiesReport() {
                                 <SelectPicker  
                                     label="KPI"
                                     options={[
-                                        { value: "", label: "-- All KPIs --" },
+                                        { value: 0, label: "-- All KPIs --" },
                                         ...kpiList
                                     ]} 
                                     value={selectedKpi} 
