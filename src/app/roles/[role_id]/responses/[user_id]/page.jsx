@@ -170,11 +170,78 @@ export default function KPIResponses({ params }) {
   }, [uploadFormData]);
 
   const sampleChartTemplate = {
-    "bar-chart": "LABEL,VALUE\n1,10\n2,20",
-    "line-chart": "LABEL,VALUE\n1,15\n2,30",
-    "pie-chart": "LABEL,VALUE\nJan,15\nFeb,30",
-    "trend-chart": "UCL,LCL\n60,40\nLABEL,VALUE\nMonday,50\nTuesday,70\nWednesday,80",
-    "control-chart": "UCL,LCL\n40,10\nLABEL,VALUE,TARGET\n1,10,15\n2,27,30\n3,35,35\n4,50,40",
+    "bar-chart-daily": "LABEL,VALUE\n1,10\n2,20",
+    "bar-chart-monthly": "LABEL,VALUE\nJan,10\nFeb,20",
+    "bar-chart-weekly": "LABEL,VALUE\nMonday,10\nTuesday,20",
+    "line-chart-daily": "LABEL,VALUE\n1,15\n2,30",
+    "line-chart-monthly": "LABEL,VALUE\nJan,15\nFeb,30",
+    "line-chart-weekly": "LABEL,VALUE\nMonday,15\nTuesday,30",
+    "pie-chart-daily": "\
+                          LABEL,VALUE\n\
+                          1,10\n\
+                          2,27\n\
+                          3,35\n\
+                          4,50",
+    "pie-chart-monthly": "\
+                          LABEL,VALUE\n\
+                          Jan,10\n\
+                          Feb,27\n\
+                          Mar,35\n\
+                          Apr,50",
+    "pie-chart-weekly": "\
+                          LABEL,VALUE\n\
+                          Sunday,10\n\
+                          Monday,27\n\
+                          Tuesday,35\n\
+                          Wednesday,50",
+    "trend-chart-daily": "\
+                          UCL,LCL\n\
+                          40,10\n\
+                          LABEL,VALUE,TARGET\n\
+                          1,10,15\n\
+                          2,27,30\n\
+                          3,35,35\n\
+                          4,50,40",
+    "trend-chart-monthly": "\
+                          UCL,LCL\n\
+                          40,10\n\
+                          LABEL,VALUE,TARGET\n\
+                          Jan,10,15\n\
+                          Feb,27,30\n\
+                          Mar,35,35\n\
+                          Apr,50,40",
+    "trend-chart-weekly": "\
+                          UCL,LCL\n\
+                          40,10\n\
+                          LABEL,VALUE,TARGET\n\
+                          Monday,10,15\n\
+                          Tuesday,27,30\n\
+                          Wednesday,35,35\n\
+                          Thursday,50,40",
+    "control-chart-daily": "\
+                          UCL,LCL\n\
+                          40,10\n\
+                          LABEL,VALUE,TARGET\n\
+                          1,10,15\n\
+                          2,27,30\n\
+                          3,35,35\n\
+                          4,50,40",
+    "control-chart-monthly": "\
+                          UCL,LCL\n\
+                          40,10\n\
+                          LABEL,VALUE,TARGET\n\
+                          Jan,10,15\n\
+                          Feb,27,30\n\
+                          Mar,35,35\n\
+                          Apr,50,40",
+    "control-chart-weekly": "\
+                          UCL,LCL\n\
+                          40,10\n\
+                          LABEL,VALUE,TARGET\n\
+                          Monday,10,15\n\
+                          Tuesday,27,30\n\
+                          Wednesday,35,35\n\
+                          Thursday,50,40",
   };
 
   const grouped = data.reduce((acc, item) => {
@@ -470,7 +537,7 @@ export default function KPIResponses({ params }) {
                               {item.chart_type ? (
                                 <button
                                   className="btn btn-success rounded-pill btn-sm me-2 icon-hover-btn"
-                                  onClick={() => handleFileDownload(item.chart_type + "-chart", role_id)}>
+                                  onClick={() => handleFileDownload(item.chart_type + "-chart-"+item.frequency, role_id)}>
                                   <AppIcon ic="tray-arrow-down" className="text-white p-1" />
                                   Download Template
                                 </button>

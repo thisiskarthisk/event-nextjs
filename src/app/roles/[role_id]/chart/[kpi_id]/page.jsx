@@ -232,38 +232,43 @@ export default function KPIResponseChart({ params }) {
           </div>
         </div>
 
-        {data &&
+        {Array.isArray(data) && data.length > 0 ? (
           data.map((response, i) => {
-            const categories = generateCategoriesForChart(response.frequency, filterData);
+            const categories = generateCategoriesForChart(
+              response.frequency,
+              filterData
+            );
+
             const values = categories.map(c => {
-              const found = response.chart_data.find(r => r.label === c);
+              const found = response.chart_data?.find(r => r.label === c);
               return found ? found.value : null;
             });
 
             return (
               <div className="card shadow-sm p-4 mt-4" key={`chart-${i}`}>
                 {response.chart_type === "bar" && (
-                  <BarChart 
-                    dataSeries={[{ label: "Points", data: values }]} 
-                    categories={categories} 
+                  <BarChart
+                    dataSeries={[{ label: "Points", data: values }]}
+                    categories={categories}
                   />
                 )}
 
                 {response.chart_type === "line" && (
-                  <LineChart 
-                    dataSeries={[{ label: "Points", data: values }]} 
-                    categories={categories} 
+                  <LineChart
+                    dataSeries={[{ label: "Points", data: values }]}
+                    categories={categories}
                   />
                 )}
 
                 {response.chart_type === "pie" && (
-                  <PieChart 
-                    dataSeries={[{ label: "Points", data: values }]} 
-                    categories={categories} 
+                  <PieChart
+                    dataSeries={[{ label: "Points", data: values }]}
+                    categories={categories}
                   />
                 )}
 
-                {(response.chart_type === "trend" || response.chart_type === "control") && (
+                {(response.chart_type === "trend" ||
+                  response.chart_type === "control") && (
                   <LineChart
                     dataSeries={[
                       {
@@ -279,7 +284,15 @@ export default function KPIResponseChart({ params }) {
                 )}
               </div>
             );
-          })}
+          })
+        ) : (
+          <div className="card shadow-sm p-4 mt-4 text-center">
+            <h5 className="mb-1">No data available</h5>
+            <p className="text-muted mb-0">
+              Try changing filters or selecting a different period.
+            </p>
+          </div>
+        )}
       </div>
     </AuthenticatedPage>
   );
