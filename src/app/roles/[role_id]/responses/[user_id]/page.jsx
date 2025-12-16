@@ -174,7 +174,7 @@ export default function KPIResponses({ params }) {
     "line-chart": "LABEL,VALUE\n1,15\n2,30",
     "pie-chart": "LABEL,VALUE\nJan,15\nFeb,30",
     "trend-chart": "UCL,LCL\n60,40\nLABEL,VALUE\nMonday,50\nTuesday,70\nWednesday,80",
-    "control-chart": "UCL,LCL\n40,10\nLABEL,VALUE\n1,10\n2,27\n3,35\n4,50",
+    "control-chart": "UCL,LCL\n40,10\nLABEL,VALUE,TARGET\n1,10,15\n2,27,30\n3,35,35\n4,50,40",
   };
 
   const grouped = data.reduce((acc, item) => {
@@ -302,6 +302,7 @@ export default function KPIResponses({ params }) {
           if (isLabelSection) {
             const label = row[0];
             const value = Number(row[1]);
+            const target = Number(row[2]);
 
             if (!label) {
               errors.push(`Line ${i + 1}, Label is empty!`);
@@ -318,6 +319,7 @@ export default function KPIResponses({ params }) {
               response_id: matched?.response_id || null,
               label,
               value: isNaN(value) ? 0 : value,
+              target,
             });
           } else {
             if (row.some(cell => cell === "")) {

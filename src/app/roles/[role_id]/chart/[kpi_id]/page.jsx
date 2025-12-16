@@ -133,7 +133,15 @@ export default function KPIResponseChart({ params }) {
       const week = selectedWeek | 1;
       setFilterData(`${year}-${month}-${week}W`);
     } else {
-      setFilterData(value);
+      if (frequency === "weekly"){
+        const date = new Date(value);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const week = selectedWeek | 1;
+        setFilterData(`${year}-${month}-${week}W`);
+      }else{
+        setFilterData(value);
+      }
     }
 
     if (frequency !== "weekly") {

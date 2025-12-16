@@ -76,7 +76,7 @@ export async function GET(req, context) {
    
   let message = "Fetch KPI Resposne Details Successfully !";
 
-  console.log("Fetched KPI responses for role_id:", role_id, result);
+  // console.log("Fetched KPI responses for role_id:", role_id, result);
   return JsonResponse.success({
     kpi_responses: result,
   }, message);

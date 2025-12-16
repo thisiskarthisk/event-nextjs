@@ -87,9 +87,9 @@ export async function POST(req) {
       await DB_Insert(sql`
         INSERT INTO 
           ${sql.identifier(Tables.TBL_KPI_RESPONSE_CHART_DATA)}
-          (kpi_response_id, rca_id, gap_analysis_id, label, value, meta)
+          (kpi_response_id, rca_id, gap_analysis_id, label, value, meta,target)
         VALUES
-          (${kpi_response_id}, ${null}, ${null}, ${record.label}, ${record.value}, ${null})
+          (${kpi_response_id}, ${null}, ${null}, ${record.label}, ${record.value}, ${null},${(record.target != 0)? record.target:null})
       `);
     }
 
