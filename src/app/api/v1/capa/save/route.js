@@ -2,6 +2,7 @@ import { DB_Insert, DB_Fetch, DB_Init, DB_Commit, DB_Rollback } from "@/db";
 import { JsonResponse } from "@/helper/api";
 import { sql } from "drizzle-orm";
 import Validation from "@/helper/validation";
+import { NextResponse } from 'next/server';
 
 export async function POST(req) {
   try {
@@ -147,6 +148,13 @@ export async function POST(req) {
             `);
     const settingValue = Setting?.[0]?.value || "";  
     const [prefix, digits] = settingValue.split(',');
+
+    if (!prefix || !digits) {
+        return NextResponse.json({
+            success: false,
+            message: "CAPA ID is not configured. Please set CAPA ID in Settings page."
+        }, { status: 400 });
+    }
     const paddedId = String(gap_analysis_id).padStart(digits, '0');
     const capa_no = `${prefix}${paddedId}`;
     
