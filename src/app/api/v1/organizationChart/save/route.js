@@ -33,7 +33,7 @@ export async function POST(req) {
       if (activeDuplicate.length > 0) {
         return JsonResponse.error(
           `Role "${roleName}" is already available and active. Please choose a different name.`,
-          409
+          422
         );
       }
 
@@ -83,7 +83,7 @@ export async function POST(req) {
       if (existingActiveRole.length > 0) {
          return JsonResponse.error(
             `Role "${roleName}" is already available and active for another role. Please choose a different name.`,
-            409
+            422
           );
       }
 
@@ -124,7 +124,7 @@ export async function POST(req) {
       const assignedRole = existingRole[0];
       return JsonResponse.error(
         `User is already assigned to role "${assignedRole.role_name}". Please remove them from that role first.`,
-        409
+        422 
       );
     }
 

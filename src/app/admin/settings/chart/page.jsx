@@ -22,7 +22,9 @@ export default function ChartSettings() {
     ucl_colour: "", 
     ucl_style: "",  
     lcl_colour: "", 
-    lcl_style: ""   
+    lcl_style: "" ,
+    outlier_colour: ""
+
   });
 
   useEffect(() => {
@@ -51,7 +53,8 @@ export default function ChartSettings() {
           ucl_colour: settings.ucl_colour || "#0000ffff",
           ucl_style: settings.ucl_style || "Line",
           lcl_colour: settings.lcl_colour || "#FF0000",
-          lcl_style: settings.lcl_style || "Line"
+          lcl_style: settings.lcl_style || "Line",
+          outlier_colour: settings.outlier_colour || "#ff5100ff"
         });
       }
     } catch (e) {
@@ -111,14 +114,12 @@ export default function ChartSettings() {
 
   return (
     <AuthenticatedPage>
-
       <div className="row">
         <div className="col-12">
           <div className="card">
             <div className="card-body">
-              
               <h5 className="d-flex align-items-center mb-4">
-                {t("Control Limit Styles")}
+                {t("Chart Settings")}
                 {!isEditing && (
                   <button 
                     className="btn btn-primary ms-3" 
@@ -128,14 +129,24 @@ export default function ChartSettings() {
                   </button>
                 )}
               </h5>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      <div className="row mt-3">
+        {/* --- Employee ID Card --- */}
+        <div className="col-lg-4">
+          <div className="card">
+            <div className="card-body">
               <div className="row">
-                {/* Upper Control Limit (UCL) Settings */}
-                <div className="col-md-6 border-end">
-                  <h5 className="text-center mb-4 text-primary">
-                    {t("UCL")} (Upper Control Limit)
-                  </h5>
+                <div className="col-6">
+                  <h6>Upper Control Limit</h6>
+                </div>
+              </div>
 
+              <div className="row mt-1">
+                <div className="col-6">
                   <TextField 
                     label={t("Colour")} 
                     type="color" 
@@ -144,7 +155,9 @@ export default function ChartSettings() {
                     onChange={value => handleChange("ucl_colour", value)}
                     className="mb-3" 
                   />
-                   
+                </div>
+
+                <div className="col-6">
                   <SelectPicker
                     label={t("Style")}
                     options={["Line", "Dotted"]}
@@ -153,12 +166,22 @@ export default function ChartSettings() {
                     onChange={value => handleChange("ucl_style", value)}
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                {/* Lower Control Limit (LCL) Settings */}
-                <div className="col-md-6">
-                  <h5 className="text-center mb-4 text-danger">
-                    {t("LCL")} (Lower Control Limit)
-                  </h5>
+        <div className="col-lg-4">
+          <div className="card">
+            <div className="card-body">
+              <div className="row">
+                <div className="col-6">
+                  <h6>Upper Control Limit</h6>
+                </div>
+              </div>
+
+              <div className="row mt-1">
+                <div className="col-6">
                   <TextField 
                     label={t("Colour")} 
                     type="color" 
@@ -167,7 +190,9 @@ export default function ChartSettings() {
                     onChange={value => handleChange("lcl_colour", value)}
                     className="mb-3" 
                   />
-                   
+                </div>
+
+                <div className="col-6">
                   <SelectPicker
                     label={t("Style")}
                     options={["Line", "Dotted"]}
@@ -179,44 +204,50 @@ export default function ChartSettings() {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* SAVE/CANCEL BUTTONS */}
-          {/* {isEditing && (
-            <div className="text-end mt-3">
-               <button 
-                className="btn btn-secondary me-2" 
-                onClick={() => {
-                  setEditing(false);
-                  loadSettings(); // Reloads original data to discard user changes
-                }}
-              >
-                {t("Cancel")}
-              </button>
-
-              <button className="btn btn-primary" onClick={ChartSettingsSave}>
-                <AppIcon ic="save" /> {t("Save")}
-              </button>
-            </div>
-          )} */}
-          <div className="row mt-3">
-            {isEditing && (
-              <div className="col-12 flex-space-between">
-                <Link 
-                    href="#" 
-                    className="btn btn-secondary"
-                    onClick = {() => {setEditing(false);
-                      loadSettings();
-                    }}>
-                  Cancel
-                </Link>
-
-                <button className="btn btn-primary" type="submit" onClick={ChartSettingsSave}>
-                  <AppIcon ic="check" /> Save
-                </button>
+        <div className="col-lg-4">
+          <div className="card">
+            <div className="card-body">
+              <div className="row">
+                <div className="col-6">
+                  <h6>Outlier Color</h6>
+                </div>
               </div>
-            )}
+
+              <div className="row mt-1">
+                <div className="col-12">
+                  <TextField 
+                    label={t("Exceeding outlier Identification color")} 
+                    type="color" 
+                    value={form.outlier_colour}
+                    disabled={!isEditing}
+                    onChange={value => handleChange("outlier_colour", value)}
+                    className="mb-3" 
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+      <div className="row mt-3">
+        {isEditing && (
+          <div className="col-12 flex-space-between">
+            <Link 
+                href="#" 
+                className="btn btn-secondary"
+                onClick = {() => {setEditing(false);
+                  loadSettings();
+                }}>
+              Cancel
+            </Link>
+
+            <button className="btn btn-primary" type="submit" onClick={ChartSettingsSave}>
+              <AppIcon ic="check" /> Save
+            </button>
+          </div>
+        )}
       </div>
     </AuthenticatedPage>
   );

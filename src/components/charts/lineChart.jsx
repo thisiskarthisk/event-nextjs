@@ -13,6 +13,38 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
   const { modal, toast, closeModal } = useAppLayoutContext();
   const { role_id, kpi_id, user_id } = useParams();
   
+  // const [chartSettings, setChartSettings] = useState(null);
+
+  // const normalizeColor = color => {
+  //     if (!color) return null;
+  //     if (color.startsWith("#") && (color.length === 7 || color.length === 4)) {
+  //       return color;
+  //     }
+  //     return null;
+  //   };
+  
+  // const fetchChartSettings = async () => {
+  //   try {
+  //     const res = await HttpClient({
+  //       url: `/roles/chart-styles`,
+  //       method: "GET"
+  //     });
+
+  //     if (res?.success) {
+  //       setChartSettings({
+  //         ...res.data,
+  //         ucl_colour: normalizeColor(res.data.ucl_colour),
+  //         lcl_colour: normalizeColor(res.data.lcl_colour),
+  //         lcl_style: Number(res.data.lcl_style ?? 0),
+  //         ucl_style: Number(res.data.ucl_style ?? 0)
+  //       });
+  //     }
+  //   } catch {
+  //     // Ignore errors
+  //     console.error("Failed to fetch chart settings");
+  //   }
+  // };
+  
   const divRef = useRef(null);
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -96,6 +128,7 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
 
     useEffect(() => {
       if (!showCapa && tab === "CAPA") setTab("RCA");
+      // fetchChartSettings();
     }, [showCapa, tab]);
 
     const assign = async () => {
