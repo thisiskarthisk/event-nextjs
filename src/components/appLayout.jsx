@@ -8,6 +8,7 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 
 import { ToastContainer, toast as toastify } from 'react-toastify';
+import { toggleSidebarBasedOnScreenSize } from "@/helper/utils";
 
 const AppLayoutContext = createContext({
   pageTitle: '',
@@ -17,8 +18,10 @@ const AppLayoutContext = createContext({
   toast: () => { },
   modal: () => { },
   closeModal: () => { },
-  appBarMenuItems: [],
-  setAppBarMenuItems: (items) => { },
+  rhsAppBarMenuItems: [],
+  setRHSAppBarMenuItems: (items) => { },
+  lhsAppBarMenuItems: [],
+  setLHSAppBarMenuItems: (items) => { },
   confirm: () => {},
 });
 
@@ -42,7 +45,9 @@ export default function AppLayout({ children }) {
 
   const [isLoading, toggleProgressBar] = useState(true);
 
-  const [appBarMenuItems, setAppBarMenuItems] = useState([]);
+  const [rhsAppBarMenuItems, setRHSAppBarMenuItems] = useState([]);
+
+  const [lhsAppBarMenuItems, setLHSAppBarMenuItems] = useState([]);
 
   const setPageTitle = (title) => {
 
@@ -135,7 +140,17 @@ export default function AppLayout({ children }) {
 
   useEffect(() => {
     document.body.className = bodyClass;
+
+    toggleSidebarBasedOnScreenSize();
   }, [bodyClass]);
+
+  useEffect(() => {
+    window.addEventListener('resize', () => toggleSidebarBasedOnScreenSize());
+
+    return () => {
+      window.removeEventListener('resize', () => toggleSidebarBasedOnScreenSize());
+    }
+  }, []);
 
   useEffect(() => {
     document.title = title ? `${title} | ${APP_NAME}` : APP_NAME;
@@ -143,7 +158,7 @@ export default function AppLayout({ children }) {
 
   return (
     <SessionProvider basePath="/api/v1/auth">
-      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, appBarMenuItems, setAppBarMenuItems, closeModal, confirm }}>
+      <AppLayoutContext.Provider value={{ pageTitle: title, setPageTitle, setBodyClass, toggleProgressBar, toast, modal, rhsAppBarMenuItems, setRHSAppBarMenuItems, lhsAppBarMenuItems, setLHSAppBarMenuItems, closeModal, confirm }}>
         
         {
           isLoading &&

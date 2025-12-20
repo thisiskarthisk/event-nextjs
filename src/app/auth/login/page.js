@@ -67,14 +67,14 @@ export default function LoginPage() {
       <div className="login-box">
         <div className="login-logo">
           <a href="">
-            <b>{APP_NAME}</b>
+            {/* <b>{APP_NAME}</b> */}
+            <img src="/assets/img/logo.png" alt="App Logo" height={"auto"} width={"50%"} className="mb-3" />
           </a>
         </div>
 
         <div className="card">
           <div className="card-body login-card-body">
-            <p className="login-box-msg">Please login to proceed</p>
-
+            {/* <p className="login-box-msg">Please login to proceed</p> */}
             <form action="" method="POST" onSubmit={onLoginFormSubmitted}>
               <TextField
                 type="email"

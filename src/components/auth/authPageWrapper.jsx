@@ -8,6 +8,7 @@ import AppSidebar from "@/components/sidebar";
 import AppFooter from "@/components/appFooter";
 import { useAppLayoutContext } from "../appLayout";
 import { createContext, useContext, useEffect, useState } from "react";
+import { toggleSidebar } from "@/helper/utils";
 
 const AuthPageLayoutContext = createContext({
   toggleBreadcrumbs: (value) => {},
@@ -63,6 +64,8 @@ export default function AuthenticatedPage({ children }) {
           </main>
   
           <AppFooter />
+
+          <div className="sidebar-overlay" onClick={toggleSidebar}></div>
         </div>
       }
     </AuthPageLayoutContext.Provider>

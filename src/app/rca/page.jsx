@@ -12,7 +12,7 @@ import { HttpClient } from "@/helper/http";
 import Link from "next/link";
 
 export default function Rca() {
-    const { setPageTitle, modal, toast, closeModal, toggleProgressBar, confirm, setAppBarMenuItems } = useAppLayoutContext();
+    const { setPageTitle, modal, toast, closeModal, toggleProgressBar, confirm, setRHSAppBarMenuItems } = useAppLayoutContext();
     const { t, locale } = useI18n();
     const [data, setData] = useState([]);
     const router = useRouter();
@@ -43,7 +43,7 @@ export default function Rca() {
     useEffect(() => {
         setPageTitle(t('RCA'));
         toggleProgressBar(false);
-        setAppBarMenuItems([
+        setRHSAppBarMenuItems([
             { icon: "upload", tooltip: "Upload RCA", className: "text-primary", onClick: handleOpenCsvModal }
         ]);
     }, [locale]);

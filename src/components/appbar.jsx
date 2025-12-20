@@ -6,10 +6,11 @@ import { useI18n } from "./i18nProvider";
 import { useAppLayoutContext } from "./appLayout";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
+import { toggleSidebar } from "@/helper/utils";
 
 export default function AppBar({pageTitle}) {
   const { locale, changeLocale, t } = useI18n();
-  const { modal, appBarMenuItems } = useAppLayoutContext();
+  const { modal, rhsAppBarMenuItems, lhsAppBarMenuItems } = useAppLayoutContext();
 
   const onLangChosen = (e, lang) => {
     e.preventDefault();
@@ -44,7 +45,7 @@ export default function AppBar({pageTitle}) {
       <div className="container-fluid">
         <ul className="navbar-nav">
           <li className="nav-item">
-            <a className="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+            <a className="nav-link" data-lte-toggle="sidebar" href="#" role="button" onClick={toggleSidebar}>
               <AppIcon ic="menu" />
             </a>
           </li>
@@ -57,14 +58,30 @@ export default function AppBar({pageTitle}) {
                 </span>
               </li>
           }
+
+          {
+            lhsAppBarMenuItems.map((item, idx) => (
+              <li key={`appbar-lhs-item-${idx}`} className="nav-item" onClick={item.onClick}>
+                <a href="#" className={"nav-link " + (item.className || '')} title={item.tooltip}>
+                  <AppIcon ic={item.icon} />
+                  {
+                    item.text && <>&nbsp; {item.text}</>
+                  }
+                </a>
+              </li>
+            ))
+          }
         </ul>
 
         <ul className="navbar-nav ms-auto">
           {
-            appBarMenuItems.map((item, idx) => (
+            rhsAppBarMenuItems.map((item, idx) => (
               <li key={idx} className="nav-item" onClick={item.onClick}>
                 <a href="#" className={"nav-link " + (item.className || '')} title={item.tooltip}>
                   <AppIcon ic={item.icon} />
+                  {
+                    item.text && <>&nbsp; {item.text}</>
+                  }
                 </a>
               </li>
             ))
