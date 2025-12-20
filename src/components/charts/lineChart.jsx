@@ -133,6 +133,22 @@ const isValueExeedsLimits = (value) => {
     }
   };
 
+  const fetchResponseDetails = async (responseId) => {
+    try {
+      const res = await HttpClient({
+        url : "/chart/list",
+        method : "GET",
+        params :{
+          id : responseId
+        },
+      });
+      
+      return res;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   const submitResponses = async (response_id, rcaRef=null, capaRef = null, user_id, kpi_id) => {
     const final_rca_id = rcaRef.current || null;
     const final_capa_id = capaRef.current || null;
@@ -330,9 +346,18 @@ const isValueExeedsLimits = (value) => {
   const handleOpenRCAandCAPAModel = async (response_id, rca_id, capa_id) => {
     const list = await fetchRCADetails();
     const capalist = await fetchCAPADetails();
-
-    const rcaRef = { current: rca_id || null };
-    const capaRef = { current: capa_id || null };
+    const response = await fetchResponseDetails(response_id);
+    
+    console.log("Response : ", response.data);
+    let rca = null;
+    let capa = null;
+    if ( response?.data?.responseChartData){
+      rca = response.data.responseChartData.rca_id;
+      capa = response.data.responseChartData.gap_analysis_id;
+    }
+    const rcaRef = { current: rca || null };
+    const capaRef = { current: capa || null };
+    
     
     modal({
       title: "Link RCA / CAPA",
