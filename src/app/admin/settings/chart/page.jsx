@@ -9,29 +9,50 @@ import AppIcon from "@/components/icon";
 import { HttpClient } from "@/helper/http";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
+import { CHART_LINE_TYPES, CHART_RESPONSES_LINE_STYLE, DEFAULT_CHART_SETTINGS } from "@/constants";
+import { useSession } from "next-auth/react";
 export default function ChartSettings() {
-  const { setPageTitle, toggleProgressBar , toast } = useAppLayoutContext();
+  const { setPageTitle, toggleProgressBar , toast, setLHSAppBarMenuItems } = useAppLayoutContext();
   const { t, locale } = useI18n();
-
+  const { data: session, status } = useSession();
   const [isEditing, setEditing] = useState(false);
 
-  // Define initial state for Chart settings with defaults
-  // These keys correspond to field_name values in your database
   const [form, setForm] = useState({
-    ucl_colour: "", 
-    ucl_style: "",  
-    lcl_colour: "", 
-    lcl_style: "" ,
-    outlier_colour: ""
-
+    ...DEFAULT_CHART_SETTINGS,
   });
 
+  // console.log(form.ucl_line_style);
+
   useEffect(() => {
-    setPageTitle(t('Settings'));
+    setPageTitle(t('Chart Settings'));
     toggleProgressBar(false);
-    loadSettings();
-  }, [locale, t, setPageTitle, toggleProgressBar]);
+  }, []);
+
+  useEffect(() => {
+    if (status == 'authenticated') {
+      loadSettings();
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setLHSAppBarMenuItems([
+        {
+          icon: "pencil",
+          className: "text-primary",
+          tooltip: "Edit",
+          text: "Edit",
+          onClick: () => setEditing(true)
+        }
+      ]);
+    } else {
+      setLHSAppBarMenuItems([]);
+    }
+
+    return () => {
+      setLHSAppBarMenuItems([]);
+    }
+  }, [isEditing]);
 
   /** Handle input/select changes */
   const handleChange = (field, value) => {
@@ -50,11 +71,8 @@ export default function ChartSettings() {
       if (res.success) {
         const settings = res.data;
         setForm({
-          ucl_colour: settings.ucl_colour || "#0000ffff",
-          ucl_style: settings.ucl_style || "Line",
-          lcl_colour: settings.lcl_colour || "#FF0000",
-          lcl_style: settings.lcl_style || "Line",
-          outlier_colour: settings.outlier_colour || "#ff5100ff"
+          ...DEFAULT_CHART_SETTINGS,
+          ...settings
         });
       }
     } catch (e) {
@@ -71,11 +89,14 @@ export default function ChartSettings() {
     e.preventDefault();
     toggleProgressBar(true);
 
-    // Transform form object into the array structure required by the backend API
-    const settingsArray = Object.keys(form).map(key => ({
-      field_name: key, // The key from the form state (e.g., ucl_colour)
-      value: form[key]  // The user-entered or selected value
+    const settingsArray = Object.keys(form)
+      .filter(key => form[key] !== undefined && form[key] !== null)
+      .map(key => ({
+        field_name: key,
+        value: form[key]
     }));
+
+    console.log("Settings Array:", settingsArray);
     
     const payload = {
       setting_group: "chart", // Sends the group name to the backend
@@ -115,27 +136,8 @@ export default function ChartSettings() {
   return (
     <AuthenticatedPage>
       <div className="row">
-        <div className="col-12">
-          <div className="card">
-            <div className="card-body">
-              <h5 className="d-flex align-items-center mb-4">
-                {t("Chart Settings")}
-                {!isEditing && (
-                  <button 
-                    className="btn btn-primary ms-3" 
-                    onClick={() => setEditing(true)}
-                  >
-                    <AppIcon ic="pencil" /> {t("Edit")}
-                  </button>
-                )}
-              </h5>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="row mt-3">
         {/* --- Employee ID Card --- */}
+        <h2> Trand and Control Chart </h2>
         <div className="col-lg-4">
           <div className="card">
             <div className="card-body">
@@ -148,11 +150,11 @@ export default function ChartSettings() {
               <div className="row mt-1">
                 <div className="col-6">
                   <TextField 
-                    label={t("Colour")} 
-                    type="color" 
-                    value={form.ucl_colour}
+                    label={t("Color")} 
+                    type="color"
+                    value={form.ucl_line_color}
                     disabled={!isEditing}
-                    onChange={value => handleChange("ucl_colour", value)}
+                    onChange={value => handleChange("ucl_line_color", value)}
                     className="mb-3" 
                   />
                 </div>
@@ -160,10 +162,10 @@ export default function ChartSettings() {
                 <div className="col-6">
                   <SelectPicker
                     label={t("Style")}
-                    options={["Line", "Dotted"]}
-                    value={form.ucl_style}
+                    options={CHART_LINE_TYPES}
+                    value={form.ucl_line_style}
                     disabled={!isEditing}
-                    onChange={value => handleChange("ucl_style", value)}
+                    onChange={value => handleChange("ucl_line_style", value)}
                   />
                 </div>
               </div>
@@ -176,18 +178,18 @@ export default function ChartSettings() {
             <div className="card-body">
               <div className="row">
                 <div className="col-6">
-                  <h6>Upper Control Limit</h6>
+                  <h6>Lower Control Limit</h6>
                 </div>
               </div>
 
               <div className="row mt-1">
                 <div className="col-6">
                   <TextField 
-                    label={t("Colour")} 
+                    label={t("Color")} 
                     type="color" 
-                    value={form.lcl_colour}
+                    value={form.lcl_line_color}
                     disabled={!isEditing}
-                    onChange={value => handleChange("lcl_colour", value)}
+                    onChange={value => handleChange("lcl_line_color", value)}
                     className="mb-3" 
                   />
                 </div>
@@ -195,10 +197,10 @@ export default function ChartSettings() {
                 <div className="col-6">
                   <SelectPicker
                     label={t("Style")}
-                    options={["Line", "Dotted"]}
-                    value={form.lcl_style}
+                    options={CHART_LINE_TYPES}
+                    value={form.lcl_line_style}
                     disabled={!isEditing}
-                    onChange={value => handleChange("lcl_style", value)}
+                    onChange={value => handleChange("lcl_line_style", value)}
                   />
                 </div>
               </div>
@@ -220,10 +222,85 @@ export default function ChartSettings() {
                   <TextField 
                     label={t("Exceeding outlier Identification color")} 
                     type="color" 
-                    value={form.outlier_colour}
+                    value={form.outlier_dot_color}
                     disabled={!isEditing}
-                    onChange={value => handleChange("outlier_colour", value)}
+                    onChange={value => handleChange("outlier_dot_color", value)}
                     className="mb-3" 
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <div className="col-lg-4 mt-3">
+          <div className="card">
+            <div className="card-body">
+              <div className="row">
+                <div className="col-6">
+                  <h6>Responses Line Style</h6>
+                </div>
+              </div>
+
+              <div className="row mt-1">
+                <div className="col-6">
+                  <TextField 
+                    label={t("Line Color")} 
+                    type="color" 
+                    value={form.responses_line_color}
+                    disabled={!isEditing}
+                    onChange={value => handleChange("responses_line_color", value)}
+                    className="mb-3" 
+                  />
+                </div>
+                <div className="col-6">
+                  <SelectPicker
+                    label={t("Line Style")}
+                    options={CHART_RESPONSES_LINE_STYLE}
+                    value={form.responses_line_curve_style}
+                    disabled={!isEditing}
+                    onChange={value => handleChange("responses_line_curve_style", value)}
+                  />
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <hr className="my-4" />
+
+        <h2> Trand Chart </h2>
+
+        <div className="col-lg-4">
+          <div className="card">
+            <div className="card-body">
+              <div className="row">
+                <div className="col-6">
+                  <h6>Target Color</h6>
+                </div>
+              </div>
+
+              <div className="row mt-1">
+                <div className="col-6">
+                  <TextField 
+                    label={t("Target Line Color")} 
+                    type="color" 
+                    value={form.target_line_color}
+                    disabled={!isEditing}
+                    onChange={value => handleChange("target_line_color", value)}
+                    className="mb-3" 
+                  />
+                </div>
+
+                <div className="col-6">
+                  <SelectPicker
+                    label={t("Style")}
+                    options={CHART_LINE_TYPES}
+                    value={form.target_line_style}
+                    disabled={!isEditing}
+                    onChange={value => handleChange("target_line_style", value)}
                   />
                 </div>
               </div>

@@ -5,7 +5,7 @@ import FieldWrapper from "./FieldWrapper";
 
 import Select from 'react-select';
 
-export default function SelectPicker({ label, options, value, onChange, isRequired, error = null, optionLabelKey = 'label', optionValueKey = 'value' }) {
+export default function SelectPicker({ label, options, value, onChange, isRequired, error = null, optionLabelKey = 'label', optionValueKey = 'value', disabled = false }) {
   const [ formattedOptions, setFormattedOptions ] = useState([]);
 
   const [ selectedValue, setSelectedValue ] = useState(null);
@@ -46,11 +46,14 @@ export default function SelectPicker({ label, options, value, onChange, isRequir
       });
     });
 
+    console.log(newFormattedOptions);
+
     setFormattedOptions([ ...newFormattedOptions ]);
   }, [options, optionLabelKey, optionValueKey]);
 
   useEffect(() => {
     setSelectedValue(getDefaultValue());
+    console.log(getDefaultValue(), value);
   }, [formattedOptions, value]);
 
   return (
@@ -59,7 +62,8 @@ export default function SelectPicker({ label, options, value, onChange, isRequir
         options={formattedOptions}
         className={error ? 'is-invalid' : ''}
         value={selectedValue}
-        onChange={(newValue) => onChange(newValue && newValue.value ? newValue.value : null)} />
+        onChange={(newValue) => onChange(newValue && newValue.value ? newValue.value : null)}
+        isDisabled={disabled} />
     </FieldWrapper>
   );
 }

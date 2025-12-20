@@ -16,10 +16,20 @@ export async function GET() {
     });
 
     return JsonResponse.success({
-      ucl_colour: settings.ucl_colour || "#ff0000", // ✅ fallback
-      lcl_colour: settings.lcl_colour || "#0000ff",
-      ucl_style: Number(settings.ucl_style ?? 0),
-      lcl_style: Number(settings.lcl_style ?? 0)
+      ucl_line_color: settings.ucl_line_color,
+      ucl_line_style:settings.ucl_line_style,
+
+      lcl_line_color: settings.lcl_line_color,
+      lcl_line_style:settings.lcl_line_style,
+
+      outlier_dot_color: settings.outlier_dot_color,
+
+      responses_line_color: settings.responses_line_color,
+      responses_line_curve_style: settings.responses_line_curve_style,
+      
+      target_line_color: settings.target_line_color,
+      target_line_style:settings.target_line_style,
+
     });
 
   } catch (err) {
