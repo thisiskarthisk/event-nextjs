@@ -278,8 +278,10 @@ export default function AbnormalitiesReport() {
                             <tfoot>
                                 <tr >
                                     <th className="text-left col-40">Total</th>
-                                    {months.map(col => (
-                                        <td><b>{totals[col] != 0 ? totals[col] : '-'}</b></td>
+                                    {months.map((col, idx) => (
+                                        <th key={`${col}-${idx}`}>
+                                            <b>{totals[col] !== 0 ? totals[col] : '-'}</b>
+                                        </th>
                                     ))}
                                 </tr>
                             </tfoot>

@@ -112,8 +112,8 @@ function UploadResponseForm({ frequency, onChange }) {
       )}
 
       {frequency === 'monthly' && (
-        <div className="mb-3">
-          <DatePicker
+        <div className="mb-3 required-field">
+          {/* <DatePicker
             type="number"
             label="Enter Year"
             id="year"
@@ -122,6 +122,25 @@ function UploadResponseForm({ frequency, onChange }) {
             value={formData.periodDate}
             onChange={(v) => onPeriodFieldChanged(v, 'year')}
             isRequired
+          /> */}
+          <label className="form-label">Enter Year</label>
+          <input
+            type="number"
+            id="monthlyYear"
+            className="form-control"
+            min="1900"
+            max="2100"
+            value={formData.periodDate}
+            placeholder="YYYY"
+            maxLength={4}
+            onChange={(e) => {
+              const value = e.target.value;
+
+              // allow only digits and max 4 chars
+              if (/^\d{0,4}$/.test(value)) {
+                onPeriodFieldChanged(value, "year");
+              }
+            }}
           />
         </div>
       )}
