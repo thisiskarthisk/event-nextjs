@@ -295,32 +295,7 @@ export default function GeneralSettings() {
           </div>
         </div>
       </div>
-
-      {/* <div className="row">
-        <div className="col-12">
-          {isEditing && (
-            <div className="text-end mt-3">
-              <button 
-                className="btn btn-secondary me-2" 
-                onClick={() => {
-                  setEditing(false);
-                  loadSettings(); 
-                }}
-              >
-                Cancel
-              </button>
-              
-              <button 
-                className="btn btn-primary" 
-                onClick={GeneralSettingsSave}
-              >
-                <AppIcon ic="save" /> Save
-              </button>
-            </div>
-          )}
-        </div>
-      </div> */}
-
+      
       <div className="row mt-3">
         {isEditing && (
           <div className="col-12 flex-space-between">

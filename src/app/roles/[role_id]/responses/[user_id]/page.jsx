@@ -176,7 +176,7 @@ export default function KPIResponses({ params }) {
   const { data: session, status } = useSession();
   const { role_id, user_id } = use(params);
 
-  const { setPageTitle, toggleProgressBar, toast, modal, closeModal, setAppBarMenuItems} = useAppLayoutContext();
+  const { setPageTitle, toggleProgressBar, toast, modal, closeModal, setRHSAppBarMenuItems} = useAppLayoutContext();
   const { t, locale } = useI18n();
   const [data, setData] = useState([]);
 
@@ -470,7 +470,7 @@ export default function KPIResponses({ params }) {
   useEffect(() => {
     if(status === 'authenticated'){
       setPageTitle(t('KPI Responses - Role: '+ decodeURLParam(role_id)));
-      setAppBarMenuItems([]);
+      setRHSAppBarMenuItems([]);
       fetchKPIResponses();
       toggleProgressBar(false);
     }

@@ -36,7 +36,8 @@ export async function POST(req) {
     for (const item of settings) {
       const { field_name, value } = item;
 
-      // find if exists
+      if (value === undefined || value === null) continue;
+
       const existing = await DB_Fetch(sql`
         SELECT id FROM ${sql.identifier(Tables.TBL_SETTINGS)}
         WHERE field_name = ${field_name}
@@ -45,19 +46,16 @@ export async function POST(req) {
       `);
 
       if (existing.length > 0) {
-        // UPDATE
         await DB_Fetch(sql`
           UPDATE ${sql.identifier(Tables.TBL_SETTINGS)}
           SET value = ${value}, updated_at = NOW()
           WHERE id = ${existing[0].id}
         `);
       } else {
-        // INSERT
         await DB_Insert(sql`
           INSERT INTO ${sql.identifier(Tables.TBL_SETTINGS)}
-            (field_name, value, setting_group)
-          VALUES
-            (${field_name}, ${value}, ${group})
+          (field_name, value, setting_group)
+          VALUES (${field_name}, ${value}, ${group})
         `);
       }
     }

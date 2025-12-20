@@ -8,16 +8,86 @@ import { useAppLayoutContext } from "@/components/appLayout";
 import { CHART_COLORS, getColorOfDataPoint, OUTLIER_DATA_POINT_COLOR } from "@/helper/chart";
 import AppIcon from "../icon";
 import Link from "next/link";
+import { HttpClient } from "@/helper/http";
+import { min } from "drizzle-orm";
+import { DEFAULT_CHART_SETTINGS } from "@/constants";
 
 export default function LineChart({ categories = [], dataSeries = [], ucl = null, lcl = null }) {
   const { modal, toast, closeModal } = useAppLayoutContext();
   const { role_id, kpi_id, user_id } = useParams();
   
+  const [chartSettings, setChartSettings] = useState(null);
+  const EPSILON = 0.0001;
+  const uclValue = Number(ucl);
+  const lclValue = Number(lcl);
+
   const divRef = useRef(null);
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
 
-  const isValueExeedsLimits = (value) => {
+
+  const normalizeColor = (color) => {
+    if (!color) return null;
+    if (color.startsWith("#") && (color.length === 7 || color.length === 4)) {
+      return color;
+    }
+    return null;
+  };
+
+  const fetchChartStyles = async () => {
+    try {
+        const res = await HttpClient({
+          url: "/roles/chart-styles",
+          method: "GET"
+        });
+
+       if (res?.success) {
+           const settings = {
+            ...res.data,
+            ucl_line_color: normalizeColor(res.data.ucl_line_color) || DEFAULT_CHART_SETTINGS.ucl_line_color,
+            ucl_line_style:res.data.ucl_line_style || DEFAULT_CHART_SETTINGS.ucl_line_style,
+
+            lcl_line_color: normalizeColor(res.data.lcl_line_color) || DEFAULT_CHART_SETTINGS.lcl_line_color,
+            lcl_line_style:res.data.lcl_line_style || DEFAULT_CHART_SETTINGS.lcl_line_style,
+
+            outlier_dot_color: normalizeColor(res.data.outlier_dot_color) || DEFAULT_CHART_SETTINGS.outlier_dot_color,
+
+            target_line_color: normalizeColor(res.data.target_line_color) || DEFAULT_CHART_SETTINGS.target_line_color,
+            target_line_style: res.data.target_line_style || DEFAULT_CHART_SETTINGS.target_line_style,
+
+            responses_line_color: normalizeColor(res.data.responses_line_color) || DEFAULT_CHART_SETTINGS.responses_line_color,
+            responses_line_curve_style: res.data.responses_line_curve_style || DEFAULT_CHART_SETTINGS.responses_line_curve_style
+          };
+
+          // console.log("settings :", settings);
+          setChartSettings(settings);
+        }
+    } catch {
+      console.log("Failed to fetch chart settings");
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    fetchChartStyles();
+  }, []);
+
+  console.log("chartSettings :", chartSettings);
+// const getLineDashByStyle = (style) => {
+//   switch (style) {
+//     case 1:  // Dotted
+//       return [4, 4];
+//     case 0:  // Solid
+//     default:
+//       return [];
+//   }
+// };
+
+function getDash(style) {
+  return style === 1 ? [4, 4] : []; // 1 = dotted, 0 = solid
+}
+
+const isValueExeedsLimits = (value) => {
     return ucl && lcl && (value > ucl || value < lcl);
   };
 
@@ -294,33 +364,53 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
     return false;
   };
 
+
   useEffect(() => {
-    (async () => {
-      const targetValues = categories.map(cat => {
-        const chartData = dataSeries?.[0]?.chart_data || [];
-        const row = chartData.find(r => r?.label === cat);
-        return row?.target ?? null;
-      });
+    if(!chartSettings || !canvasRef.current || dataSeries.length === 0) return;
+      // --- 1. X-AXIS PADDING LOGIC ---
+      const rawLabels = dataSeries[0]?.chart_data?.map(item => String(item.label)) || [];
+      if (rawLabels.length === 0) return;
+
+      const firstNum = Number(rawLabels[0]);
+      const lastNum = Number(rawLabels[rawLabels.length - 1]);
       
-      const hasTargetValues = targetValues.some(v => v !== null && v !== undefined);
+      // Labels: ["0", "1", "2", "3", "4", "5"]
+      const activeLabels = [String(firstNum - 1), ...rawLabels, String(lastNum + 1)];
+      
+      // --- 2. Y-AXIS PADDING LOGIC ---
+      const allValues = dataSeries.flatMap(d => d.chart_data.map(p => p.value));
+      const allTargets = dataSeries.flatMap(d => d.chart_data.map(p => p.target));
+      const limits = [uclValue, lclValue].filter(v => v !== null);
+      
+      const combinedValues = [...allValues, ...allTargets, ...limits];
+      const maxVal = Math.max(...combinedValues);
+      const minVal = Math.min(...combinedValues);
 
-      if (chartRef.current && chartRef.current.destroy) {
-        chartRef.current.destroy();
-        chartRef.current = null;
-      }
+      const yMax = maxVal + (maxVal * 0.15); // 15% padding top
+      const yMin = minVal > 5 ? minVal - 5 : 0; // Padding bottom
 
+      //--- 3. DATA MAPPING ---
+      const mapData = (dataArray, key) => activeLabels.map(label => {
+        const point = dataArray.find(p => String(p.label) === label);
+        return point ? point[key] : null; // Label 0 and 5 will be null
+      });
+
+      const targetValues = mapData(dataSeries[0].chart_data, 'target');
+      const hasTargetValues = targetValues.some(v => v !== null);
+      
       let options = {
         type: 'line',
         data: {
-          labels: categories,
+          labels: activeLabels,
           datasets: [
-            ...dataSeries.map(d => {
+            ...dataSeries.map((d, idx) => {
               return {
                 ...d,
-                borderColor: getColorOfDataPoint(0),
-                tension: 0.4,
-                pointBackgroundColor: (ctx) => (shouldHighlightDataPoint(ctx) ? OUTLIER_DATA_POINT_COLOR : getColorOfDataPoint(0)),
-                pointBorderColor: (ctx) => (shouldHighlightDataPoint(ctx) ? OUTLIER_DATA_POINT_COLOR : getColorOfDataPoint(0)),
+                data: mapData(d.chart_data, 'value'),
+                borderColor: chartSettings.responses_line_color || getColorOfDataPoint(idx),
+                tension: chartSettings.responses_line_curve_style === 'curve' ? 0.4 : 0,
+                pointBackgroundColor: (ctx) => (shouldHighlightDataPoint(ctx) ? chartSettings.outlier_dot_color || OUTLIER_DATA_POINT_COLOR : getColorOfDataPoint(0)),
+                pointBorderColor: (ctx) => (shouldHighlightDataPoint(ctx) ? chartSettings.outlier_dot_color || OUTLIER_DATA_POINT_COLOR : getColorOfDataPoint(0)),
                 pointRadius: (ctx) => (shouldHighlightDataPoint(ctx) ? 6 : 3),
                 pointHoverRadius: (ctx) => (shouldHighlightDataPoint(ctx) ? 8 : 4),
               };
@@ -332,7 +422,8 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
                     data: targetValues,
                     tension: 0.4,
                     spanGaps: true,
-                    borderColor: getColorOfDataPoint(4),
+                    borderDash:chartSettings.target_line_style === 'solid_line' ? [] : [5, 5],
+                    borderColor: chartSettings.target_line_color || getColorOfDataPoint(4),
                     pointBackgroundColor: (ctx) => (shouldHighlightDataPoint(ctx) ? getColorOfDataPoint(3) : getColorOfDataPoint(4)),
                     pointBorderColor: (ctx) => (shouldHighlightDataPoint(ctx) ? getColorOfDataPoint(3) : getColorOfDataPoint(4)),
                   }
@@ -344,11 +435,29 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
         options: {
           scales: {
             y: {
+              min : Math.floor(yMin),
+              max: Math.floor(yMax),
               grid: {
-                color: (ctx) =>  (shouldHighlightGridLine(ctx) ? OUTLIER_DATA_POINT_COLOR : 'rgba(0, 0, 0, 0.1)'),
+                color:(ctx) =>  {
+                  const value = ctx.tick.value;
+                  if (shouldHighlightGridLine(ctx)) {
+                    if (Math.abs(value - uclValue) < EPSILON) return chartSettings.ucl_line_color;
+                    if (Math.abs(value - lclValue) < EPSILON) return chartSettings.lcl_line_color;
+                  }
+                  return '#e9e9e9'; 
+                },
                 lineWidth: (ctx) =>  (shouldHighlightGridLine(ctx) ? 3 : 1),
               },
-              min: 0,
+              border:{
+                dash: (ctx) => {
+                  const value = ctx.tick.value;
+                  if (shouldHighlightGridLine(ctx)) {
+                    if (Math.abs(value - uclValue) < EPSILON) return chartSettings.ucl_line_style === 'solid_line' ? [] : [6, 6];
+                    if (Math.abs(value - lclValue) < EPSILON) return chartSettings.lcl_line_style === 'solid_line' ? [] : [6, 6];
+                  }
+                  return [];
+                },
+              },
             },
           },
           onHover: (event, elements, chart) => {
@@ -387,9 +496,13 @@ export default function LineChart({ categories = [], dataSeries = [], ucl = null
       };
 
       chartRef.current = new Chart(canvasRef.current, options);
-    }) ();
-  }, [ dataSeries, categories, ucl, lcl ]);
-
+      return () => {
+        if (chartRef.current) {
+          chartRef.current.destroy();
+          chartRef.current = null;
+        }
+      };
+  }, [ dataSeries, categories, uclValue, lclValue, chartSettings ]);
   return (
     <div ref={divRef}>
       <canvas ref={canvasRef}></canvas>

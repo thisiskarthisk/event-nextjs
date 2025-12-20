@@ -19,13 +19,13 @@ export default function UsersListPage() {
     { 'column': 'mobile_no', 'label': 'Mobile No' },
   ];
 
-  const { setPageTitle, toggleProgressBar, confirm, toast ,closeModal ,modal, setAppBarMenuItems } = useAppLayoutContext();
+  const { setPageTitle, toggleProgressBar, confirm, toast ,closeModal ,modal, setRHSAppBarMenuItems } = useAppLayoutContext();
   const tableRef = useRef(null);
 
   useEffect(() => {
     setPageTitle('Users');
     toggleProgressBar(false);
-    setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Users", className: "text-primary", onClick: showUploadDialog }]);
+    setRHSAppBarMenuItems([{ icon: "upload", tooltip: "Upload Users", className: "text-primary", onClick: showUploadDialog }]);
   }, []);
   
   const onDeleteUserClicked = (e, id) => {

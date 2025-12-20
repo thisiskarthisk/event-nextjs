@@ -17,7 +17,7 @@ import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 import Link from "next/link";
 
 export default function RolesPage() {
-  const { toggleProgressBar, toast, modal, setPageTitle , confirm , setAppBarMenuItems ,  } = useAppLayoutContext();
+  const { toggleProgressBar, toast, modal, setPageTitle , confirm , setRHSAppBarMenuItems ,  } = useAppLayoutContext();
   const { data: session, status } = useSession();
   const { locale } = useI18n();
   const { role_id } = useParams();
@@ -30,7 +30,7 @@ export default function RolesPage() {
     if (status == 'authenticated') {
       setPageTitle('Role Sheet');
       toggleProgressBar(false);
-      setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Role Sheet", className: "text-primary", onClick: handleOpenCsvModal }]);
+      setRHSAppBarMenuItems([{ icon: "upload", tooltip: "Upload Role Sheet", className: "text-primary", onClick: handleOpenCsvModal }]);
 
       // fetch(`/api/v1/roles?user_id=${session.user.id}`).then((res) => res.json()).then((data) => {
       //   if (data.success && data.data.roles) {

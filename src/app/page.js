@@ -248,7 +248,7 @@ function UploadOrgChartWidget({ onChange, errorMessage }) {
 
 /* -------------------- Main Component -------------------- */
 export default function OrganizationChartPage() {
-  const { setPageTitle, toggleProgressBar, setAppBarMenuItems, modal, closeModal, toast , confirm } =
+  const { setPageTitle, toggleProgressBar, setRHSAppBarMenuItems, modal, closeModal, toast , confirm } =
     useAppLayoutContext();
   const { t } = useI18n?.() ?? {};
   const [roles, setRoles] = useState([]);
@@ -262,7 +262,7 @@ export default function OrganizationChartPage() {
     if (status == 'authenticated') {
       setPageTitle(t ? t("organizationChart") : "Organization Chart");
       toggleProgressBar(false);
-      setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Organization Chart", className: "text-primary", onClick: showUploadDialog }]);
+      setRHSAppBarMenuItems([{ icon: "upload", tooltip: "Upload Organization Chart", className: "text-primary", onClick: showUploadDialog }]);
 
       loadRoles();
 

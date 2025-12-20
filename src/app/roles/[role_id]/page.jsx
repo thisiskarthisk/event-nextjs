@@ -15,7 +15,7 @@ import DataTable from "@/components/DataTable";
 import Link from "next/link";
 
 export default function RoleSheet() {
-  const { toggleProgressBar, toast, modal, setPageTitle, setAppBarMenuItems, closeModal } = useAppLayoutContext();
+  const { toggleProgressBar, toast, modal, setPageTitle, setRHSAppBarMenuItems, closeModal } = useAppLayoutContext();
   const { data: session, status } = useSession();
 
   const { locale } = useI18n();
@@ -25,7 +25,7 @@ export default function RoleSheet() {
   useEffect(() => {
     setPageTitle('Role Sheet');
     toggleProgressBar(false);
-    setAppBarMenuItems([{ icon: "upload", tooltip: "Upload Role Sheet", className: "text-primary", onClick: handleOpenCsvModal }]);
+    setRHSAppBarMenuItems([{ icon: "upload", tooltip: "Upload Role Sheet", className: "text-primary", onClick: handleOpenCsvModal }]);
   }, [locale, role_id]);
 
   
