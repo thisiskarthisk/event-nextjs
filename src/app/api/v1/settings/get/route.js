@@ -12,7 +12,6 @@ export async function GET(req) {
     }
 
     const rows = await DB_Fetch(sql`
-      -- 🐛 CORRECTION: Use 'field_name' instead of 'setting_key' 
       SELECT field_name, value 
       FROM ${sql.identifier(Tables.TBL_SETTINGS)}
       WHERE setting_group = ${group}
@@ -20,7 +19,7 @@ export async function GET(req) {
 
     const result = {};
     rows.forEach(r => {
-      // 🐛 CORRECTION: Use 'field_name' here to construct the response object keys
+      // CORRECTION: Use 'field_name' here to construct the response object keys
       result[r.field_name] = r.value;
     });
 

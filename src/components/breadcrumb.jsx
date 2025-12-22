@@ -9,9 +9,9 @@ export default function AppBreadCrumb({ breadcrumbs = {} }) {
         <div className="col-sm-6">
           <ol className="breadcrumb float-sm-end">
             {
-              Object.keys(breadcrumbs).map(b => {
+              Object.keys(breadcrumbs).map((b, i) => {
                 return (
-                  <li className={"breadcrumb-item" + (!breadcrumbs[b] ? ' active' : '')}>
+                  <li key={`breadcrumb-${i}`} className={"breadcrumb-item" + (!breadcrumbs[b] ? ' active' : '')}>
                     {
                       breadcrumbs[b] ? <a href={breadcrumbs[b]}>{b}</a> : b
                     }
