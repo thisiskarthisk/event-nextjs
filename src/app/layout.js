@@ -40,16 +40,14 @@ export default async function RootLayout({ children }) {
       </head>
       <body>
         <I18nProvider initialLocale={locale} initialMessages={initialMessages}>
-          <AppLayout>
             {children}
 
-            <Script src="/assets/js/overlayscrollbars.browser.es6.min.js" type="text/javascript" strategy="lazyOnload" />
-            <Script src="/assets/js/popper.min.js" type="text/javascript" strategy="lazyOnload" />
-            <Script src="/assets/js/bootstrap.min.js" type="text/javascript" strategy="lazyOnload" />
-            <Script src="/assets/js/apexcharts.min.js" type="text/javascript" strategy="lazyOnload" />
+          <Script src="/assets/js/overlayscrollbars.browser.es6.min.js" type="text/javascript" strategy="lazyOnload" />
+          <Script src="/assets/js/popper.min.js" type="text/javascript" strategy="lazyOnload" />
+          <Script src="/assets/js/bootstrap.min.js" type="text/javascript" strategy="lazyOnload" />
+          <Script src="/assets/js/apexcharts.min.js" type="text/javascript" strategy="lazyOnload" />
 
-            {/* <Script src="/assets/js/adminlte.min.js" type="text/javascript" strategy="lazyOnload" /> */}
-          </AppLayout>
+          <Script src="/assets/js/adminlte.min.js" type="text/javascript" strategy="lazyOnload" />
         </I18nProvider>
       </body>
     </html>
