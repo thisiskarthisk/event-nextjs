@@ -3,7 +3,10 @@
 export default function FieldWrapper({ children, label, isRequired, error = null, prefixIcon = null, suffixIcon = null, className = '' }) {
   return (
     <div className={"form-group" + (isRequired ? ' required-field' : '') + (className ? ` ${className}` : '')}>
-      <label className="form-label">{ label }</label>
+      {
+        label &&
+        <label className="form-label">{ label }</label>
+      }
 
       {
         (prefixIcon || suffixIcon) ? <div className="input-group">
