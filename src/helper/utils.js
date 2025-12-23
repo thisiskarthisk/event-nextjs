@@ -77,10 +77,6 @@ export function toggleSidebar(e = null, show = -1) {
 
   let removeClass, addClass;
 
-  if (show === -1 && !shouldToggleSidebar()) {
-    return;
-  }
-
   if (typeof(show) === 'boolean') {
     removeClass = show ? 'sidebar-collapse' : 'sidebar-open';
     addClass = show ? 'sidebar-open' : 'sidebar-collapse';

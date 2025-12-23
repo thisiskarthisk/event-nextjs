@@ -34,7 +34,22 @@ export async function GET() {
       ORDER BY r.id
     `);
 
-    return JsonResponse.success({ roles });
+  const users = await DB_Fetch(`
+      SELECT
+        ${Tables.PublicFields[Tables.TBL_USERS].join(', ')}
+      FROM ${Tables.TBL_USERS} u
+      WHERE u.active = TRUE
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ${Tables.TBL_ROLE_USERS} ru
+          WHERE ru.user_id = u.id
+            AND ru.active = TRUE
+        )
+      ORDER BY u.id DESC
+    `);
+
+    return JsonResponse.success({ roles, users });
+    
   } catch (error) {
     console.error("Error in /organizationChart/list:", error);
     return JsonResponse.error("Server error: " + error.message);

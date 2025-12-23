@@ -116,6 +116,12 @@
 
 .flex-column {
   display: flex;
+  flex-direction: column;
+}
+
+.flex-inline-column {
+  display: inline-flex;
+  flex-direction: column;
 }
 *.float-right {
   float: right !important;
@@ -209,4 +215,10 @@ dd {
 
 .fs-large {
   font-size: 1.2em;
+}
+
+.text-placeholder {
+  color: #999;
+  user-select: none;
+  text-align: center;
 }

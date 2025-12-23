@@ -374,7 +374,7 @@ function openFormModal(type, payload = {}) {
 
     (async () => {
       HttpClient({
-        url: "/users/list",
+        url: "/organizationChart/list",
         method: "GET",
       })
         .then((res) => {
@@ -409,6 +409,12 @@ function openFormModal(type, payload = {}) {
       title: "Add User",
       body: (
         <div>
+           {/* <SelectPicker
+            label="Select a User"
+            value={selectedUser}
+            options={usersList}
+            optionLabelKey="full_name"
+            optionValueKey="id" /> */}
           <label className="form-label">User Name</label>
           <select
             id="userDropdown"
@@ -490,7 +496,8 @@ function openFormModal(type, payload = {}) {
           className="form-control mt-2"
           defaultValue={name}
           onChange={(e) => (name = e.target.value)}
-          placeholder="Enter a role name"
+          placeholder="Enter name for the role"
+          autoFocus={true}
         />
       </div>
     ),
@@ -725,21 +732,34 @@ const showUploadDialog = () => {
 
   return (
     <div style={cardContainerStyle}>
-      <div style={{ width: "100%", minHeight: "500px", minWidth: "max-content", padding: "16px 6px", display: "flex", justifyContent: "center" }}>
-        {tree.length > 0 && (
-          <Tree lineWidth="2px" lineColor="#444" lineBorderRadius="0px" label={<div style={{ fontSize: 20, color: "#5807d1", fontWeight: 700 }}>Organization Chart</div>}>
-            {tree.map((node) =>
-              renderOrgNode(node, expandedNodes, toggleExpand, {
-                onAddUser: (id) => openFormModal("addUser", { role_id: id }),
-                onEditUser: (id, user) => openFormModal("editUser", { role_id: id, user }),
-                onDeleteUser: (id, user) => openFormModal("deleteUser", { role_id: id, user }),
-                onAddRole: (id) => openFormModal("addRole", { reporting_to: id }),
-                onEditRole: (role) => openFormModal("editRole", role),
-                onDeleteRole: (role) => openFormModal("deleteRole", role),
-              })
-            )}
-          </Tree>
-        )}
+      <div style={{ width: "100%", minHeight: "500px", minWidth: "max-content", padding: "16px 6px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+        {
+          tree.length > 0 ? (
+            <Tree lineWidth="2px" lineColor="#444" lineBorderRadius="0px" label={<div style={{ fontSize: 20, color: "#5807d1", fontWeight: 700 }}>Organization Chart</div>}>
+              {tree.map((node) =>
+                renderOrgNode(node, expandedNodes, toggleExpand, {
+                  onAddUser: (id) => openFormModal("addUser", { role_id: id }),
+                  onEditUser: (id, user) => openFormModal("editUser", { role_id: id, user }),
+                  onDeleteUser: (id, user) => openFormModal("deleteUser", { role_id: id, user }),
+                  onAddRole: (id) => openFormModal("addRole", { reporting_to: id }),
+                  onEditRole: (role) => openFormModal("editRole", role),
+                  onDeleteRole: (role) => openFormModal("deleteRole", role),
+                })
+              )}
+            </Tree>
+          ) : (
+            <div className="text-placeholder">
+              <h5>No data found</h5>
+
+              <p className="mt-3">Upload an organization chart or add a role to get started.</p>
+
+              <p className="mt-3 flex-inline-column">
+                <button className="btn btn-primary" onClick={showUploadDialog}><AppIcon ic="upload"/>&nbsp;Upload</button>
+                <button className="btn btn-info mt-3" onClick={(id) => openFormModal("addRole", { reporting_to: null })}><AppIcon ic="account-plus"/>&nbsp;Add a Role</button>
+              </p>
+            </div>
+          )
+        }
       </div>
     </div>
   );
