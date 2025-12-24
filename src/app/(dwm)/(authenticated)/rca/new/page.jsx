@@ -25,8 +25,9 @@ export default function RcaForm({ params }) {
         rca_no: "",
         gap_analysis_id: "",
         department: "",
-        date_of_report: "",
-        reported_by: "", // ✅ Default numeric user ID
+        // date_of_report: "",
+        date_of_report: new Date().toISOString().split('T')[0],
+        reported_by: "", 
         date_of_occurrence: "",
         impact: "",
         problem_description: "",
@@ -42,25 +43,10 @@ export default function RcaForm({ params }) {
     const [rcaId, setRCAID] = useState(false);
     const [rcaIdWarning, setRcaIdWarning] = useState("");
 
-
-    const getCapaDetails = async () => {
-        try {
-            HttpClient({
-                url: "/rca/new",
-                method: "GET",
-            }).then(res => {
-                if (res.success) {
-                    setCapaList(res.data.gap_analysis_list || []);
-                    setCpActionsList(res.data.cp_actions || []);
-                }
-            }).catch(err => console.error("getCapaDetails error:", err));
-        } catch (err) {
-            console.error("getCapaDetails error:", err);
-        }
-    };
+    const [usersList, setUsersList] = useState([]);
 
 
-     const loadRcaData = async (rcaId) => {
+    const loadRcaData = async (rcaId) => {
         try {
             HttpClient({
                 url: `/rca/${rcaId}`,
@@ -82,7 +68,6 @@ export default function RcaForm({ params }) {
                         id: root_cause_analysis.id,
                         rca_no: root_cause_analysis.rca_no || '',
                         gap_analysis_id: root_cause_analysis.gap_analysis_id || '',
-                        // gap_analysis_id: String(res.gap_analysis_id || ""),
                         department: root_cause_analysis.department || '',
                         date_of_report: root_cause_analysis.date_of_report || '',
                         reported_by: root_cause_analysis.reported_by || "1",
@@ -109,6 +94,8 @@ export default function RcaForm({ params }) {
             setRCAID(id);
             loadRcaData(id);
         } 
+
+        getUserList();
         getCapaDetails();
 
         checkRcaSetting();
@@ -155,12 +142,7 @@ export default function RcaForm({ params }) {
 
 
     const removeWhy = (id, why_id) => {
-        console.log("RCA Question removeWhy called with ID: " + why_id);
-
         if (document.activeElement) document.activeElement.blur();
-   
-        console.log("RCA Question removeWhy called with ID: " + why_id);
-
         confirm({
             title: "Delete RCA Question",
             message: "Are you sure you want to Delete the RCA Question?",
@@ -170,10 +152,7 @@ export default function RcaForm({ params }) {
                     HttpClient({
                         url: `/rca/delete/rca_whys/${why_id}`, // Assuming a new specific endpoint for 'rca_whys'
                         method: "POST", // Changed from 'POST'
-                        // No need to send 'data: { id }' in the body for a DELETE with ID in URL
                     }).then(res => {
-                        // console.log(res);
-                        // *** CORRECTION 3: The success message should indicate a 'why' question was deleted.
                         toast('success', res.message || 'The RCA Question has been deleted successfully.');
                         closeModal();
                         toggleProgressBar(false);
@@ -203,36 +182,70 @@ export default function RcaForm({ params }) {
         setForm({ ...form, gap_analysis_id: value });
     };
 
+    // const handleSubmit = async (e) => {
+    //     e.preventDefault();
+    //     setErrors({});
+    //     toggleProgressBar(true);
+
+    //     try {
+    //         HttpClient({
+    //             url: "/rca/save",
+    //             method: "POST",
+    //             data: form,
+    //         }).then(res => {
+    //             if (res.success) {
+    //                 toast('success', res.message || 'RCA saved successfully!');
+    //                 router.push("/rca");
+    //             } else {
+    //                 toast('error', res.message || "Failed to save RCA");
+    //             }
+    //         }).catch(err => {
+    //             console.error("Submit Error:", err);
+    //             toast('error', 'Network error. Please try again.');
+    //         }).finally(() => {
+    //             toggleProgressBar(false);
+    //         });
+    //     } catch (err) {
+    //         console.error("Submit Error:", err);
+    //         toast('error', 'Network error. Please try again.');
+    //     } finally {
+    //         toggleProgressBar(false);
+    //     }
+    // };
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrors({});
         toggleProgressBar(true);
 
+        //REMOVE EMPTY WHY ROWS
+        const cleanedForm = {
+            ...form,
+            rca_whys: form.rca_whys.filter(
+                w => w.question?.trim() || w.response?.trim()
+            ),
+        };
+
         try {
-            HttpClient({
+            const res = await HttpClient({
                 url: "/rca/save",
                 method: "POST",
-                data: form,
-            }).then(res => {
-                if (res.success) {
-                    toast('success', res.message || 'RCA saved successfully!');
-                    router.push("/rca");
-                } else {
-                    toast('error', res.message || "Failed to save RCA");
-                }
-            }).catch(err => {
-                console.error("Submit Error:", err);
-                toast('error', 'Network error. Please try again.');
-            }).finally(() => {
-                toggleProgressBar(false);
+                data: cleanedForm,
             });
+
+            if (res.success) {
+                toast("success", res.message || "RCA saved successfully!");
+                router.push("/rca");
+            } else {
+                toast("error", res.message || "Failed to save RCA");
+            }
         } catch (err) {
             console.error("Submit Error:", err);
-            toast('error', 'Network error. Please try again.');
+            toast("error", "Network error. Please try again.");
         } finally {
             toggleProgressBar(false);
         }
     };
+
 
 
     useEffect(() => {
@@ -244,6 +257,40 @@ export default function RcaForm({ params }) {
         }
     }, [form.gap_analysis_id, cpActionsList]);
 
+
+    const getCapaDetails = async () => {
+        try {
+            HttpClient({
+                url: "/rca/new",
+                method: "GET",
+            }).then(res => {
+                if (res.success) {
+                    setCapaList(res.data.gap_analysis_list || []);
+                    setCpActionsList(res.data.cp_actions || []);
+                }
+            }).catch(err => console.error("getCapaDetails error:", err));
+        } catch (err) {
+            console.error("getCapaDetails error:", err);
+        }
+    };
+    
+    const getUserList = async () => {
+        try {
+            const res = await HttpClient({
+                url: "/dropdown",
+                params: {type: "userList"},
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            setUsersList(res.data);
+
+        } catch (error) {
+            console.error("getUserList error:", error);
+            toast("error", "Network error. Please try again.");
+        }
+    };
 
     return (
         <>
@@ -267,6 +314,7 @@ export default function RcaForm({ params }) {
                                         <div className="col-md-4 mb-3">
                                             <TextField
                                                 label="RCA No"
+                                                className="form-control"
                                                 name="rca_no"
                                                 value={form.rca_no || ''}
                                                 disabled
@@ -276,38 +324,46 @@ export default function RcaForm({ params }) {
                                     )}
                                     <div className="col-md-4 mb-3">
                                         <TextField
-                                            label="Department *"
-                                            className={`form-control ${errors.department ? "is-invalid" : ""}`}
+                                            isRequired
+                                            label="Department"
+                                            className={`required-field form-control ${errors.department ? "is-invalid" : ""}`}
                                             name="department"
                                             value={form.department || ''}
                                             onChange={(e) => handleChange(e, "department")}
                                         />
                                         {errors.department && <div className="invalid-feedback">{errors.department}</div>}
                                     </div>
+
                                     <div className="col-md-4 mb-3">
-                                        <TextField
-                                            label="Reported By *"
-                                            className={`form-control ${errors.reported_by ? "is-invalid" : ""}`}
+                                        <SelectPicker
+                                            isRequired
+                                            label="Reported By"
+                                            className={`required-field form-control ${errors.reported_by ? "is-invalid" : ""}`}
                                             name="reported_by"
-                                            value={form.reported_by || ''}
-                                            onChange={(e) => handleChange(e, "reported_by")}
+                                            value={form.reported_by || null}
+                                            onChange={(value) => handleChange(value, "reported_by")}
+                                            options={usersList}
+                                            placeholder="Select user"
                                         />
+
                                     </div>
                                     <div className="col-md-4 mb-3">
                                         <TextField
-                                            label="Date of Report *"
+                                            label="Date of Report"
                                             type="date"
-                                            className={`form-control ${errors.date_of_report ? "is-invalid" : ""}`}
+                                            className={`required-field form-control ${errors.date_of_report ? "is-invalid" : ""}`}
                                             name="date_of_report"
-                                            value={form.date_of_report || ''}
+                                            // value={form.date_of_report || new Date().toISOString().split('T')[0]}
+                                            value={form.date_of_report}
                                             onChange={(e) => handleChange(e, "date_of_report")}
                                         />
                                     </div>
                                     <div className="col-md-4 mb-3">
                                         <TextField
-                                            label="Date of Occurrence *"
+                                            isRequired
+                                            label="Date of Occurrence"
                                             type="date"
-                                            className={`form-control ${errors.date_of_occurrence ? "is-invalid" : ""}`}
+                                            className={`required-field form-control ${errors.date_of_occurrence ? "is-invalid" : ""}`}
                                             name="date_of_occurrence"
                                             value={form.date_of_occurrence || ''}
                                             onChange={(e) => handleChange(e, "date_of_occurrence")}
@@ -317,33 +373,36 @@ export default function RcaForm({ params }) {
 
                                 <div className="mb-3">
                                     <TextArea
-                                        label="Impact *"
+                                        isRequired
+                                        label="Impact"
                                         name="impact"
                                         value={form.impact || ''}
                                         onChange={(e) => handleChange(e, "impact")}
-                                        className={`form-control ${errors.impact ? "is-invalid" : ""}`}
+                                        className={`required-field form-control ${errors.impact ? "is-invalid" : ""}`}
                                         rows="2"
                                     />
                                 </div>
 
                                 <div className="mb-3">
                                     <TextArea
-                                        label="Problem Description *"
+                                        isRequired
+                                        label="Problem Description"
                                         name="problem_description"
                                         value={form.problem_description || ''}
                                         onChange={(e) => handleChange(e, "problem_description")}
-                                        className={`form-control ${errors.problem_description ? "is-invalid" : ""}`}
+                                        className={`required-field form-control ${errors.problem_description ? "is-invalid" : ""}`}
                                         rows="3"
                                     />
                                 </div>
 
                                 <div className="mb-3">
                                     <TextArea
-                                        label="Immediate Action Taken *"
+                                        isRequired
+                                        label="Immediate Action Taken"
                                         name="immediate_action_taken"
                                         value={form.immediate_action_taken || ''}
                                         onChange={(e) => handleChange(e, "immediate_action_taken")}
-                                        className={`form-control ${errors.immediate_action_taken ? "is-invalid" : ""}`}
+                                        className={`required-field form-control ${errors.immediate_action_taken ? "is-invalid" : ""}`}
                                         rows="3"
                                     />
                                 </div>
@@ -352,7 +411,6 @@ export default function RcaForm({ params }) {
                                 <div className="mt-4">
                                     <h5 className="text-primary mb-3 border-bottom pb-2">RCA 5 Whys</h5>
                                     {form.rca_whys.map((why, idx) => (
-                                        console.log(why),
                                         <div key={idx} className="card mb-3 border-info">
                                             <div className="card-header bg-light d-flex justify-content-between">
                                                 <span className="fw-bold text-info">Why {idx + 1}</span>
@@ -369,19 +427,21 @@ export default function RcaForm({ params }) {
                                             </div>
                                             <div className="card-body">
                                                 <TextArea
+                                                    isRequired
                                                     label="Question"
                                                     name="question"
                                                     value={why.question || ''}
                                                     onChange={(e) => handleWhyChange(e, idx)}
-                                                    className="form-control mb-3"
+                                                    className="required-field form-control mb-3"
                                                     rows="2"
                                                 />
                                                 <TextArea
+                                                    isRequired
                                                     label="Response"
                                                     name="response"
                                                     value={why.response || ''}
                                                     onChange={(e) => handleWhyChange(e, idx)}
-                                                    className="form-control mb-3"
+                                                    className="required-field form-control mb-3"
                                                     rows="2"
                                                 />
                                             </div>
@@ -396,11 +456,12 @@ export default function RcaForm({ params }) {
                                 <div className="mt-5">
                                     <h5 className="text-primary mb-3 border-bottom pb-2">Linked CAPA</h5>
                                     <div className="col-md-4 mb-3">
-                                         <SelectPicker
+                                        <SelectPicker
                                             label="Select CAPA"
                                             name="gap_analysis_id"
                                             value={form.gap_analysis_id || ''}
                                             onChange={handleCapaSelect}
+                                            // options={cpActionsList}
                                             options={capaList.map((capa, idx) => ({ 
                                                 key: idx, 
                                                 value: capa.id, 
