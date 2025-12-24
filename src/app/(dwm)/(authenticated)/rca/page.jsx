@@ -39,6 +39,12 @@ export default function Rca() {
     );
 
     
+    if (sessionStorage.getItem("msg_success")) {
+        let msg = sessionStorage.getItem("msg_success");
+        toast("success", msg);
+        sessionStorage.removeItem("msg_success");
+    }
+    
     useEffect(() => {
         setPageTitle(t('RCA'));
         toggleProgressBar(false);
@@ -48,7 +54,7 @@ export default function Rca() {
     }, [locale]);
 
     // --------------------------------------------------------------------------------------------------
-    // ⬇️ CSV UPLOAD MODAL (UPDATED WITH ERROR BOX)
+    // CSV UPLOAD MODAL (UPDATED WITH ERROR BOX)
     // --------------------------------------------------------------------------------------------------
 
     const uploadedFiles = () => {

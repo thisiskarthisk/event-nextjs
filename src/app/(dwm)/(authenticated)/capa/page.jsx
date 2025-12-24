@@ -77,6 +77,13 @@ export default function Capa() {
         </>
     );
 
+    
+    if (sessionStorage.getItem("msg_success")) {
+        let msg = sessionStorage.getItem("msg_success");
+        toast("success", msg);
+        sessionStorage.removeItem("msg_success");
+    }
+
 
     useEffect(() => {
         setPageTitle(t('CAPA'));

@@ -1,4 +1,4 @@
-import { DB_Insert, Tables } from "@/db";
+import { DB_Insert, DB_Update, Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
 import { sql } from "drizzle-orm";
 
@@ -10,11 +10,7 @@ export async function POST(req, context) {
     // const { id } = await req.json();
     const RCA_WhysId = Number(why_id);
 
-    await DB_Insert(sql`
-        UPDATE ${sql.identifier(Tables.TBL_RCA_WHYS)}
-        SET active = FALSE
-        WHERE id = ${RCA_WhysId}
-    `);
+    await DB_Update(Tables.TBL_RCA_WHYS,{active:false},RCA_WhysId);
 
     return JsonResponse.success(
       { rca_why_id: RCA_WhysId },
