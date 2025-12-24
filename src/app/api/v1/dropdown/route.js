@@ -10,7 +10,7 @@ export async function GET(req) {
         let rows;
 
         switch (type) {
-            case "userList":
+            case "user":
                 rows = await DB_Fetch(sql`
                     SELECT id AS value,
                     CASE
