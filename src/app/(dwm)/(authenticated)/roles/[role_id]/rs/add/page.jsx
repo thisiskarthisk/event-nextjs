@@ -19,7 +19,6 @@ export default function AddRoleSheetPage() {
   const router = useRouter();
   const { role_id, rs_id } = useParams();
 
-  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState([
     {
       objective: "",
@@ -45,7 +44,7 @@ export default function AddRoleSheetPage() {
 
     if (!role_id) return;
     if (!rs_id) {
-      setLoading(false); // Add Mode — skip loading
+      toggleProgressBar(false);
       return;
     }
 
@@ -70,7 +69,6 @@ export default function AddRoleSheetPage() {
         toast("error", "Failed to load role sheet");
       } finally {
         toggleProgressBar(false);
-        setLoading(false);
       }
     };
 
@@ -225,7 +223,7 @@ export default function AddRoleSheetPage() {
       }).catch(err => {
         toast('error', 'Network error. Please try again.');
       }).finally(() => {
-        setLoading(false);
+        toggleProgressBar(false);
       });
     } catch (error) {
       console.error("Error saving role sheet:", error);
@@ -234,14 +232,6 @@ export default function AddRoleSheetPage() {
       toggleProgressBar(false);
     }
   };
-
-  if (loading) {
-    return (
-      <>
-        <div className="text-center py-5">Loading Role Sheet...</div>
-      </>
-    );
-  }
 
   /* Page */
   return (

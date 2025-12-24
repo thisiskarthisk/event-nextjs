@@ -133,6 +133,13 @@
   float: right !important;
 }
 
+.text-placeholder {
+  color: #999;
+  user-select: none;
+  text-align: center;
+}
+
+
 th.is-orderable {
   position: relative;
   cursor: pointer;
