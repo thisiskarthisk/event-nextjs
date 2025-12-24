@@ -52,7 +52,7 @@ export default function CAPAForm({ params }) {
 
     async function getUsersDropdown () {
         await HttpClient({
-            url: "/dropdowns",
+            url: "/dropdown",
             method: "GET",
             params: {
                 type: "user"

@@ -72,11 +72,11 @@ export default function CapaAnalysis({ params }) {
                     a.cor_action_desc || "—",
                     a.cor_action_target_date || "—",
                     a.cor_action_status || "—",
-                    a.cor_action_responsibility || "—",
+                    a.cor_responsibility_user || "—",
                     a.prev_action_desc || "—",
                     a.prev_action_target_date || "—",
                     a.prev_action_status || "—",
-                    a.prev_action_responsibility || "—",
+                    a.prev_responsibility_user || "—",
                 ]);
 
                 autoTable(doc, {
@@ -179,11 +179,11 @@ export default function CapaAnalysis({ params }) {
                 a.cor_action_desc || "—",
                 a.cor_action_target_date || "—",
                 a.cor_action_status || "—",
-                a.cor_action_responsibility || "—",
+                a.cor_responsibility_user || "—",
                 a.prev_action_desc || "—",
                 a.prev_action_target_date || "—",
                 a.prev_action_status || "—",
-                a.prev_action_responsibility || "—",
+                a.prev_responsibility_user || "—",
             ]);
 
             // Combine headers + data
@@ -299,11 +299,11 @@ export default function CapaAnalysis({ params }) {
                                         <td className="col-desc description-cell">{a.cor_action_desc ?? "—"}</td>
                                         <td className="col-target">{a.cor_action_target_date ?? "—"}</td>
                                         <td className="col-status">{a.cor_action_status ?? "—"}</td>
-                                        <td className="col-resp">{a.cor_action_responsibility ?? "—"}</td>
+                                        <td className="col-resp">{a.cor_responsibility_user ?? "—"}</td>
                                         <td className="col-desc description-cell">{a.prev_action_desc ?? "—"}</td>
                                         <td className="col-target">{a.prev_action_target_date ?? "—"}</td>
                                         <td className="col-status">{a.prev_action_status ?? "—"}</td>
-                                        <td className="col-resp">{a.prev_action_responsibility ?? "—"}</td>
+                                        <td className="col-resp">{a.prev_responsibility_user ?? "—"}</td>
                                     </tr>
                                 ))
                             ) : (
