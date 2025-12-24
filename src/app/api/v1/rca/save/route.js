@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { DB_Insert, DB_Fetch } from "@/db";
+import { DB_Insert, DB_Fetch, DB_Update, Tables } from "@/db";
 import { sql } from "drizzle-orm";
 
 export async function POST(req) {
@@ -10,34 +10,33 @@ export async function POST(req) {
         const RCAId = data.id ? Number(data.id) : null;
 
         if (RCAId) {
-            // ✅ UPDATE - Use DB_Fetch instead of DB_Insert for UPDATE
+            // UPDATE - Use DB_Fetch instead of DB_Insert for UPDATE
             console.log('Updating RCA:', RCAId);
+            console.log("RCA Details:",data);
+            let rca_data = {
+                reported_by: data.reported_by || null,
+                department: data.department || null,
+                date_of_report: data.date_of_report || null,
+                date_of_occurrence: data.date_of_occurrence || null,
+                impact: data.impact || null,
+                problem_desc: data.problem_description || null,
+                immediate_action_taken: data.immediate_action_taken || null,
+                gap_analysis_id: Number(data.gap_analysis_id) || null
+            };
+            await DB_Update(Tables.TBL_RCA,rca_data,RCAId);
             
-            await DB_Fetch(sql`
-                UPDATE root_cause_analysis SET 
-                    reported_by = ${data.reported_by || null},
-                    department = ${data.department || null},
-                    date_of_report = ${data.date_of_report || null},
-                    date_of_occurrence = ${data.date_of_occurrence || null},
-                    impact = ${data.impact || null},
-                    problem_desc = ${data.problem_description || null},
-                    immediate_action_taken = ${data.immediate_action_taken || null},
-                    gap_analysis_id = ${Number(data.gap_analysis_id) || null}
-                WHERE id = ${RCAId}
-            `);
             console.log('RCA updated successfully');
 
             // Handle RCA Whys
             const rca_whys = data.rca_whys || [];
             for (const rca_why of rca_whys) {
+                console.log("RCA Whys :",rca_why.id && rca_why.isExist);
                 if (rca_why.id && rca_why.isExist) {
-                    // Update existing why - Use DB_Fetch
-                    await DB_Fetch(sql`
-                        UPDATE rca_whys SET 
-                            question = ${rca_why.question || null},
-                            answer = ${rca_why.response || null}
-                        WHERE id = ${Number(rca_why.id)}
-                    `);
+                    let why_data = {
+                        question:rca_why.question || null,
+                        answer:rca_why.response || null
+                    };
+                    await DB_Update(Tables.TBL_RCA_WHYS,why_data,Number(rca_why.id));
                 } else {
                     // Insert new why - Use DB_Insert
                     await DB_Insert(sql`
@@ -87,7 +86,7 @@ export async function POST(req) {
             const rca_no = `${prefix}${paddedId}`;
             console.log('Generated RCA No:', rca_no);
 
-            // ✅ INSERT - Use DB_Insert
+            // INSERT - Use DB_Insert
             const insertedRCA = await DB_Insert(sql`
                 INSERT INTO root_cause_analysis (
                     rca_no, reported_by, department, date_of_report, 
@@ -103,7 +102,6 @@ export async function POST(req) {
             `);
 
             const newRCAId = insertedRCA[0]?.id || rca_id;
-            console.log('New RCA created with ID:', newRCAId);
 
             // Insert RCA Whys
             if (data.rca_whys?.length > 0) {

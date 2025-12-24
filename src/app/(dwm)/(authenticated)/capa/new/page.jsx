@@ -232,7 +232,11 @@ export default function CAPAForm({ params }) {
                 data:JSON.stringify(form)
             }).then((res)=>{
                 if (res.success) {
-                    toast( "success", res.message || "Saved successfully!" )
+                    /* toast( "success", res.message || "Saved successfully!" ) */
+                    sessionStorage.setItem(
+                        "msg_success",
+                        res.message || "Saved successfully!"
+                    );
                     router.push("/capa");
                 } else {
                     const formErrors = res?.errors?.errors || [];

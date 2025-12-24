@@ -46,39 +46,42 @@ export default function RcaForm({ params }) {
     const [usersList, setUsersList] = useState([]);
 
 
-    const loadRcaData = async (rcaId) => {
+    const loadRcaData = async () => {
         try {
-            HttpClient({
-                url: `/rca/${rcaId}`,
-                method: "GET",
-            }).then(res => {
-                if (res.success) {
-                    const root_cause_analysis = res.data.root_cause_analysis;
-                    const rca_whys = res.data.rca_whys || [];
+            if(id){
+                await HttpClient({
+                    url: `/rca/${id}`,
+                    method: "GET",
+                }).then(res => {
+                    if (res.success) {
+                        const root_cause_analysis = res.data.root_cause_analysis;
+                        const rca_whys = res.data.rca_whys || [];
 
-                    const rca_whys_data = rca_whys.map(a => ({
-                        id: a.id,
-                        question: a.question || '',
-                        response: a.answer || '',
-                        isExist: true
-                    }));
+                        const rca_whys_data = rca_whys.map(a => ({
+                            id: a.id,
+                            question: a.question || '',
+                            response: a.answer || '',
+                            isExist: true
+                        }));
 
-                    setForm({
-                        ...initialForm,
-                        id: root_cause_analysis.id,
-                        rca_no: root_cause_analysis.rca_no || '',
-                        gap_analysis_id: root_cause_analysis.gap_analysis_id || '',
-                        department: root_cause_analysis.department || '',
-                        date_of_report: root_cause_analysis.date_of_report || '',
-                        reported_by: root_cause_analysis.reported_by || "1",
-                        date_of_occurrence: root_cause_analysis.date_of_occurrence || '',
-                        impact: root_cause_analysis.impact || '',
-                        problem_description: root_cause_analysis.problem_desc || '',
-                        immediate_action_taken: root_cause_analysis.immediate_action_taken || '',
-                        rca_whys: rca_whys_data.length > 0 ? rca_whys_data : [initialForm.rca_whys[0]]
-                    });
-                }
-            }).catch(err => console.error("loadRcaData error:", err));
+                        setForm({
+                            ...initialForm,
+                            id: root_cause_analysis.id,
+                            rca_no: root_cause_analysis.rca_no || '',
+                            gap_analysis_id: root_cause_analysis.gap_analysis_id || '',
+                            department: root_cause_analysis.department || '',
+                            date_of_report: root_cause_analysis.date_of_report || '',
+                            reported_by: root_cause_analysis.reported_by || "1",
+                            date_of_occurrence: root_cause_analysis.date_of_occurrence || '',
+                            impact: root_cause_analysis.impact || '',
+                            problem_description: root_cause_analysis.problem_desc || '',
+                            immediate_action_taken: root_cause_analysis.immediate_action_taken || '',
+                            rca_whys: rca_whys_data.length > 0 ? rca_whys_data : [initialForm.rca_whys[0]]
+                        });
+                    }
+                }).catch(err => console.error("loadRcaData error:", err));
+            }
+            
         } catch (err) {
             console.error("loadRcaData error:", err);
         }
@@ -89,16 +92,14 @@ export default function RcaForm({ params }) {
         setPageTitle(id ? t("Edit RCA") : t("Add a RCA"));
         toggleProgressBar(false);
         toggleBreadcrumbs({ 'RCA': '/rca', [(id ? 'Edit': 'Add')] : null });
-
-        if (id) {
-            setRCAID(id);
-            loadRcaData(id);
-        } 
-
         getUserList();
         getCapaDetails();
 
         checkRcaSetting();
+        if (id) {
+            loadRcaData();
+            setRCAID(id); 
+        } 
     }, [id, locale]);
     
     async function checkRcaSetting() {
@@ -156,10 +157,8 @@ export default function RcaForm({ params }) {
                         toast('success', res.message || 'The RCA Question has been deleted successfully.');
                         closeModal();
                         toggleProgressBar(false);
-
-                        if(rcaId){                            
-                            loadRcaData(id);
-                        }
+                        
+                        loadRcaData();
                     }).catch(err => {
                         closeModal();
                         let message = 'Error occurred when trying to delete the RCA Question.';
@@ -231,9 +230,13 @@ export default function RcaForm({ params }) {
                 method: "POST",
                 data: cleanedForm,
             });
-
+            console.log("Results Save:",res);
             if (res.success) {
-                toast("success", res.message || "RCA saved successfully!");
+                /* toast("success", res.message || "RCA saved successfully!"); */
+                sessionStorage.setItem(
+                    "msg_success",
+                    res.message || "RCA saved successfully!"
+                );
                 router.push("/rca");
             } else {
                 toast("error", res.message || "Failed to save RCA");
@@ -278,7 +281,7 @@ export default function RcaForm({ params }) {
         try {
             const res = await HttpClient({
                 url: "/dropdown",
-                params: {type: "userList"},
+                params: {type: "user"},
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -494,11 +497,11 @@ export default function RcaForm({ params }) {
                                                                 <td>{a.cor_action_desc || "—"}</td>
                                                                 <td>{a.cor_action_target_date || "—"}</td>
                                                                 <td>{a.cor_action_status || "—"}</td>
-                                                                <td>{a.cor_action_responsibility || "—"}</td>
+                                                                <td>{a.cor_responsibility_user || "—"}</td>
                                                                 <td>{a.prev_action_desc || "—"}</td>
                                                                 <td>{a.prev_action_target_date || "—"}</td>
                                                                 <td>{a.prev_action_status || "—"}</td>
-                                                                <td>{a.prev_action_responsibility || "—"}</td>
+                                                                <td>{a.prev_responsibility_user || "—"}</td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
