@@ -95,20 +95,26 @@
   }
 }
 
-.login-page .app-footer {
-  position: absolute;
-  bottom: 0.5rem;
+.login-page,
+.register-page {
+  position: relative;
+}
+
+.login-page .app-footer,
+.register-page .app-footer {
+  position: sticky;
+  top: 100%;
   width: 100%;
   text-align: center;
   background: transparent;
   border: 0;
 }
 
-@media (max-height: 600px) {
+/* @media (max-height: 600px) {
   .login-page .app-footer {
     position: static;
   }
-}
+} */
 
 .text-left {
   text-align: left !important;
@@ -116,6 +122,12 @@
 
 .flex-column {
   display: flex;
+  flex-direction: column;
+}
+
+.flex-inline-column {
+  display: inline-flex;
+  flex-direction: column;
 }
 *.float-right {
   float: right !important;
@@ -209,4 +221,14 @@ dd {
 
 .fs-large {
   font-size: 1.2em;
+}
+
+.register-box {
+  width: 768px;
+}
+
+@media (max-width: 768px) {
+  .register-box {
+    width: 100%;
+  }
 }

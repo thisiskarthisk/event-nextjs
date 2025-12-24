@@ -1,12 +1,13 @@
-import { DB_Fetch } from "@/db";
+import { DB_Fetch ,Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
+import { sql } from "drizzle-orm";
 
 export async function GET() {
   const result = await DB_Fetch(`
     SELECT
       *
     FROM
-      root_cause_analysis rca
+      ${Tables.TBL_RCA} AS rca
     WhERE rca.active = TRUE
     ORDER BY rca.id ASC
   `);

@@ -77,10 +77,6 @@ export function toggleSidebar(e = null, show = -1) {
 
   let removeClass, addClass;
 
-  if (show === -1 && !shouldToggleSidebar()) {
-    return;
-  }
-
   if (typeof(show) === 'boolean') {
     removeClass = show ? 'sidebar-collapse' : 'sidebar-open';
     addClass = show ? 'sidebar-open' : 'sidebar-collapse';
@@ -105,3 +101,37 @@ export function toggleSidebarBasedOnScreenSize() {
   }
 }
 
+/**
+ * Set value of the nested property from strung key identifier
+ * 
+ * e.g:
+ * obj = { name: 'John', address: { city: 'ABC' } }
+ * name = 'address.city'
+ * value = 'XYZ'
+ */
+export function setNestedObjectValue(obj, name, value) {
+  const keys = name.split('.');
+  const lastKey = keys.pop();
+  let current = obj;
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+
+    if (!current[key] || typeof current[key] !== 'object') {
+      current[key] = {};
+    }
+
+    current = current[key];
+  }
+
+  current[lastKey] = value;
+
+  return obj;
+}
+
+/**
+ * Duplicate object with no reference
+ */
+export function deepCopy(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}

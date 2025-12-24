@@ -50,11 +50,16 @@ export default function TextField({
       const file = e.target.files?.[0] || null;
       onChange(file);
       return;
-    }
-    if (type == 'tel') {
+    } else if (type == 'tel') {
       if (subType == 'mobile') {
         newValue = newValue.replace(/[^0-9]/g, '').substr(0, 10);
       }
+    } else if (type == 'number') {
+      if (subType == 'year') {
+        newValue = (newValue || '').replace(/[^0-9]+/g, '').substring(0, 4);
+      }
+    } else if (subType == 'gstNo') {
+      newValue = (newValue || '').toUpperCase().replace(/[^a-z0-9]+/ig, '').substring(0, 15);
     }
 
     onChange(newValue);
