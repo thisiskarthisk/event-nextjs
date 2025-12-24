@@ -30,6 +30,27 @@ export async function DB_Insert(query, idCol = 'id') {
   return null;
 }
 
+export async function DB_Update( table, data, id, idCol = 'id' ) {
+  if (!table || !data || typeof data !== 'object') {
+    throw new Error('Invalid parameters for DB_Update');
+  }
+
+  const setFragments = Object.entries(data).map(
+    ([col, value]) =>
+      sql`${sql.identifier(col)} = ${value}`
+  );
+
+  const query = sql`
+    UPDATE ${sql.identifier(table)}
+    SET ${sql.join(setFragments, sql`, `)}
+    WHERE ${sql.identifier(idCol)} = ${id}
+    RETURNING *
+  `;
+
+  const result = await DB.execute(query);
+  return result.rows?.[0] ?? null;
+}
+
 export async function DB_Fetch(query) {
   return (await DB.execute(typeof(query) === 'object' ? sql`${query}` : query)).rows;
 }

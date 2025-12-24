@@ -8,6 +8,7 @@ import AppIcon from "../../components/icon";
 import DataTable from "@/components/DataTable";
 import { useRouter } from "next/navigation";
 import { HttpClient } from "@/helper/http";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 
 export default function Capa() {
 
@@ -22,9 +23,9 @@ export default function Capa() {
 
     const handleAddNewCAPA = () => router.push(`/capa/new`);
 
-    const handleView = (id) => router.push(`/capa/view/${btoa(id)}`);
+    const handleView = (id) => router.push(`/capa/view/${encodeURLParam(id)}`);
 
-    const handleEdit = (id) => router.push(`/capa/edit/${btoa(id)}`);
+    const handleEdit = (id) => router.push(`/capa/edit/${encodeURLParam(id)}`);
 
     const handleDelete = (id) => {
         console.log("handleDelete called with ID: " + id);

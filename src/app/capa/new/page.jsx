@@ -11,6 +11,7 @@ import TextArea from "@/components/form/TextArea";
 import SelectPicker from "@/components/form/SelectPicker";
 import { HttpClient } from "@/helper/http";
 import AppIcon from "@/components/icon";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 
 export default function CAPAForm({ params }) {
     const { setPageTitle, toast, toggleProgressBar } = useAppLayoutContext();
@@ -46,6 +47,22 @@ export default function CAPAForm({ params }) {
     const [form, setForm] = useState(initialForm);
     const [errors, setErrors] = useState({});
     const [capaIdWarning, setCapaIdWarning] = useState("");
+    const [usersDropdown , setUsersDropdown] = useState([]);
+
+    async function getUsersDropdown () {
+        await HttpClient({
+            url: "/dropdowns",
+            method: "GET",
+            params: {
+                type: "user"
+            }
+        }).then((res) => {
+            console.log("Users Dropdown:",res);
+            if(res.success){
+                setUsersDropdown(res.data)
+            }
+        })
+    }
 
     async function checkCapaSetting() {
         try {
@@ -66,11 +83,11 @@ export default function CAPAForm({ params }) {
         setPageTitle(id ? t("CAPA Details") : t("CAPA New"));
         toggleProgressBar(false);
         checkCapaSetting();
+        getUsersDropdown();
         
         if (!id) return;
-        console.log(id);
         HttpClient({
-            url: `/capa/${decodeURIComponent(id)}`,
+            url: `/capa/${decodeURLParam(id)}`,
             method: "GET",
             data: { id: id },
         })
@@ -216,9 +233,7 @@ export default function CAPAForm({ params }) {
                     toast( "success", res.message || "Saved successfully!" )
                     router.push("/capa");
                 } else {
-                    toast( "error", res.message || "Failed to save CAPA" )
-
-                    const formErrors = res.data?.errors || [];
+                    const formErrors = res?.errors?.errors || [];
                     if (Array.isArray(formErrors) && formErrors.length > 0) {
                         const errorMap = [];
                         formErrors.forEach((err) => {
@@ -228,6 +243,7 @@ export default function CAPAForm({ params }) {
                     } else {
                         setErrors([]);
                     }
+                    toast( "error", res.message || "Failed to save CAPA" )
                 }
             })            
         } catch (err) {
@@ -289,7 +305,7 @@ export default function CAPAForm({ params }) {
                                         <div className="card-body">
                                             {/* Row 1: Date / Reason / Responsibility */}
                                             <div className="row mb-3">
-                                                <div className="col-md-6">
+                                                <div className="col-md-6 required-field">
                                                     <TextField
                                                         label="Date"
                                                         name="date"
@@ -302,7 +318,7 @@ export default function CAPAForm({ params }) {
                                                         <span id="dateInputError" className="error invalid-feedback">{errors[idx]?.errors?.main?.date}</span>
                                                     )}
                                                 </div>
-                                                <div className="col-md-6">
+                                                <div className="col-md-6 required-field">
                                                     <TextField
                                                         label="Reason for Deviation"
                                                         name="reason_for_deviation"
@@ -321,7 +337,7 @@ export default function CAPAForm({ params }) {
                                                 <div className="col-md-6">
                                                     <h6 className="text-success fw-bold mb-2 text-center">Corrective</h6>
 
-                                                    <div className="mb-2">
+                                                    <div className="mb-2 required-field">
                                                         <TextField
                                                             label="Counter Measure"
                                                             name="counter_measure"
@@ -349,7 +365,7 @@ export default function CAPAForm({ params }) {
                                                     </div>
 
                                                     <div className="row">
-                                                        <div className="col-md-4">
+                                                        <div className="col-md-4 required-field">
                                                             <TextField
                                                                 label="Target Date"
                                                                 type="date"
@@ -362,7 +378,7 @@ export default function CAPAForm({ params }) {
                                                                 <span id="targetDateInputError" className="error invalid-feedback">{errors[idx]?.errors?.corrective?.target_date}</span>
                                                             )}
                                                         </div>
-                                                        <div className="col-md-4">
+                                                        <div className="col-md-4 required-field">
                                                             <SelectPicker
                                                                 label="Select Status"
                                                                 options={[
@@ -379,16 +395,15 @@ export default function CAPAForm({ params }) {
                                                             )}
                                                         </div>
                                                         <div className="col-md-4">
-                                                            <TextField
-                                                                label="Responsibility"
-                                                                name="responsibility"
+                                                            <SelectPicker
+                                                                label={"Responsibility"}
+                                                                options={usersDropdown}
                                                                 value={action.corrective.responsibility}
                                                                 onChange={(e) => {
                                                                     console.log(e);
                                                                     handleActionChange(e, idx, "corrective", "responsibility");
                                                                 }}
-
-                                                                className={`form-control ${errors[idx]?.errors?.corrective?.responsibility ? "is-invalid" : ""}`}
+                                                                isRequired={true}
                                                             />
                                                             {errors[idx]?.errors?.corrective?.responsibility && (
                                                                 <span id="statusSelectInputError" className="error invalid-feedback">{errors[idx]?.errors?.corrective?.responsibility}</span>
@@ -467,12 +482,15 @@ export default function CAPAForm({ params }) {
                                                             )}
                                                         </div>
                                                         <div className="col-md-4">
-                                                            <TextField
-                                                                label="Responsibility"
-                                                                name="responsibility"
+                                                            <SelectPicker
+                                                                label={"Responsibility"}
+                                                                options={usersDropdown}
                                                                 value={action.preventive.responsibility}
-                                                                onChange={(e) => handleActionChange(e, idx, "preventive", "responsibility")}
-                                                                className={`form-control ${errors[idx]?.errors?.preventive?.responsibility ? "is-invalid" : ""}`}
+                                                                onChange={(e) => {
+                                                                    console.log(e);
+                                                                    handleActionChange(e, idx, "preventive", "responsibility");
+                                                                }}
+                                                                isRequired={true}
                                                             />
                                                             {errors[idx]?.errors?.preventive?.responsibility && (
                                                                 <span id="responsibilityInputError" className="error invalid-feedback">{errors[idx]?.errors?.preventive?.responsibility}</span>

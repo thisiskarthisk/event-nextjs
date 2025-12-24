@@ -1,6 +1,6 @@
-import { DB_Insert, DB_Fetch, DB_Init, DB_Commit, DB_Rollback } from "@/db";
+import { DB_Insert, DB_Fetch, DB_Init, DB_Commit, DB_Rollback, DB_Update } from "@/db";
 import { JsonResponse } from "@/helper/api";
-import { sql } from "drizzle-orm";
+import { sql, Table } from "drizzle-orm";
 import Validation from "@/helper/validation";
 import { NextResponse } from 'next/server';
 
@@ -21,15 +21,6 @@ export async function POST(req) {
 
         const CFErrors = Validation(capa_action.corrective || {}, {
           counter_measure: "required",
-          description: "required",
-          target_date: "required",
-          status: "required",
-          responsibility: "required",
-        });
-
-        const PFErrors = Validation(capa_action.preventive || {}, {
-          counter_measure: "required",
-          description: "required",
           target_date: "required",
           status: "required",
           responsibility: "required",
@@ -42,9 +33,6 @@ export async function POST(req) {
         }
         if (CFErrors && Object.keys(CFErrors).length > 0) {
           formErrors.corrective = CFErrors;
-        }
-        if (PFErrors && Object.keys(PFErrors).length > 0) {
-          formErrors.preventive = PFErrors;
         }
 
         if (Object.keys(formErrors).length > 0) {
@@ -71,22 +59,22 @@ export async function POST(req) {
       if (capa_actions.length > 0) {
         for (const capa_action of capa_actions) {
           if (capa_action.isExist && capa_action.cpa_id) {
-            await DB_Insert(sql`
-              UPDATE cp_actions SET 
-                reason = ${capa_action.reason_for_deviation || null},
-                date = ${capa_action.date || null},
-                cor_action_desc = ${capa_action.corrective?.description || null},
-                cor_counter_measure = ${capa_action.corrective?.counter_measure || null},
-                cor_action_target_date = ${capa_action.corrective?.target_date || null},
-                cor_action_status = ${capa_action.corrective?.status || null},
-                cor_action_responsibility = ${capa_action.corrective?.responsibility || null},
-                prev_action_desc = ${capa_action.preventive?.description || null},
-                prev_counter_measure = ${capa_action.preventive?.counter_measure || null},
-                prev_action_target_date = ${capa_action.preventive?.target_date || null},
-                prev_action_status = ${capa_action.preventive?.status || null},
-                prev_action_responsibility = ${capa_action.preventive?.responsibility || null}
-              WHERE id = ${capa_action.cpa_id}
-            `);
+            let cp_data = {
+              reason: capa_action.reason_for_deviation || null,
+              date: capa_action.date || null,
+              cor_action_desc: capa_action.corrective?.description || null,
+              cor_counter_measure: capa_action.corrective?.counter_measure || null,
+              cor_action_target_date: capa_action.corrective?.target_date || null,
+              cor_action_status:capa_action.corrective?.status || null,
+              cor_action_responsibility:capa_action.corrective?.responsibility || null,
+              prev_action_desc : capa_action.preventive?.description || null,
+              prev_counter_measure : capa_action.preventive?.counter_measure || null,
+              prev_action_target_date : capa_action.preventive?.target_date || null,
+              prev_action_status : capa_action.preventive?.status || null,
+              prev_action_responsibility : capa_action.preventive?.responsibility || null
+            };
+
+            await DB_Update("cp_actions",cp_data,capa_action.cpa_id);
           } else {
             await DB_Insert(sql`
               INSERT INTO cp_actions (
@@ -123,7 +111,8 @@ export async function POST(req) {
           }
         }
       }
-
+      await DB_Commit();
+      
       return JsonResponse.success(
         { gap_analysis_id: CAPAID },
         "The CAPA record has been updated successfully."

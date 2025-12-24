@@ -10,6 +10,7 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { HttpClient } from "@/helper/http";
+import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 
 export default function CapaAnalysis({ params }) {
     const { setPageTitle, toggleProgressBar } = useAppLayoutContext();
@@ -23,7 +24,7 @@ export default function CapaAnalysis({ params }) {
 
         toggleProgressBar(false);
         HttpClient({
-            url: `/capa/${decodeURIComponent(id)}`,
+            url: `/capa/${decodeURLParam(id)}`,
             method:"GET"
         })
         .then(async(response) => {
