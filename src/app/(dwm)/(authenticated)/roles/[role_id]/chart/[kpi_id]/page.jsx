@@ -254,7 +254,10 @@ export default function KPIResponseChart({ params }) {
 
                 {response.chart_type === "line" && (
                   <LineChart
-                    dataSeries={[{ label: "Points", data: values }]}
+                    dataSeries={[{ 
+                      label: "Points", 
+                      data: values, 
+                      chart_data: response.chart_data }]}
                     categories={categories}
                   />
                 )}
