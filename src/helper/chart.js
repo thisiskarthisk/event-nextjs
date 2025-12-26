@@ -14,6 +14,21 @@ Chart.defaults.backgroundColor = function (context){
   return getColorOfDataPoint(context.dataIndex % CHART_COLORS.length);
 }
 
+/**
+ * Parse weekly date strings like "2025-12" or "2025-12" or "2025-12"
+ * Returns numeric values or null when missing.
+ * @param {string} str
+ * @returns {{year:number|null, month:number|null}}
+ */
+export function parseWeeklyDateString(str) {
+  if (!str || typeof str !== 'string') throw new Error('Invalid date string');
+  const parts = str.split('-').map(s => s && s.trim());
+  const year = parts[0] && /^[0-9]{4}$/.test(parts[0]) ? Number(parts[0]) : null;
+  const month = parts[1] && /^[0-9]{1,2}$/.test(parts[1]) ? Number(parts[1]) : null;
+  
+  return { year, month };
+}
+
 export function generateCategoriesForChart(frequency, date) {
   let categories = [];
 
@@ -37,7 +52,15 @@ export function generateCategoriesForChart(frequency, date) {
       break;
 
     case "weekly":
-      categories = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      console.log("Filter date: ", date);
+      try {
+        const { year, month } = parseWeeklyDateString(String(date));
+        const weeks = noOfWeeksInMonth(year, month);
+        categories = weeks;
+      } catch (err) {
+        console.warn('Invalid weekly date format', date);
+      }
+      /* categories = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']; */
       break;
 
     default:
@@ -46,3 +69,15 @@ export function generateCategoriesForChart(frequency, date) {
 
   return categories;
 }
+
+export function noOfWeeksInMonth (year, month) {
+    const lastOfMonth = new Date(year, month, 0);
+    let weeks = 0;
+    for (let d = 0; d < lastOfMonth.getDate(); d++) {
+      const date = new Date(year, month - 1, d + 1);
+      if (date.getDay() === 1) weeks++;
+    }
+    return Array.from({ length: weeks }, (_, i) => (
+      `Week ${i + 1}`
+    ));
+  };

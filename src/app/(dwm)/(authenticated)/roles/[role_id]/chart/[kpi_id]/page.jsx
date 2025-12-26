@@ -215,7 +215,7 @@ export default function KPIResponseChart({ params }) {
                     />
                   </div>
 
-                  <div className="col-lg-4 md-6 col-sm-12">
+                  {/* <div className="col-lg-4 md-6 col-sm-12">
                     <label className="form-label">Select Week</label>
                     <select className="form-control" value={selectedWeek} onChange={e => setSelectedWeek(e.target.value)}>
                       {weeks.map(w => (
@@ -224,7 +224,7 @@ export default function KPIResponseChart({ params }) {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </div> */}
                 </>
               )}
             </div>
