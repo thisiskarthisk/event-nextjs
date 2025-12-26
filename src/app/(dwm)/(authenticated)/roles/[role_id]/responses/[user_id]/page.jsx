@@ -20,7 +20,7 @@ const initialUploadFormData = {
   file: null,
 };
 
-function UploadResponseForm({ frequency, onChange }) {
+function UploadResponseForm({ frequency, onChange, onDownload }) {
   const [formData, setFormData] = useState({ ...initialUploadFormData });
   const [weeksList, setWeeksList] = useState([]);
 
@@ -112,16 +112,6 @@ function UploadResponseForm({ frequency, onChange }) {
 
       {frequency === 'monthly' && (
         <div className="mb-3 required-field">
-          {/* <DatePicker
-            type="number"
-            label="Enter Year"
-            id="year"
-            name="year"
-            format="Y"
-            value={formData.periodDate}
-            onChange={(v) => onPeriodFieldChanged(v, 'year')}
-            isRequired
-          /> */}
           <label className="form-label">Enter Year</label>
           <input
             type="number"
@@ -157,6 +147,21 @@ function UploadResponseForm({ frequency, onChange }) {
         </div>
       )}
 
+      <div className="mb-3 flex-column align-items-start">
+        <label className="form-label">Template</label>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            if (typeof onDownload === 'function') onDownload(formData);
+          }}
+          className="btn btn-link p-0"
+          download
+        >
+          <AppIcon ic="download" /> Click here to download
+        </a>
+      </div>
+
       <div className="mb-3 mt-3">
         <TextField
           type="file"
@@ -187,80 +192,6 @@ export default function KPIResponses({ params }) {
     latestUploadFormData.current = uploadFormData;
   }, [uploadFormData]);
 
-  const sampleChartTemplate = {
-    "bar-chart-daily": "LABEL,VALUE\n1,10\n2,20",
-    "bar-chart-monthly": "LABEL,VALUE\nJan,10\nFeb,20",
-    "bar-chart-weekly": "LABEL,VALUE\nMonday,10\nTuesday,20",
-    "line-chart-daily": "LABEL,VALUE\n1,15\n2,30",
-    "line-chart-monthly": "LABEL,VALUE\nJan,15\nFeb,30",
-    "line-chart-weekly": "LABEL,VALUE\nMonday,15\nTuesday,30",
-    "pie-chart-daily": "\
-                          LABEL,VALUE\n\
-                          1,10\n\
-                          2,27\n\
-                          3,35\n\
-                          4,50",
-    "pie-chart-monthly": "\
-                          LABEL,VALUE\n\
-                          Jan,10\n\
-                          Feb,27\n\
-                          Mar,35\n\
-                          Apr,50",
-    "pie-chart-weekly": "\
-                          LABEL,VALUE\n\
-                          Sunday,10\n\
-                          Monday,27\n\
-                          Tuesday,35\n\
-                          Wednesday,50",
-    "trend-chart-daily": "\
-                          UCL,LCL\n\
-                          40,10\n\
-                          LABEL,VALUE,TARGET\n\
-                          1,10,15\n\
-                          2,27,30\n\
-                          3,35,35\n\
-                          4,50,40",
-    "trend-chart-monthly": "\
-                          UCL,LCL\n\
-                          40,10\n\
-                          LABEL,VALUE,TARGET\n\
-                          Jan,10,15\n\
-                          Feb,27,30\n\
-                          Mar,35,35\n\
-                          Apr,50,40",
-    "trend-chart-weekly": "\
-                          UCL,LCL\n\
-                          40,10\n\
-                          LABEL,VALUE,TARGET\n\
-                          Monday,10,15\n\
-                          Tuesday,27,30\n\
-                          Wednesday,35,35\n\
-                          Thursday,50,40",
-    "control-chart-daily": "\
-                          UCL,LCL\n\
-                          40,10\n\
-                          LABEL,VALUE,TARGET\n\
-                          1,10,15\n\
-                          2,27,30\n\
-                          3,35,35\n\
-                          4,50,40",
-    "control-chart-monthly": "\
-                          UCL,LCL\n\
-                          40,10\n\
-                          LABEL,VALUE,TARGET\n\
-                          Jan,10,15\n\
-                          Feb,27,30\n\
-                          Mar,35,35\n\
-                          Apr,50,40",
-    "control-chart-weekly": "\
-                          UCL,LCL\n\
-                          40,10\n\
-                          LABEL,VALUE,TARGET\n\
-                          Monday,10,15\n\
-                          Tuesday,27,30\n\
-                          Wednesday,35,35\n\
-                          Thursday,50,40",
-  };
 
   const grouped = data.reduce((acc, item) => {
     const key = item.objective || "Unspecified Objective";
@@ -330,20 +261,89 @@ export default function KPIResponses({ params }) {
     }
   };
 
-  const handleFileDownload = (chartType, role_id) => {
-    const template = sampleChartTemplate[chartType];
+  // Shared template generator (used by both download modal and upload modal)
+  const generateTemplateGlobal = (chartMainType, freq, formPeriod) => {
+    const isTrendOrControl = ['trend', 'control'].includes(chartMainType);
+    const monthNamesShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-    if(!template){
-      return alert("No template for this chart type.");
+    let csv = '';
+
+    if (isTrendOrControl) {
+      csv += 'UCL,LCL\n40,10\n';
     }
-    
-    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${role_id}_${chartType}_template.csv`;
-    link.click();
+    if (freq === 'daily') {
+      const pd = formPeriod ? new Date(formPeriod) : null;
+      if (!pd || isNaN(pd.getTime())) return null;
+      const year = pd.getFullYear();
+      const month = pd.getMonth() + 1;
+      const daysInMonth = new Date(year, month, 0).getDate();
+
+      if (isTrendOrControl) csv += 'LABEL,VALUE,TARGET\n';
+      else csv += 'LABEL,VALUE\n';
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        if (isTrendOrControl) csv += `${d},,\n`;
+        else csv += `${d},\n`;
+      }
+      return csv;
+    }
+
+    if (freq === 'monthly') {
+      const year = formPeriod ? Number(formPeriod) : null;
+      if (!year || isNaN(year)) return null;
+
+      if (isTrendOrControl) csv += 'LABEL,VALUE,TARGET\n';
+      else csv += 'LABEL,VALUE\n';
+
+      for (let m = 0; m < 12; m++) {
+        const label = monthNamesShort[m];
+        if (isTrendOrControl) csv += `${label},,\n`;
+        else csv += `${label},\n`;
+      }
+      return csv;
+    }
+
+    if (freq === 'weekly') {
+      const monthStr = formPeriod?.month || formPeriod;
+      if (!monthStr) return null;
+      const [yStr, mStr] = String(monthStr).split('-');
+      const year = Number(yStr);
+      const month = Number(mStr);
+      if (!year || !month) return null;
+
+      const lastOfMonth = new Date(year, month, 0);
+      let weeks = 0;
+      for (let d = 0; d < lastOfMonth.getDate(); d++) {
+        const date = new Date(year, month - 1, d + 1);
+        if (date.getDay() === 1) weeks++;
+      }
+      if (weeks < 1) weeks = 4;
+
+      if (isTrendOrControl) csv += 'LABEL,VALUE,TARGET\n';
+      else csv += 'LABEL,VALUE\n';
+
+      for (let w = 1; w <= weeks; w++) {
+        const label = `Week ${w}`;
+        if (isTrendOrControl) csv += `${label},,\n`;
+        else csv += `${label},\n`;
+      }
+      return csv;
+    }
+
+    return null;
   };
+
+  const performBlobDownload = (template, filename) => {
+    if (!template) return false;
+    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    return true;
+  };
+
 
   const handleFileUpload = (user_id, file, chartType, role_id, record_id, existingChartData, periodDate, frequency) => {
     if (!file) return;
@@ -450,7 +450,17 @@ export default function KPIResponses({ params }) {
               ...prevData,
               ...newData,
             }));
-          }} />
+          }}
+          onDownload={(formData) => {
+            const period = formData?.periodDate;
+            const template = generateTemplateGlobal(chartType, frequency, period);
+            if (!template) {
+              toast('error', 'Please select day/Month/Year before downloading template.');
+              return;
+            }
+            performBlobDownload(template, `${role_id}_${chartType}-chart-${frequency}_template.csv`);
+          }}
+        />
       ),
       okBtn: {
         label: 'Upload',
@@ -553,12 +563,7 @@ export default function KPIResponses({ params }) {
                                 <AppIcon ic="tray-arrow-up" className="text-black" /> Upload Responses
                               </label>
                               {item.chart_type ? (
-                                <button
-                                  className="btn btn-success rounded-pill btn-sm me-2 icon-hover-btn"
-                                  onClick={() => handleFileDownload(item.chart_type + "-chart-"+item.frequency, role_id)}>
-                                  <AppIcon ic="tray-arrow-down" className="text-white p-1" />
-                                  Download Template
-                                </button>
+                                <></>
                               ) : (
                                 "-"
                               )}

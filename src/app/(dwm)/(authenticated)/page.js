@@ -274,11 +274,11 @@ const UploadOrgChartWidget = ({ onChange, errorMessage }) => {
             <input type="file" name="file" className="form-control mb-3" accept=".csv" autoFocus onChange={onChange} />
             {errorMessage && (
               <div
-                className="alert alert-danger mt-3"
+                className="alert alert-warning mt-3"
                 role="alert"
                 style={{ whiteSpace: "pre-wrap" }}   // 👈 IMPORTANT
               >
-                <strong className="mt-3">Upload Error:</strong>
+                <strong className="mt-3">Upload Entity Alerts:</strong>
                 <br />
                 <dl dangerouslySetInnerHTML={{ __html: errorMessage }}></dl>
               </div>
