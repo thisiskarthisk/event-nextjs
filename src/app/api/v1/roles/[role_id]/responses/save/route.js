@@ -11,8 +11,8 @@ export async function POST(req) {
     let result, kpi_response_id;
 
     if (frequency === 'weekly') {
-      const { month, week } = periodDate;
-      periodDate = `${month}-${week}W`;
+      const { month } = periodDate;
+      periodDate = `${month}`;
     }
     /* --------------------------------------------
      * Fetching KPI Details

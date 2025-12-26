@@ -59,12 +59,12 @@ function UploadResponseForm({ frequency, onChange, onDownload }) {
             periodDate: { ...prev.periodDate, month: newValue } 
           };
         }
-        if (name === 'week') {
+        /* if (name === 'week') {
           return { 
             ...prev, 
             periodDate: { ...prev.periodDate, week: newValue } 
           };
-        }
+        } */
       }
 
       return { 
@@ -134,7 +134,7 @@ function UploadResponseForm({ frequency, onChange, onDownload }) {
         </div>
       )}
 
-      {frequency === 'weekly' && (
+      {/* {frequency === 'weekly' && (
         <div className="mb-3">
           <SelectPicker
             label="Select Week"
@@ -145,7 +145,7 @@ function UploadResponseForm({ frequency, onChange, onDownload }) {
             onChange={(v) => onPeriodFieldChanged(v, 'week')}
           />
         </div>
-      )}
+      )} */}
 
       <div className="mb-3 flex-column align-items-start">
         <label className="form-label">Template</label>
@@ -458,7 +458,7 @@ export default function KPIResponses({ params }) {
               toast('error', 'Please select day/Month/Year before downloading template.');
               return;
             }
-            performBlobDownload(template, `${role_id}_${chartType}-chart-${frequency}_template.csv`);
+            performBlobDownload(template, `${chartType}-chart-${frequency}_template.csv`);
           }}
         />
       ),
