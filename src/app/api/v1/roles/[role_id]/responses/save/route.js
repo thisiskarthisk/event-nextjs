@@ -46,6 +46,7 @@ export async function POST(req) {
         WHERE 
           kpi_id = ${kpi_record_id}
           AND user_id = ${user_id}
+          AND period_date = ${periodDate}
       `);
       /* --------------------------------------------
       * Delete The Already exisit KPI Chart Details
