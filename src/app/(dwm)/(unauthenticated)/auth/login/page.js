@@ -83,7 +83,7 @@ export default function LoginPage() {
                 prefixIcon="email" />
 
               <TextField
-                className="mb-3"
+                className="mt-3"
                 name="password"
                 type="password"
                 placeholder="Password"
@@ -91,7 +91,7 @@ export default function LoginPage() {
                 onChange={e => onFieldChanged(e, 'password')}
                 prefixIcon="lock" />
 
-              <div className="row">
+              <div className="row mt-3">
                 <div className="col-12 text-center">
                   <button type="submit" className="btn btn-primary">Login</button>
                 </div>

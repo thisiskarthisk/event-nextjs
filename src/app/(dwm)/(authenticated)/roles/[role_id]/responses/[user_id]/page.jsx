@@ -27,8 +27,15 @@ function UploadResponseForm({ frequency, onChange, onDownload }) {
   const onPeriodFieldChanged = (value, name) => {
     let newValue = value;
 
-    if (name === 'file' && value?.target?.files) {
-      newValue = value.target.files[0] || null;
+    // Normalize file input: TextField may pass a FileList, an event, or a File
+    if (name === 'file') {
+      if (value?.target?.files) {
+        newValue = value.target.files[0] || null;
+      } else if (value instanceof FileList || (Array.isArray(value) && value.length)) {
+        newValue = value[0] || null;
+      } else {
+        newValue = value || null;
+      }
     }
 
     if (frequency === 'weekly' && name === 'month') {
@@ -405,12 +412,137 @@ export default function KPIResponses({ params }) {
               label,
               value: isNaN(value) ? 0 : value,
               target,
+              rowNumber: i + 1,  // Track the Excel row number for error reporting
             });
           } else {
             if (row.some(cell => cell === "")) {
               errors.push(`Line ${i + 1}: Contains empty cell(s) before 'label' section`);
             }
           }
+        }
+
+        // Frequency-specific validations (days/weeks/months) with row tracking
+        try {
+          if (frequency === 'daily') {
+            const pd = new Date(periodDate);
+            const year = pd.getFullYear();
+            const month = pd.getMonth() + 1;
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const monthName = pd.toLocaleString(undefined, { month: 'long' });
+
+            const seenValid = new Map();
+            const duplicatesValid = new Map();
+            const seenInvalid = new Map();
+            const duplicatesInvalid = new Map();
+
+            chartData.forEach(c => {
+              const n = Number(String(c.label).trim());
+              const row = c.rowNumber;
+              if (isNaN(n)) return;
+              if (n > daysInMonth) {
+                if (!seenInvalid.has(n)) seenInvalid.set(n, row);
+                else {
+                  if (!duplicatesInvalid.has(n)) duplicatesInvalid.set(n, []);
+                  duplicatesInvalid.get(n).push(row);
+                }
+              } else {
+                if (!seenValid.has(n)) seenValid.set(n, row);
+                else {
+                  if (!duplicatesValid.has(n)) duplicatesValid.set(n, []);
+                  duplicatesValid.get(n).push(row);
+                }
+              }
+            });
+
+            // Report first invalid occurrence as invalid, later ones as duplicates
+            seenInvalid.forEach((firstRow, day) => {
+              errors.push(`Row ${firstRow}: "${monthName}" ${year} has ${daysInMonth} days, but invalid day: ${day}`);
+            });
+            duplicatesInvalid.forEach((rows, day) => {
+              errors.push(`Row ${rows.join(', ')}: Duplicate invalid day ${day} found`);
+            });
+
+            // Report duplicates among valid days
+            duplicatesValid.forEach((rows, day) => {
+              errors.push(`Row ${rows.join(', ')}: Duplicate day ${day} found`);
+            });
+          }
+
+          if (frequency === 'weekly') {
+            const monthStr = periodDate?.month || periodDate;
+            const [yStr, mStr] = String(monthStr || '').split('-');
+            const year = Number(yStr);
+            const month = Number(mStr);
+            if (year && month) {
+              const lastOfMonth = new Date(year, month, 0);
+              let weeks = 0;
+              for (let d = 0; d < lastOfMonth.getDate(); d++) {
+                const date = new Date(year, month - 1, d + 1);
+                if (date.getDay() === 1) weeks++;
+              }
+              if (weeks < 1) weeks = 4;
+
+              const monthName = new Date(year, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+              
+              // Check invalid and duplicate weeks, classifying first invalid as invalid and later ones as duplicates
+              const seenValid = new Map();
+              const duplicatesValid = new Map();
+              const seenInvalid = new Map();
+              const duplicatesInvalid = new Map();
+
+              chartData.forEach(c => {
+                const m = String(c.label).match(/(\d+)/);
+                const n = m ? Number(m[1]) : NaN;
+                const row = c.rowNumber;
+                if (isNaN(n)) return;
+                if (n > weeks) {
+                  if (!seenInvalid.has(n)) seenInvalid.set(n, row);
+                  else {
+                    if (!duplicatesInvalid.has(n)) duplicatesInvalid.set(n, []);
+                    duplicatesInvalid.get(n).push(row);
+                  }
+                } else {
+                  if (!seenValid.has(n)) seenValid.set(n, row);
+                  else {
+                    if (!duplicatesValid.has(n)) duplicatesValid.set(n, []);
+                    duplicatesValid.get(n).push(row);
+                  }
+                }
+              });
+
+              seenInvalid.forEach((firstRow, week) => {
+                errors.push(`Row ${firstRow}: "${monthName}" ${year} has ${weeks} week(s), but invalid week: ${week}`);
+              });
+              duplicatesInvalid.forEach((rows, week) => {
+                errors.push(`Row ${rows.join(', ')}: Duplicate invalid week ${week} found`);
+              });
+
+              duplicatesValid.forEach((rows, week) => {
+                errors.push(`Row ${rows.join(', ')}: Duplicate week ${week} found`);
+              });
+            }
+          }
+
+          if (frequency === 'monthly') {
+            const year = Number(periodDate);
+            if (year) {
+              const seen = new Map();
+              chartData.forEach(c => {
+                const label = String(c.label).trim();
+                if (!label) return;
+                const key = label.toLowerCase();
+                if (!seen.has(key)) seen.set(key, []);
+                seen.get(key).push(c.rowNumber);
+              });
+              seen.forEach((rows, label) => {
+                if (rows.length > 1) {
+                  errors.push(`Row ${rows.join(', ')}: Duplicate month "${label}" found`);
+                }
+              });
+            }
+          }
+        } catch (vErr) {
+          // swallow validation errors but keep parsing errors array empty if nothing else
         }
 
         if (errors.length > 0) {
@@ -433,7 +565,8 @@ export default function KPIResponses({ params }) {
 
   const onUploadFormSubmitted = (frequency, user_id, chartType, role_id, record_id, existingChartData) => {
     const currentData = latestUploadFormData.current;
-    handleFileUpload(user_id, currentData.file[0], chartType, role_id, record_id, existingChartData, currentData.periodDate, frequency);
+    // `file` is stored as a File object in the form state — pass it directly
+    handleFileUpload(user_id, currentData.file, chartType, role_id, record_id, existingChartData, currentData.periodDate, frequency);
   };
 
   const handleModalFileUpload = (frequency, user_id, chartType, role_id, record_id, existingChartData) => {
