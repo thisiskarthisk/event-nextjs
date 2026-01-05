@@ -13,8 +13,6 @@ import { toggleSidebar } from "@/helper/utils";
 export default function AppSidebar() {
   const pathName = usePathname();
   const { data: session, status } = useSession();
-  const UserType = session.user.user_type;
-
   const { t } = useI18n();
   const [roles, setRoles] = useState([]);
 
@@ -49,13 +47,14 @@ export default function AppSidebar() {
                 <p>{t('organizationChart')}</p>
               </Link>
             </li>
-
-            <li className="nav-item">
-              <Link href="/admin/users" className={"nav-link " + (pathName == '/admin/users' ? 'active' : '')} onClick={e => toggleSidebar()}>
-                <AppIcon ic="account-group" className="nav-icon" />
-                <p>{t('Manage Users')}</p>
-              </Link>
-            </li>
+            {session.user.user_type === "admin" && (
+              <li className="nav-item">
+                <Link href="/admin/users" className={"nav-link " + (pathName == '/admin/users' ? 'active' : '')} onClick={e => toggleSidebar()}>
+                  <AppIcon ic="account-group" className="nav-icon" />
+                  <p>{t('Manage Users')}</p>
+                </Link>
+              </li>
+            )}
        
             {/* <li className="nav-item">
               <Link href="/roles" className={"nav-link " + (pathName == '/roles' ? 'active' : '')} onClick={e => toggleSidebar()}>
@@ -79,7 +78,7 @@ export default function AppSidebar() {
             </li>
 
             {/* Admin Settings */}
-            {/* {UserType == 'Admin' && */}
+            {session.user.user_type === "admin" && (
               <li className={`nav-item ${open ? "menu-open" : ""}`}>
                 <Link href="/" className={"nav-link " + (open ? 'active' : '')} onClick={toggleSettings}>
                   <AppIcon ic="cog" className="nav-icon" />
@@ -105,16 +104,17 @@ export default function AppSidebar() {
                     </ul>
                 )}
               </li>
-            {/* } */}
-            <li className={`nav-item ${reportOpen ? "menu-open" : ""}`}>
-              <Link href="#" className={"nav-link " + (open ? 'active' : '')} onClick={toggleMenu}>
-                  <AppIcon className="nav-icon bi bi-journal mdi mdi-chart-box-multiple"></AppIcon>
-                  <p>
-                      Reports
-                      <AppIcon ic="chevron-right" className="nav-arrow" />
-                  </p>
-              </Link>
-              {reportOpen && (
+            )}
+            {session.user.user_type === "admin" && (
+              <li className={`nav-item ${reportOpen ? "menu-open" : ""}`}>
+                <Link href="#" className={"nav-link " + (open ? 'active' : '')} onClick={toggleMenu}>
+                    <AppIcon className="nav-icon bi bi-journal mdi mdi-chart-box-multiple"></AppIcon>
+                    <p>
+                        Reports
+                        <AppIcon ic="chevron-right" className="nav-arrow" />
+                    </p>
+                </Link>
+                {reportOpen && (
                   <ul className="nav nav-treeview">
                       <li className="nav-item">
                           <Link href="/reports/abnormalities-report" className={"nav-link " + (pathName == '/reports/abnormalities-report' ? 'active' : '')} onClick={e => toggleSidebar()}>
@@ -123,8 +123,9 @@ export default function AppSidebar() {
                           </Link>
                       </li>
                   </ul>
-              )}
-          </li>
+                )}
+              </li>
+            )}
           </ul>
         </nav>
       </div>

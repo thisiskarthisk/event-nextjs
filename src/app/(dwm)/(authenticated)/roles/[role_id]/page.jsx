@@ -1,9 +1,9 @@
 'use client';
 
-import { useAppLayoutContext } from "@/components/appLayout";
+import { useAppLayoutContext,useCurrentUserRole, getChildrenRoles } from "@/components/appLayout";
 import { useI18n } from "@/components/i18nProvider";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { decodeURLParam, encodeURLParam } from "@/helper/utils";
 import { HttpClient } from "@/helper/http";
@@ -16,7 +16,9 @@ import Link from "next/link";
 export default function RoleSheet() {
   const { toggleProgressBar, toast, modal, setPageTitle, setRHSAppBarMenuItems, closeModal } = useAppLayoutContext();
   const { data: session, status } = useSession();
-
+  const [ childrenRoles, setChildrenRoles ] = useState([]);
+  const { currentUserRole, loading: roleLoading } = useCurrentUserRole();
+  const { userChildrenRole, loading: userChildrenRoleLoading } = getChildrenRoles();
   const { locale } = useI18n();
   const { role_id } = useParams();
   const router = useRouter();
@@ -25,7 +27,8 @@ export default function RoleSheet() {
     setPageTitle('Role Sheet');
     toggleProgressBar(false);
     setRHSAppBarMenuItems([{ icon: "upload", tooltip: "Upload Role Sheet", className: "text-primary", onClick: handleOpenCsvModal }]);
-  }, [locale, role_id]);
+    setChildrenRoles(userChildrenRole || []);
+  }, [locale, role_id,userChildrenRole]);
 
   
   /** View Role Sheet */
@@ -231,18 +234,23 @@ export default function RoleSheet() {
       <button className="btn btn-md me-2" onClick={() => handleView(rowData.id)}>
         <AppIcon ic="eye" className="text-info" />
       </button>
-      <button className="btn btn-md me-2" onClick={() => handleEdit(rowData.id)}>
-        <AppIcon ic="pencil" className="text-primary" />
-      </button>
-      <button className="btn btn-md" onClick={() => handleDelete(rowData.id)}>
-        <AppIcon ic="delete" className="text-danger" />
-      </button>
+      {(childrenRoles.includes(Number(decodeURLParam(role_id))) || session.user.user_type === "admin") && (
+        <>
+        <button className="btn btn-md me-2" onClick={() => handleEdit(rowData.id)}>
+          <AppIcon ic="pencil" className="text-primary" />
+        </button>
+        <button className="btn btn-md" onClick={() => handleDelete(rowData.id)}>
+          <AppIcon ic="delete" className="text-danger" />
+        </button>
+        </>
+      )}
     </>
   );
   
   
   return (
     <>
+      {(childrenRoles.includes(Number(decodeURLParam(role_id))) || session.user.user_type === "admin") && (
         <div className="row mb-3">
           <div className="col-12 text-right">
             <Link href={`/roles/${role_id}/rs/add`} className="btn btn-primary ms-auto me-2">
@@ -250,6 +258,7 @@ export default function RoleSheet() {
             </Link>
           </div>
         </div>
+      )}
         <div className="row">
           <div className="col-12">
             <div className="card">

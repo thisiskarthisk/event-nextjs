@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useAppLayoutContext } from "@/components/appLayout";
+import { useAppLayoutContext, useCurrentUserRole, getChildrenRoles } from "@/components/appLayout";
 import { useI18n } from "@/components/i18nProvider";
 import AppIcon from "@/components/icon";
 import Link from "next/link";
@@ -77,7 +77,10 @@ const OrgChartCard = ({
   onDeleteRole,
   onEditUser,
   onDeleteUser,
+  userChildrenRole,
+  currentUserRole
 }) => {
+  const { data: session, status } = useSession();
   const userList = role.users || [];
   const validUsers = userList.filter(u => u && u.id);
 
@@ -144,15 +147,17 @@ const OrgChartCard = ({
               gap: "15px",
             }}
           >
-            <span
-              title="Add Sub Role"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddRole(role.id);
-              }}
-            >
-              <AppIcon ic="plus-circle" size="large" />
-            </span>
+            {( session.user.user_type === "admin" || userChildrenRole.includes(Number(role.id)) || currentUserRole.role_id === role.id) && (
+              <span
+                title="Add Sub Role"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddRole(role.id);
+                }}
+              >
+                <AppIcon ic="plus-circle" size="large" />
+              </span>
+            )}
 
             <Link
               href={`/roles/${encodeURLParam(role.id)}`}
@@ -163,15 +168,16 @@ const OrgChartCard = ({
           </div>
         </div>
 
-
-        <div className="my-2">
-          <a href="#" className="btn btn-primary btn-rounded" onClick={(e) => {
-              e.stopPropagation();
-              onAddUser(role.id);
-            }}>
-            <AppIcon ic="plus" />&nbsp;Add a User
-          </a>
-        </div>
+        {(userChildrenRole.includes(Number(role.id)) || session.user.user_type === "admin") && (
+          <div className="my-2">
+            <a href="#" className="btn btn-primary btn-rounded" onClick={(e) => {
+                e.stopPropagation();
+                onAddUser(role.id);
+              }}>
+              <AppIcon ic="plus" />&nbsp;Add a User
+            </a>
+          </div>
+        )}
 
         {/* Body */}
         <div className="list-group text-left mb-3 mx-1">
@@ -188,17 +194,25 @@ const OrgChartCard = ({
                     <Link href={`/roles/${encodeURLParam(role.id)}/responses/${encodeURLParam(user.id)}`} className="text-success">
                       <AppIcon ic="speedometer" size="large" />
                     </Link>
-                    &nbsp;|&nbsp;
-                    <Link href={`/admin/users/edit/${encodeURLParam(user.id)}?from=${encodeURLParam('/')}`} className="text-primary">
-                      <AppIcon ic="pencil" size="large" />
-                    </Link>
-                    &nbsp;|&nbsp;
-                    <a href="#" className="text-danger fs-large" onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteUser(role.id, user);
-                      }}>
-                      <AppIcon ic="delete" />
-                    </a>
+                    {(userChildrenRole.includes(Number(role.id)) || currentUserRole?.id === user.id || session.user.user_type === "admin" ) && (
+                      <>
+                      &nbsp;|&nbsp;
+                      <Link href={`/admin/users/edit/${encodeURLParam(user.id)}?from=${encodeURLParam('/')}`} className="text-primary">
+                        <AppIcon ic="pencil" size="large" />
+                      </Link>
+                      {(userChildrenRole.includes(Number(role.id)) || (session.user.user_type === "admin" && currentUserRole?.id != user.id)) && (
+                        <>
+                          &nbsp;|&nbsp;
+                          <a href="#" className="text-danger fs-large" onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteUser(role.id, user);
+                            }}>
+                            <AppIcon ic="delete" />
+                          </a>
+                        </>
+                      )}
+                    </>
+                    )}
                   </span>
                 </div>
               ))
@@ -209,14 +223,16 @@ const OrgChartCard = ({
         </div>
 
         {/* Footer */}
-        <div style={orgNodeFooterStyle}>
-          <span style={{ cursor: "pointer", color: "#2980b9" }} title="Edit Role" onClick={(e) => { e.stopPropagation(); onEditRole(role); }}>
-            <AppIcon ic="pencil" />
-          </span>
-          <span style={{ cursor: "pointer", color: "#e74c3c" }} title="Delete Role" onClick={(e) => { e.stopPropagation(); onDeleteRole(role); }}>
-            <AppIcon ic="delete" />
-          </span>
-        </div>
+        {(userChildrenRole.includes(Number(role.id)) || session.user.user_type === "admin") && (
+          <div style={orgNodeFooterStyle}>
+            <span style={{ cursor: "pointer", color: "#2980b9" }} title="Edit Role" onClick={(e) => { e.stopPropagation(); onEditRole(role); }}>
+              <AppIcon ic="pencil" />
+            </span>
+            <span style={{ cursor: "pointer", color: "#e74c3c" }} title="Delete Role" onClick={(e) => { e.stopPropagation(); onDeleteRole(role); }}>
+              <AppIcon ic="delete" />
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -235,7 +251,7 @@ const buildTree = (roles) => {
 }
 
 /* -------------------- Recursive Render -------------------- */
-const renderOrgNode = (node, expandedNodes, toggleExpand, actions) => {
+const renderOrgNode = (node, expandedNodes, toggleExpand, actions, childrenRoles, currentUser) => {
   const expanded = !!expandedNodes[node.id];
   const hasChildren = node.children.length > 0;
 
@@ -248,11 +264,13 @@ const renderOrgNode = (node, expandedNodes, toggleExpand, actions) => {
           expanded={expanded}
           hasChildren={hasChildren}
           onToggle={toggleExpand}
+          userChildrenRole={childrenRoles}
+          currentUserRole={currentUser}
           {...actions}
         />
       }
     >
-      {expanded && node.children.map((child) => renderOrgNode(child, expandedNodes, toggleExpand, actions))}
+      {expanded && node.children.map((child) => renderOrgNode(child, expandedNodes, toggleExpand, actions, childrenRoles, currentUser))}
     </TreeNode>
   );
 }
@@ -298,15 +316,20 @@ export default function OrganizationChartPage() {
   const [roles, setRoles] = useState([]);
   const [expandedNodes, setExpandedNodes] = useState({});
   const searchParams = useSearchParams();
+  const [childrenRoles, setChildrenRoles] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const { data: session, status } = useSession();
-
+  const { currentUserRole, loading: roleLoading } = useCurrentUserRole();
+  const { userChildrenRole, loading: userChildrenRoleLoading } = getChildrenRoles();
+  
   const toggleExpand = (id) => setExpandedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
 
   useEffect(() => {
     if (status == 'authenticated') {
       setPageTitle(t ? t("organizationChart") : "Organization Chart");
       toggleProgressBar(false);
-      setRHSAppBarMenuItems([{ icon: "upload", tooltip: "Upload Organization Chart", className: "text-primary", onClick: showUploadDialog }]);
+      if ( session.user.user_type === 'admin' )
+        setRHSAppBarMenuItems([{ icon: "upload", tooltip: "Upload Organization Chart", className: "text-primary", onClick: showUploadDialog }]);
 
       loadRoles(true);
 
@@ -315,12 +338,17 @@ export default function OrganizationChartPage() {
       const temp_user_id = decodeURLParam(searchParams.get('user'));
 
       if (action == 'assign' && temp_role_id) {
-        console.log('temp_user_id:',temp_user_id);
 
         openFormModal("addUser", { role_id: temp_role_id, user_id: (temp_user_id || null) });
       }
     }
   }, [status]);
+
+  useEffect(() => {
+    setChildrenRoles(userChildrenRole || []);
+    setCurrentUser(currentUserRole || null);
+
+  }, [currentUserRole, userChildrenRole]);
 
   const buildInitialExpandedMap = (nodes, level = 0, map = {}) => {
     nodes.forEach((n) => {
@@ -864,7 +892,7 @@ export default function OrganizationChartPage() {
                     onAddRole: (id) => openFormModal("addRole", { reporting_to: id }),
                     onEditRole: (role) => openFormModal("editRole", role),
                     onDeleteRole: (role) => openFormModal("deleteRole", role),
-                  })
+                  }, childrenRoles, currentUser)
                 )}
               </Tree>
             ) : (

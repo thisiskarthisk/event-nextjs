@@ -9,6 +9,8 @@ import withReactContent from "sweetalert2-react-content";
 
 import { ToastContainer, toast as toastify } from 'react-toastify';
 import { toggleSidebarBasedOnScreenSize } from "@/helper/utils";
+import { useSession } from "next-auth/react";
+import { HttpClient } from "@/helper/http";
 
 const AppLayoutContext = createContext({
   pageTitle: '',
@@ -177,4 +179,106 @@ export default function AppLayout({ children }) {
 
 export function useAppLayoutContext() {
   return useContext(AppLayoutContext);
+}
+
+export function useCurrentUserRole() {
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
+  useEffect(() => {
+    // Reset if user is not authenticated
+    if (status === 'loading') {
+      setLoading(true);
+      return;
+    }
+
+    if (status !== 'authenticated') {
+      setCurrentUserRole(null);
+      setLoading(false);
+      return;
+    }
+
+    const fetchUserRole = async () => {
+      setLoading(true);
+      try {
+        // API returns { success: true, data: { user: {...} } }
+        const res = await HttpClient({
+          url: "auth/user",
+          method: 'GET',
+          params: {
+            user_id: session.user.id,
+          },
+        });
+
+        if (res && res.success && res.data && res.data.user) {
+          console.log("Fetched current user role:", res.data.user);
+          setCurrentUserRole(res.data.user);
+        } else {
+          console.warn('No user role returned from auth/user', res);
+          setCurrentUserRole(null);
+        }
+      } catch (error) {
+        console.error("Error fetching current user role:", error);
+        setCurrentUserRole(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserRole();
+  }, [status, session?.user?.id]);
+
+  return { currentUserRole, loading };
+}
+
+export function getChildrenRoles() {
+  const [userChildrenRole, setUserChildrenRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
+  useEffect(() => {
+    // Reset if user is not authenticated
+    if (status === 'loading') {
+      setLoading(true);
+      return;
+    }
+
+    if (status !== 'authenticated') {
+      setUserChildrenRole(null);
+      setLoading(false);
+      return;
+    }
+
+    const fetchUserRole = async () => {
+      setLoading(true);
+      try {
+        // API returns { success: true, data: { user: {...} } }
+        const res = await HttpClient({
+          url: "/organizationChart/childrenRoles",
+          method: 'GET',
+          params: {
+            user_id: session.user.id,
+          },
+        });
+
+        if (res && res.success && res.data) {
+            const data = res.data || [];
+            const roleIds = data.map(item => Number(item.role_id));
+            console.log('childrenRoles roleIds:',roleIds);
+            setUserChildrenRole(roleIds);
+        } else {
+          console.warn('No user role returned from /organizationChart/childrenRoles', res);
+          setUserChildrenRole(null);
+        }
+      } catch (error) {
+        console.error("Error fetching current user role:", error);
+        setUserChildrenRole(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserRole();
+  }, [status, session?.user?.id]);
+  console.log("userChildrenRole in useGetChildrenRoles:", userChildrenRole);
+  return { userChildrenRole, loading };
 }
