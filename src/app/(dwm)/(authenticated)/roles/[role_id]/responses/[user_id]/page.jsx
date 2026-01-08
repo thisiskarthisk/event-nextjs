@@ -141,19 +141,6 @@ function UploadResponseForm({ frequency, onChange, onDownload }) {
         </div>
       )}
 
-      {/* {frequency === 'weekly' && (
-        <div className="mb-3">
-          <SelectPicker
-            label="Select Week"
-            name="week"
-            options={weeksList}
-            value={formData.periodDate?.week}
-            isRequired
-            onChange={(v) => onPeriodFieldChanged(v, 'week')}
-          />
-        </div>
-      )} */}
-
       <div className="mb-3 flex-column align-items-start">
         <label className="form-label">Template</label>
         <a
@@ -393,15 +380,15 @@ export default function KPIResponses({ params }) {
 
           if (isLabelSection) {
             const label = row[0];
-            const value = Number(row[1]);
+            const value = (isNaN(row[1]) || row[1] === '') ? null : Number(row[1]);
             const target = Number(row[2]);
 
             if (!label) {
               errors.push(`Line ${i + 1}, Label is empty!`);
             }
-            if (isNaN(value) || value <= 0) {
+            /* if (isNaN(value) || value <= 0) {
               errors.push(`Line ${i + 1}, Value is empty or incorrect value!`);
-            }
+            } */
 
             const matched = existingChartData?.find(
               (x) => x.label?.trim().toLowerCase() === label.toLowerCase()
@@ -410,7 +397,7 @@ export default function KPIResponses({ params }) {
             chartData.push({
               response_id: matched?.response_id || null,
               label,
-              value: isNaN(value) ? 0 : value,
+              value: isNaN(value) ? null : value,
               target,
               rowNumber: i + 1,  // Track the Excel row number for error reporting
             });
@@ -552,9 +539,21 @@ export default function KPIResponses({ params }) {
           
           link.href = URL.createObjectURL(blob);
           link.download = `validation_error_list.txt`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          const fileInput = document.getElementsByName("file")[0];
+          const parentDiv = fileInput.closest(".form-group");
+
+          if (parentDiv) {
+            const existingLink = parentDiv.querySelector(".file-error-download-link");
+            if (existingLink) {
+              parentDiv.removeChild(existingLink);
+            }
+            link.textContent = "Click here to download the error log.";
+            link.className = "btn btn-link p-0 mt-2 d-block text-danger file-error-download-link";
+            const span = document.createElement("span");
+            span.className = "mdi mdi-download fs-normal ic";
+            link.appendChild(span);
+            parentDiv.appendChild(link);
+          }
           toast("error", "Errors found in uploaded file. Check validation_error_list.txt.");
           return;
         }

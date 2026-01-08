@@ -1,4 +1,4 @@
-import { DB_Insert, DB_Fetch, Tables } from "@/db";
+import { DB_Insert, DB_Fetch, DB_Update, Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
 import { sql } from "drizzle-orm";
 
@@ -56,12 +56,12 @@ export async function POST(req) {
       * If kpi_response already exist then remove chart_data
       * otherwise create a new response  
       */
-      await DB_Insert(sql`
+      /* await DB_Insert(sql`
         DELETE FROM 
           ${sql.identifier(Tables.TBL_KPI_RESPONSE_CHART_DATA)}
         WHERE 
           kpi_response_id = ${kpi_response_id}
-      `);
+      `); */
     } else {
       /* --------------------------------------------
       * Insert The New KPI Records
@@ -85,13 +85,32 @@ export async function POST(req) {
      * --------------------------------------------
     */
     for (const record of chartData) {
-      await DB_Insert(sql`
+      let oldRecord = await DB_Fetch(sql`
+        SELECT 
+          id 
+        FROM 
+          ${sql.identifier(Tables.TBL_KPI_RESPONSE_CHART_DATA)}
+        WHERE 
+          kpi_response_id = ${kpi_response_id}
+          AND label = ${record.label}
+      `);
+
+      if (oldRecord?.length > 0) {
+        // Update existing record
+        let id = oldRecord[0].id;
+        await DB_Update(Tables.TBL_KPI_RESPONSE_CHART_DATA, {
+          value: record.value,
+          target: (record.target != 0)? record.target:null
+        }, id);
+      }else{
+        await DB_Insert(sql`
         INSERT INTO 
           ${sql.identifier(Tables.TBL_KPI_RESPONSE_CHART_DATA)}
           (kpi_response_id, rca_id, gap_analysis_id, label, value, meta,target)
         VALUES
           (${kpi_response_id}, ${null}, ${null}, ${record.label}, ${record.value}, ${null},${(record.target != 0)? record.target:null})
       `);
+      }     
     }
 
     return JsonResponse.success({ 'result': result },"The chart data was uploaded successfully!");
