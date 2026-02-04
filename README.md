@@ -1,6 +1,7 @@
-# DWM
+# Events
 
-DWM is a Daily Work Management application designed for manufacturing companies to track, analyze, and manage employee activities, KPIs, and performance metrics efficiently.
+The event management process includes setting up an event, defining related activities, and registering delegates via QR code scanning. First, the event is created with details like name and date. Next, various activities are added for participants. Delegates then check in by scanning a QR code using a web camera. Finally, attendance is tracked based on successful QR code scans.
+
 
 ## 🚀 Project Overview
 
