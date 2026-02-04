@@ -1,95 +1,161 @@
 'use client';
 
 import { useState } from "react";
-import AppIcon from "../icon";
 import FieldWrapper from "./FieldWrapper";
+import AppIcon from "../icon";
 
-const TextFieldTypes = [
-  'text', 'number', 'email', 'password', 'url', 'tel', 'search', 'date', 'time', 'datetime-local', 'month', 'year', 'file', 'color',
+const VALID_TYPES = [
+  'text','number','email','password','url','tel','search',
+  'date','time','datetime-local','month','year','file','color', 'checkbox' , 
 ];
 
 export default function TextField({
   label,
   value,
   onChange,
-  isRequired,
-  autoFocus = false,
+  type = "text",
+  subType = null,
+  isRequired = false,
   disabled = false,
   error = null,
-  type = 'text',
-  subType = null,
+  className = "",
+  placeholder = "",
+  name = "",
+  autoFocus = false,
+  autoComplete = null,
+  accept = null,
   prefixIcon = null,
   suffixIcon = null,
   suffixIconOnClick = null,
-  className = '',
-  placeholder = '',
-  name = '',
-  autoComplete = null,
-  accept = null,
+
+  inline = false,          // label + control in one row
+  toggle = false,         // render switch instead of checkbox
 }) {
-  const [ isPasswordVisible, togglePassword ] = useState(false);
 
-  const onBtnTogglePasswordClicked = (e) => {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  const onTogglePassword = (e) => {
     e.preventDefault();
-
-    if (document.activeElement) document.activeElement.blur();
-
-    togglePassword(!isPasswordVisible);
+    setIsPasswordVisible(p => !p);
   };
 
   const onFieldChanged = (e) => {
 
+    // -----------------------
+    // FILE INPUT
+    // -----------------------
     if (type === "file") {
-      // 👇 Return file(s)
-      return onChange(e.target.files);
+      onChange(e);     // forward real event
+      return;
     }
+
+    // CHECKBOX
+    if (type === "checkbox") {
+      onChange(e.target.checked);
+      return;
+    }
+
 
     let newValue = e.target.value;
 
-    if (type === "file") {
-      const file = e.target.files?.[0] || null;
-      onChange(file);
-      return;
-    } else if (type == 'tel') {
-      if (subType == 'mobile') {
-        newValue = newValue.replace(/[^0-9]/g, '').substr(0, 10);
-      }
-    } else if (type == 'number') {
-      if (subType == 'year') {
-        newValue = (newValue || '').replace(/[^0-9]+/g, '').substring(0, 4);
-      }
-    } else if (subType == 'gstNo') {
-      newValue = (newValue || '').toUpperCase().replace(/[^a-z0-9]+/ig, '').substring(0, 15);
+    // -----------------------
+    // FORMATTERS
+    // -----------------------
+    if (type === "tel" && subType === "mobile") {
+      newValue = newValue.replace(/[^0-9]/g, "").substring(0, 10);
+    }
+
+    if (type === "number" && subType === "year") {
+      newValue = newValue.replace(/[^0-9]/g, "").substring(0, 4);
+    }
+
+    if (subType === "gstNo") {
+      newValue = newValue
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/gi, "")
+        .substring(0, 15);
     }
 
     onChange(newValue);
   };
 
+  /* ----------------------------------
+      CHECKBOX / TOGGLE RENDER
+  ---------------------------------- */
+
+  if (type === "checkbox") {
+    return (
+      <div className="d-flex align-items-center gap-3 mb-2">
+
+        <input
+          type="checkbox"
+          className="form-check-input"
+          checked={Boolean(value)}
+          onChange={(e) => {
+            console.log("checkbox changed:", e.target.checked);
+            onChange(e.target.checked);
+          }}
+          disabled={disabled}
+          name={name}
+        />
+
+        <span className="fw-medium">
+          {label}
+          {isRequired && <span className="text-danger">*</span>}
+        </span>
+
+      </div>
+    );
+  }
+
+
+
+  
   return (
     <FieldWrapper
       label={label}
-      isRequired={isRequired}
       error={error}
-      prefixIcon={prefixIcon ? <div className="input-group-text"><AppIcon ic={prefixIcon} /></div> : null}
-      suffixIcon={
-        (suffixIcon || type == 'password' ? <a href="#" tabIndex={-1} className="btn btn-outline-secondary" onClick={suffixIcon ? suffixIconOnClick : onBtnTogglePasswordClicked}>
-          { suffixIcon || <AppIcon ic={isPasswordVisible ? 'eye-off' : 'eye'} /> }
-        </a> : null)
+      isRequired={isRequired}
+      className={className}
+      prefixIcon={
+        prefixIcon && (
+          <div className="input-group-text">
+            <AppIcon ic={prefixIcon} />
+          </div>
+        )
       }
-      className={className}>
+      suffixIcon={
+        type === "password" ? (
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={onTogglePassword}
+          >
+            <AppIcon ic={isPasswordVisible ? "eye-off" : "eye"} />
+          </button>
+        ) : suffixIcon
+      }
+    >
       <input
-        className={"form-control" + (error ? ' is-invalid' : '')}
-        type={isPasswordVisible ? 'text' : (TextFieldTypes.includes(type) ? type : 'text')}
-        // value={value}
+        className={"form-control" + (error ? " is-invalid" : "")}
+        type={
+          type === "password"
+            ? (isPasswordVisible ? "text" : "password")
+            : VALID_TYPES.includes(type)
+              ? type
+              : "text"
+        }
         value={type === "file" ? undefined : value}
+        
         onChange={onFieldChanged}
-        autoFocus={autoFocus}
-        required={isRequired}
-        placeholder={placeholder}
         name={name}
+        placeholder={placeholder}
+        required={isRequired}
+        disabled={disabled}
+        autoFocus={autoFocus}
         autoComplete={autoComplete}
         accept={accept}
-        disabled={disabled} />
+      />
     </FieldWrapper>
   );
 }

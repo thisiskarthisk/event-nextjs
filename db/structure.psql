@@ -1,301 +1,296 @@
--- ======================
--- users
--- ======================
-CREATE TABLE IF NOT EXISTS users (
-  id            BIGSERIAL PRIMARY KEY,
-  user_type     CHARACTER VARYING (10) NOT NULL DEFAULT 'employee',
-  employee_id   CHARACTER VARYING (50),
-  first_name    CHARACTER VARYING (255) NOT NULL,
-  last_name     CHARACTER VARYING (255),
-  email         CHARACTER VARYING (320) NOT NULL,
-  mobile_no     CHARACTER VARYING (15),
-  password      TEXT NOT NULL,
-  active        BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by    BIGINT,
-  updated_at    TIMESTAMPTZ DEFAULT NULL,
-  updated_by    BIGINT DEFAULT NULL,
+-- Adminer 4.8.1 PostgreSQL 17.4 (Ubuntu 17.4-1.pgdg20.04+2) dump
 
-  CONSTRAINT user_types CHECK (user_type IN ('admin', 'employee')),
+DROP TABLE IF EXISTS "all_delegates";
+DROP SEQUENCE IF EXISTS all_delegates_delegates_id_seq;
+CREATE SEQUENCE all_delegates_delegates_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
-  CONSTRAINT unique_employee_id UNIQUE (employee_id),
-  CONSTRAINT unique_email UNIQUE (email),
-  CONSTRAINT unique_mobile_no UNIQUE (mobile_no)
-);
+CREATE TABLE "public"."all_delegates" (
+    "delegates_id" integer DEFAULT nextval('all_delegates_delegates_id_seq') NOT NULL,
+    "fkevent_id" integer NOT NULL,
+    "regn_no" character varying(255),
+    "name" character varying(250),
+    "callname" character varying(250),
+    "phone_number" character varying(255),
+    "email" character varying(250),
+    "club_name" character varying(500),
+    "couple" integer,
+    "children" integer,
+    "guest_couple" integer,
+    "guest_children" integer,
+    "guest_single" integer,
+    "guest" integer,
+    "org_name" character varying(500),
+    "regn_id" character varying(50),
+    "qr_code" character varying(20),
+    "designation" character varying(250),
+    "no_of_times_sent" integer DEFAULT '0' NOT NULL,
+    "meal_type" integer DEFAULT '1' NOT NULL,
+    "meals_per_event" integer DEFAULT '1' NOT NULL,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "all_delegates_pkey" PRIMARY KEY ("delegates_id")
+) WITH (oids = false);
 
-COMMENT ON TABLE users IS 'Application users / employees';
-COMMENT ON COLUMN users.employee_id IS 'Company-specific employee identifier (string to allow alphanumeric ids)';
 
--- ======================
--- roles
--- ======================
-CREATE TABLE IF NOT EXISTS roles (
-  id            BIGSERIAL PRIMARY KEY,
-  name          CHARACTER VARYING (255) NOT NULL,
-  reporting_to  BIGINT,  -- stores parent role id (no FK enforced)
-  note          TEXT,
-  active        BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by    BIGINT,
-  updated_at    TIMESTAMPTZ DEFAULT NULL,
-  updated_by    BIGINT DEFAULT NULL,
+DROP TABLE IF EXISTS "codelist_details";
+DROP SEQUENCE IF EXISTS codelist_details_codelist_details_id_seq;
+CREATE SEQUENCE codelist_details_codelist_details_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
-  CONSTRAINT unique_role_name UNIQUE (name)
-);
+CREATE TABLE "public"."codelist_details" (
+    "codelist_details_id" integer DEFAULT nextval('codelist_details_codelist_details_id_seq') NOT NULL,
+    "fkcodelist_id" integer NOT NULL,
+    "codelist_code" character varying(10) NOT NULL,
+    "codelist_description" character varying(100) NOT NULL,
+    "additional_info" character varying(1000),
+    "user_editable" integer DEFAULT '2' NOT NULL,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "user_created" integer NOT NULL,
+    "date_created" timestamp(3) NOT NULL,
+    "user_modified" integer,
+    "date_modified" timestamp(3),
+    CONSTRAINT "codelist_details_fkcodelist_id_codelist_code_key" UNIQUE ("fkcodelist_id", "codelist_code"),
+    CONSTRAINT "codelist_details_pkey" PRIMARY KEY ("codelist_details_id")
+) WITH (oids = false);
 
-COMMENT ON TABLE roles IS 'Reference table: organizational roles. reporting_to stores the parent role id (self-relation).';
-COMMENT ON COLUMN roles.reporting_to IS 'Bigint referencing roles.id (no FK enforced)';
 
--- ======================
--- role_users
--- ======================
-CREATE TABLE IF NOT EXISTS role_users (
-  id            BIGSERIAL PRIMARY KEY,
-  role_id       BIGINT NOT NULL, -- references roles.id logically (no FK)
-  user_id       BIGINT NOT NULL, -- references users.id logically (no FK)
-  active        BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by    BIGINT,
-  updated_at    TIMESTAMPTZ DEFAULT NULL,
-  updated_by    BIGINT DEFAULT NULL,
+DROP TABLE IF EXISTS "codelist_master";
+DROP SEQUENCE IF EXISTS codelist_master_codelist_id_seq;
+CREATE SEQUENCE codelist_master_codelist_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
-  CONSTRAINT unique_user_role UNIQUE (role_id, user_id)
-);
+CREATE TABLE "public"."codelist_master" (
+    "codelist_id" integer DEFAULT nextval('codelist_master_codelist_id_seq') NOT NULL,
+    "codelist_name" character varying(100) NOT NULL,
+    "user_editable" integer DEFAULT '2' NOT NULL,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "user_created" integer NOT NULL,
+    "date_created" timestamp(3) NOT NULL,
+    "user_modified" integer,
+    "date_modified" timestamp(3),
+    CONSTRAINT "codelist_master_pkey" PRIMARY KEY ("codelist_id")
+) WITH (oids = false);
 
--- index to speed up lookups by user / role
-CREATE INDEX IF NOT EXISTS idx_role_users_user_id ON role_users(user_id);
-CREATE INDEX IF NOT EXISTS idx_role_users_role_id ON role_users(role_id);
 
--- ======================
--- role_objectives
--- ======================
-CREATE TABLE IF NOT EXISTS role_objectives (
-  id            BIGSERIAL PRIMARY KEY,
-  role_id       BIGINT NOT NULL, -- logically references roles.id (no FK)
-  name          CHARACTER VARYING (255) NOT NULL,
-  description   TEXT,
-  active        BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by    BIGINT,
-  updated_at    TIMESTAMPTZ DEFAULT NULL,
-  updated_by    BIGINT DEFAULT NULL,
+DROP TABLE IF EXISTS "delegate_activities";
+DROP SEQUENCE IF EXISTS delegate_activities_delegate_activity_id_seq;
+CREATE SEQUENCE delegate_activities_delegate_activity_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
-  CONSTRAINT unique_objective_name UNIQUE (role_id, name)
-);
+CREATE TABLE "public"."delegate_activities" (
+    "delegate_activity_id" integer DEFAULT nextval('delegate_activities_delegate_activity_id_seq') NOT NULL,
+    "fkdelegates_id" integer NOT NULL,
+    "activity_type" character varying(50) NOT NULL,
+    "activity_date" timestamp(3),
+    "attended_status" integer DEFAULT '2' NOT NULL,
+    "recorded_date_time" timestamp(3),
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "delegate_activities_pkey" PRIMARY KEY ("delegate_activity_id")
+) WITH (oids = false);
 
-COMMENT ON TABLE role_objectives IS 'Reference table: objectives associated with roles';
-COMMENT ON COLUMN role_objectives.role_id IS 'Bigint referencing roles.id (no FK enforced)';
 
-CREATE INDEX IF NOT EXISTS idx_role_objectives_role_id ON role_objectives(role_id);
+DROP TABLE IF EXISTS "event_activities";
+DROP SEQUENCE IF EXISTS event_activities_event_activity_id_seq;
+CREATE SEQUENCE event_activities_event_activity_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
--- ======================
--- role_sheets
--- ======================
-CREATE TABLE IF NOT EXISTS role_sheets (
-  id                  BIGSERIAL PRIMARY KEY,
-  role_objective_id   BIGINT NOT NULL, -- logically references role_objectives.id (no FK)
-  title               CHARACTER VARYING (255) NOT NULL,
-  description         TEXT,
-  active              BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by          BIGINT,
-  updated_at          TIMESTAMPTZ DEFAULT NULL,
-  updated_by          BIGINT DEFAULT NULL,
+CREATE TABLE "public"."event_activities" (
+    "event_activity_id" integer DEFAULT nextval('event_activities_event_activity_id_seq') NOT NULL,
+    "fkevent_id" integer NOT NULL,
+    "activity_name" text NOT NULL,
+    "description" text,
+    "start_datetime" timestamp(3) NOT NULL,
+    "end_datetime" timestamp(3) NOT NULL,
+    "multiple_allowed" integer DEFAULT '2' NOT NULL,
+    "activity_category" integer DEFAULT '1' NOT NULL,
+    "meal_type" integer DEFAULT '1' NOT NULL,
+    "icon_class" character varying(255) DEFAULT 'fa-solid fa-calendar-day' NOT NULL,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "event_activities_pkey" PRIMARY KEY ("event_activity_id")
+) WITH (oids = false);
 
-  CONSTRAINT unique_role_sheet_title UNIQUE (role_objective_id, title)
-);
 
-COMMENT ON TABLE role_sheets IS 'Reference table: sheets/forms tied to a role objective (i.e., containers for KPIs)';
-COMMENT ON COLUMN role_sheets.role_objective_id IS 'Bigint referencing role_objectives.id (no FK enforced)';
+DROP TABLE IF EXISTS "events";
+DROP SEQUENCE IF EXISTS events_event_id_seq;
+CREATE SEQUENCE events_event_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
-CREATE INDEX IF NOT EXISTS idx_role_sheets_role_objective_id ON role_sheets(role_objective_id);
+CREATE TABLE "public"."events" (
+    "event_id" integer DEFAULT nextval('events_event_id_seq') NOT NULL,
+    "event_name" text NOT NULL,
+    "event_description" text,
+    "start_datetime" timestamp(3) NOT NULL,
+    "end_datetime" timestamp(3) NOT NULL,
+    "fkorganisation_id" integer NOT NULL,
+    "event_tag_image_file" character varying(100) NOT NULL,
+    "orglogo" character varying(100) NOT NULL,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "events_pkey" PRIMARY KEY ("event_id")
+) WITH (oids = false);
 
--- ======================
--- kpis
--- ======================
-CREATE TABLE IF NOT EXISTS kpis (
-  id              BIGSERIAL PRIMARY KEY,
-  role_sheet_id   BIGINT NOT NULL, -- logically references role_sheets.id (no FK)
-  name            CHARACTER VARYING (255) NOT NULL,
-  measurement     CHARACTER VARYING (255) NOT NULL,   -- e.g., "units", "%", "hours"
-  op_definition   TEXT NOT NULL,   -- operational definition for measurement
-  frequency       CHARACTER VARYING (20) NOT NULL,   -- e.g., 'daily', 'weekly', 'monthly'
-  chart_type      CHARACTER VARYING (20) NOT NULL,   -- versioning / visualization config / other metadata (freeform)
-  notes           TEXT,
-  active          BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by      BIGINT,
-  updated_at      TIMESTAMPTZ DEFAULT NULL,
-  updated_by      BIGINT DEFAULT NULL,
 
-  CONSTRAINT frequency_types CHECK (frequency IN ('daily', 'weekly', 'monthly')),
-  CONSTRAINT chart_types CHECK (chart_type IN ('bar', 'line', 'pie', 'trend', 'control')),
+DROP TABLE IF EXISTS "log";
+DROP SEQUENCE IF EXISTS log_id_seq;
+CREATE SEQUENCE log_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
-  CONSTRAINT unique_kpi_name UNIQUE (role_sheet_id, name)
-);
+CREATE TABLE "public"."log" (
+    "id" integer DEFAULT nextval('log_id_seq') NOT NULL,
+    "delegate_id" integer NOT NULL,
+    "fkevent_id" integer NOT NULL,
+    "whatsapp_msg_status" character varying(100) NOT NULL,
+    "email_msg_status" character varying(100) NOT NULL,
+    "whatsapp_error_log" character varying(1000),
+    "exception_error_log" character varying(1000),
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "log_pkey" PRIMARY KEY ("id")
+) WITH (oids = false);
 
-COMMENT ON TABLE kpis IS 'Reference table: KPI definitions attached to a role_sheet';
-COMMENT ON COLUMN kpis.role_sheet_id IS 'Bigint referencing role_sheets.id (no FK enforced)';
-COMMENT ON COLUMN kpis.chart_type IS 'Freeform column for visualization / config / small metadata (use JSON in future if needed)';
 
-CREATE INDEX IF NOT EXISTS idx_kpis_role_sheet_id ON kpis(role_sheet_id);
+DROP TABLE IF EXISTS "organisation";
+DROP SEQUENCE IF EXISTS organisation_organisation_id_seq;
+CREATE SEQUENCE organisation_organisation_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
--- ======================
--- kpi_responses (transactional)
--- ======================
-CREATE TABLE IF NOT EXISTS kpi_responses (
-  id            BIGSERIAL PRIMARY KEY,
-  kpi_id        BIGINT NOT NULL, -- logically references kpis.id (no FK)
-  user_id       BIGINT NOT NULL, -- logically references users.id (no FK)
-  period_date   CHARACTER VARYING (255) NOT NULL,   -- store a date representing the period; for monthly imports store first day of month (e.g., 2025-01-01)
-  ucl           NUMERIC(18,6) DEFAULT NULL,
-  lcl           NUMERIC(18,6) DEFAULT NULL,
-  comments      TEXT,
-  active        BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by    BIGINT,
-  updated_at    TIMESTAMPTZ DEFAULT NULL,
-  updated_by    BIGINT DEFAULT NULL
-);
+CREATE TABLE "public"."organisation" (
+    "organisation_id" integer DEFAULT nextval('organisation_organisation_id_seq') NOT NULL,
+    "organisation_name" text NOT NULL,
+    "organisation_url" text,
+    "email" text,
+    "phone_no" text,
+    "address1" text,
+    "address2" text,
+    "address3" text,
+    "city" text,
+    "state" text,
+    "orglogo" text,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "organisation_pkey" PRIMARY KEY ("organisation_id")
+) WITH (oids = false);
 
-COMMENT ON TABLE kpi_responses IS 'KPI response container for a user+KPI+period. period_date is used to represent the reporting period (monthly imports should use the first day of month).';
-COMMENT ON COLUMN kpi_responses.period_date IS 'For month-based bulk imports use the first day of the month (01-MONTH-YEAR). For daily/weekly records, use the actual date.';
 
-CREATE INDEX IF NOT EXISTS idx_kpi_responses_kpi_id ON kpi_responses(kpi_id);
-CREATE INDEX IF NOT EXISTS idx_kpi_responses_user_id ON kpi_responses(user_id);
-CREATE INDEX IF NOT EXISTS idx_kpi_responses_period_date ON kpi_responses(period_date);
+DROP TABLE IF EXISTS "qr_image_texts";
+DROP SEQUENCE IF EXISTS qr_image_texts_qr_image_texts_id_seq;
+CREATE SEQUENCE qr_image_texts_qr_image_texts_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
--- ======================
--- kpi_response_chart_data
--- ======================
-CREATE TABLE IF NOT EXISTS kpi_response_chart_data (
-  id                BIGSERIAL PRIMARY KEY,
-  kpi_response_id   BIGINT NOT NULL, -- logically references kpi_responses.id (no FK)
-  rca_id            BIGINT,          -- optional reference to root_cause_analysis.id (no FK)
-  gap_analysis_id   BIGINT,          -- optional reference to gap_analysis.id (no FK)
-  label             CHARACTER VARYING (255) NOT NULL,
-  value             NUMERIC(18,6),
-  meta              TEXT,            -- freeform metadata (JSON string if needed)
-  active            BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by        BIGINT,
-  updated_at        TIMESTAMPTZ DEFAULT NULL,
-  updated_by        BIGINT DEFAULT NULL
-);
+CREATE TABLE "public"."qr_image_texts" (
+    "qr_image_texts_id" integer DEFAULT nextval('qr_image_texts_qr_image_texts_id_seq') NOT NULL,
+    "fkevent_id" integer NOT NULL,
+    "xpos" integer NOT NULL,
+    "ypos" integer NOT NULL,
+    "delegates_field" character varying(20) NOT NULL,
+    "fontsize" integer DEFAULT '18' NOT NULL,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "qr_image_texts_pkey" PRIMARY KEY ("qr_image_texts_id")
+) WITH (oids = false);
 
-CREATE INDEX IF NOT EXISTS idx_krcd_kpi_response_id ON kpi_response_chart_data(kpi_response_id);
-CREATE INDEX IF NOT EXISTS idx_krcd_rca_id ON kpi_response_chart_data(rca_id);
-CREATE INDEX IF NOT EXISTS idx_krcd_gap_analysis_id ON kpi_response_chart_data(gap_analysis_id);
 
--- ======================
--- root_cause_analysis
--- ======================
-CREATE TABLE IF NOT EXISTS root_cause_analysis (
-  id                      BIGSERIAL PRIMARY KEY,
-  rca_no                  CHARACTER VARYING (255) NOT NULL,  -- e.g., RCA/2025/0001
-  reported_by             BIGINT NOT NULL,       -- user id who reported
-  department              CHARACTER VARYING (255),
-  date_of_report          DATE,
-  date_of_occurrence      DATE,
-  impact                  TEXT,
-  problem_desc            TEXT,
-  immediate_action_taken  TEXT,
-  gap_analysis_id         BIGINT,          -- optional reference to gap_analysis.id (no FK)
-  active                  BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by              BIGINT,
-  updated_at              TIMESTAMPTZ DEFAULT NULL,
-  updated_by              BIGINT DEFAULT NULL,
+DROP TABLE IF EXISTS "user_events";
+DROP SEQUENCE IF EXISTS user_events_user_events_id_seq;
+CREATE SEQUENCE user_events_user_events_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
-  CONSTRAINT unique_rca_no UNIQUE (rca_no)
-);
+CREATE TABLE "public"."user_events" (
+    "user_events_id" integer DEFAULT nextval('user_events_user_events_id_seq') NOT NULL,
+    "fkuser_id" integer NOT NULL,
+    "fkevent_id" integer NOT NULL,
+    "assigned_event_user" integer,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "user_events_fkuser_id_fkevent_id_key" UNIQUE ("fkuser_id", "fkevent_id"),
+    CONSTRAINT "user_events_pkey" PRIMARY KEY ("user_events_id")
+) WITH (oids = false);
 
-COMMENT ON TABLE root_cause_analysis IS 'Transactional: RCA records. rca_no should follow format RCA/{YEAR}/{SL_NO}';
-CREATE INDEX IF NOT EXISTS idx_rca_reported_by ON root_cause_analysis(reported_by);
-CREATE INDEX IF NOT EXISTS idx_rca_date_of_occurrence ON root_cause_analysis(date_of_occurrence);
-CREATE INDEX IF NOT EXISTS idx_rca_gap_analysis_id ON root_cause_analysis(gap_analysis_id);
 
--- ======================
--- rca_whys
--- ======================
-CREATE TABLE IF NOT EXISTS rca_whys (
-  id                 BIGSERIAL PRIMARY KEY,
-  rca_id      BIGINT NOT NULL, -- logically references root_cause_analysis.id (no FK)
-  question           TEXT,
-  answer             TEXT,
-  sequence_no        INTEGER,         -- ordering of the why steps
-  active             BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by         BIGINT,
-  updated_at         TIMESTAMPTZ DEFAULT NULL,
-  updated_by         BIGINT DEFAULT NULL,
+DROP TABLE IF EXISTS "user_organisation";
+DROP SEQUENCE IF EXISTS user_organisation_user_organisation_id_seq;
+CREATE SEQUENCE user_organisation_user_organisation_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
-  CONSTRAINT unique_question UNIQUE (rca_id, question)
-);
+CREATE TABLE "public"."user_organisation" (
+    "user_organisation_id" integer DEFAULT nextval('user_organisation_user_organisation_id_seq') NOT NULL,
+    "fkuser_id" integer NOT NULL,
+    "fkorganisation_id" integer NOT NULL,
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "default_organisation" integer DEFAULT '2' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "user_organisation_fkuser_id_fkorganisation_id_key" UNIQUE ("fkuser_id", "fkorganisation_id"),
+    CONSTRAINT "user_organisation_pkey" PRIMARY KEY ("user_organisation_id")
+) WITH (oids = false);
 
-CREATE INDEX IF NOT EXISTS idx_rca_whys_rca_id ON rca_whys(rca_id);
-CREATE INDEX IF NOT EXISTS idx_rca_whys_sequence_no ON rca_whys(sequence_no);
 
--- ======================================================
--- Sample additional comments (for clarity)
--- ======================================================
-COMMENT ON COLUMN kpi_response_chart_data.rca_id IS 'Optional link to an RCA (root_cause_analysis.id) when a data point is tied to an RCA event.';
-COMMENT ON COLUMN kpi_response_chart_data.value IS 'Numeric value for chart point; precision set to NUMERIC(18,6) (adjust if needed).';
+DROP TABLE IF EXISTS "users";
+DROP SEQUENCE IF EXISTS users_user_id_seq;
+CREATE SEQUENCE users_user_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
--- ======================
--- gap_analysis
--- ======================
-CREATE TABLE IF NOT EXISTS gap_analysis (
-  id                BIGSERIAL PRIMARY KEY,
-  capa_no           TEXT NOT NULL,  -- e.g., CAPA/2025/0001
-  active             BOOLEAN NOT NULL DEFAULT TRUE,
+CREATE TABLE "public"."users" (
+    "user_id" integer DEFAULT nextval('users_user_id_seq') NOT NULL,
+    "username" character varying(20) NOT NULL,
+    "password" text,
+    "first_name" text,
+    "last_name" text,
+    "phone" text,
+    "email" text,
+    "user_type" character varying(10),
+    "active_status" integer DEFAULT '1' NOT NULL,
+    "date_created" timestamp(3),
+    "user_created" integer,
+    "date_modified" timestamp(3),
+    "user_modified" integer,
+    CONSTRAINT "users_pkey" PRIMARY KEY ("user_id"),
+    CONSTRAINT "users_username_key" UNIQUE ("username")
+) WITH (oids = false);
 
-  CONSTRAINT unique_capa_no UNIQUE (capa_no)
-);
 
-COMMENT ON TABLE gap_analysis IS 'Transactional: CAPA records. capa_no should follow format CAPA/{YEAR}/{SL_NO}';
+ALTER TABLE ONLY "public"."all_delegates" ADD CONSTRAINT "all_delegates_fkevent_id_fkey" FOREIGN KEY (fkevent_id) REFERENCES events(event_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."all_delegates" ADD CONSTRAINT "all_delegates_user_created_fkey" FOREIGN KEY (user_created) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE SET NULL NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."all_delegates" ADD CONSTRAINT "all_delegates_user_modified_fkey" FOREIGN KEY (user_modified) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE SET NULL NOT DEFERRABLE;
 
--- ======================
--- cp_actions
--- ======================
-CREATE TABLE IF NOT EXISTS cp_actions (
-  id                            BIGSERIAL PRIMARY KEY,
-  gap_analysis_id               BIGINT NOT NULL, -- logically references root_cause_analysis.id (no FK)
-  date                          DATE NOT NULL,
-  reason                        TEXT NOT NULL,
-  cor_action_desc               TEXT,
-  cor_counter_measure           CHARACTER VARYING(255),
-  cor_action_target_date        DATE,
-  cor_action_status             CHARACTER VARYING(20),
-  cor_action_responsibility     CHARACTER VARYING(255),
-  prev_action_desc              TEXT,
-  prev_counter_measure          CHARACTER,
-  prev_action_target_date       DATE,
-  prev_action_status            CHARACTER VARYING(20),
-  prev_action_responsibility    CHARACTER VARYING(255),
+ALTER TABLE ONLY "public"."codelist_details" ADD CONSTRAINT "codelist_details_fkcodelist_id_fkey" FOREIGN KEY (fkcodelist_id) REFERENCES codelist_master(codelist_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
 
-  CONSTRAINT cor_action_status_types CHECK (cor_action_status IN ('planned', 'in-progress', 'implemented', 'cancelled')),
-  CONSTRAINT prev_action_status_types CHECK (prev_action_status IN ('planned', 'in-progress', 'implemented', 'cancelled')),
+ALTER TABLE ONLY "public"."delegate_activities" ADD CONSTRAINT "delegate_activities_fkdelegates_id_fkey" FOREIGN KEY (fkdelegates_id) REFERENCES all_delegates(delegates_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
 
-  CONSTRAINT unique_reason UNIQUE (gap_analysis_id, reason)
-);
+ALTER TABLE ONLY "public"."event_activities" ADD CONSTRAINT "event_activities_fkevent_id_fkey" FOREIGN KEY (fkevent_id) REFERENCES events(event_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."event_activities" ADD CONSTRAINT "event_activities_user_created_fkey" FOREIGN KEY (user_created) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE SET NULL NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."event_activities" ADD CONSTRAINT "event_activities_user_modified_fkey" FOREIGN KEY (user_modified) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE SET NULL NOT DEFERRABLE;
 
-CREATE INDEX IF NOT EXISTS idx_cp_actions_gap_analysis_id ON cp_actions(gap_analysis_id);
+ALTER TABLE ONLY "public"."events" ADD CONSTRAINT "events_fkorganisation_id_fkey" FOREIGN KEY (fkorganisation_id) REFERENCES organisation(organisation_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."events" ADD CONSTRAINT "events_user_created_fkey" FOREIGN KEY (user_created) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE SET NULL NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."events" ADD CONSTRAINT "events_user_modified_fkey" FOREIGN KEY (user_modified) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE SET NULL NOT DEFERRABLE;
 
-COMMENT ON TABLE cp_actions IS 'Transactional: RCA records. capa_no should follow format RCA/{YEAR}/{SL_NO}';
+ALTER TABLE ONLY "public"."log" ADD CONSTRAINT "log_delegate_id_fkey" FOREIGN KEY (delegate_id) REFERENCES all_delegates(delegates_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."log" ADD CONSTRAINT "log_fkevent_id_fkey" FOREIGN KEY (fkevent_id) REFERENCES events(event_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
 
-CREATE TABLE IF NOT EXISTS settings (
-  id              BIGSERIAL PRIMARY KEY,
-  field_name      CHARACTER VARYING (255) NOT NULL,
-  value           CHARACTER VARYING (255) DEFAULT NULL,
-  setting_group   CHARACTER VARYING (255) NOT NULL,
-  active          BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by      BIGINT,
-  updated_at      TIMESTAMPTZ DEFAULT NULL,
-  updated_by      BIGINT DEFAULT NULL
-);
+ALTER TABLE ONLY "public"."qr_image_texts" ADD CONSTRAINT "qr_image_texts_fkevent_id_fkey" FOREIGN KEY (fkevent_id) REFERENCES events(event_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
 
--- ======================================================
--- End of schema
--- ======================================================
+ALTER TABLE ONLY "public"."user_events" ADD CONSTRAINT "user_events_fkevent_id_fkey" FOREIGN KEY (fkevent_id) REFERENCES events(event_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."user_events" ADD CONSTRAINT "user_events_fkuser_id_fkey" FOREIGN KEY (fkuser_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
+
+ALTER TABLE ONLY "public"."user_organisation" ADD CONSTRAINT "user_organisation_fkorganisation_id_fkey" FOREIGN KEY (fkorganisation_id) REFERENCES organisation(organisation_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."user_organisation" ADD CONSTRAINT "user_organisation_fkuser_id_fkey" FOREIGN KEY (fkuser_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE RESTRICT NOT DEFERRABLE;
+
+-- 2026-01-30 23:38:19.923055+05:30

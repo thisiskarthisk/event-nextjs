@@ -11,7 +11,7 @@ export async function GET(req) {
   }
 
   const rows = await DB_Fetch(sql`
-    SELECT id, employee_id, first_name, last_name, email, mobile_no
+    SELECT *
     FROM ${sql.identifier(Tables.TBL_USERS)}
     WHERE active = TRUE AND id = ${userId}
     ORDER BY id DESC

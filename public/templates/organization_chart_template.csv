@@ -1,7 +1,0 @@
-name,reporting_to,users
-MD,,Karthi
-Manager,MD,John Doe
-Hr , MD,Emily Davis
-Accountant,Hr,Michael Brown
-Supervisor,Accountant,Jane Smith
-Intern,Supervisor,Chris Johnson

@@ -22,6 +22,8 @@ const handler = NextAuth({
 
           let user = await DB_Fetch(sql`SELECT * FROM ${sql.identifier(Tables.TBL_USERS)} WHERE active = TRUE AND email = ${email}`);
 
+          console.log('\n\nNextAuth -> authorize() -> user:', user);
+
           if (!(user && user.length > 0 && user[0])) throw new Error('The account dose not exists!');
 
           user = user[0];

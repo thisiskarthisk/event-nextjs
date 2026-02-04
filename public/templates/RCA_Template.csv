@@ -1,6 +1,0 @@
-Department , Reported By , Date of Report , Date of Occurrence , Impact , Problem Description , Immediate Action Taken , Question , Answer
-Production, Karthi, 22/05/25, 30/10/25, Production, Production 100 need it ..but 50, Production lane 2 produced extra 50 item, why only 50 produced in lane 1 ?, machine repair
-Quality, Anitha, 22/05/20, 28/10/25, Quality, Quality issue in batch 200, Quality check failed for batch 200, what was the defect found ?, surface defect
-Maintenance, Ravi, 22/05/22, 29/10/25, Maintenance, Machine breakdown in line 3, Machine repaired and tested, what caused the breakdown ?, overheating
-Logistics, Meena, 22/05/23, 27/10/25, Logistics, Delay in shipment of goods, Rescheduled shipment for next day, what caused the delay ?, traffic congestion
-HR, Suresh, 22/05/24, 26/10/25, HR, Employee dissatisfaction reported, Conducted feedback session, what were the main concerns ?, work-life balance

@@ -1,5 +1,5 @@
 export default {
-  'organizationChart': 'Organization Chart',
+  'events': 'Events',
   'profile': 'Profile',
   'logout': 'Logout',
 
