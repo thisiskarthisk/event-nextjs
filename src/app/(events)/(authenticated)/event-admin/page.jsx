@@ -52,26 +52,14 @@ const AssignmentManager = ({ users, initialSelected, onChange }) => {
 /* ------------------------------------------------------------------
    MAIN PAGE COMPONENT
 ------------------------------------------------------------------ */
-export default function EventsListPage() {
+export default function EventsAdminListPage() {
 
-  const { data: session } = useSession();
-  const userType = session?.user?.user_type;
-
-  const eventColumns = [
+  const columns = [
     { column: "event_name", label: "Event Name" },
-    { column: "event_description", label: "Event Description" },
+    { column: "event_name", label: "Event Organisation" },
     { column: "start_date", label: "Start Date" },
     { column: "end_date", label: "End Date" },
   ];
-
-  const eventsAdminColumns = [
-    { column: "event_name", label: "Event Name" },
-    { column: "event_organisation", label: "Event Organisation" },
-    { column: "start_date", label: "Start Date" },
-    { column: "end_date", label: "End Date" },
-  ];
-
-  const columns = (userType === "site_admin") ? eventColumns : eventsAdminColumns;
 
   const {
     setPageTitle,
@@ -81,6 +69,9 @@ export default function EventsListPage() {
     closeModal,
     modal,
   } = useAppLayoutContext();
+
+  const { data: session } = useSession();
+  console.log("Session data in EventsListPage:", session);
 
   const tableRef = useRef(null);
   const [eventUserList, setEventUserList] = useState([]);
@@ -192,12 +183,6 @@ export default function EventsListPage() {
     }
   };
 
-
-  const siteAdminListUrl = "/events/list";
-  const eventAdminListUrl = "/event-admin/list";
-  const urlPath = (userType === "site_admin") ? siteAdminListUrl : eventAdminListUrl;
-  // console.log("URL Path for Event Admin List:", urlPath);
-
   return (
     <>
       <div className="row mb-3">
@@ -212,93 +197,42 @@ export default function EventsListPage() {
         <div className="card-body">
           <DataTable
             ref={tableRef}
-            apiPath={urlPath}
+            apiPath="/events/list"
             dataKeyFromResponse="events"
             columns={columns}
             paginationType="client"
             actionColumnFn={(rowData) => (
               <>
-              
-              {userType === "site_admin" && ( 
-                <>
-                  <button
-                    onClick={() => openAssignModal(rowData.event_id, eventAdminList, 0, "Assign Event Admins")}
-                    className="text-warning bg-transparent border-0"
-                    title="Assign Admin"
-                  >
-                    <AppIcon ic="calendar-text" size="large" />
-                  </button>
-                  &nbsp;|&nbsp; &nbsp;
-                </>
-              )}
-              
-              {/* site admin and event admin can assign event users */}
-              <button
-                onClick={() => openAssignModal(rowData.event_id, eventUserList, 1, "Assign Event Users")}
-                className="text-primary bg-transparent border-0"
-                title="Assign Users"
-              >
-                <AppIcon ic="account" size="large" />
-              </button>
-
-                {userType === "event_admin" && ( 
-                  <>
-
-                  &nbsp;|&nbsp;&nbsp;
-
-                  <Link
-                    href="#"
-                    className="text-success"
-                    title="Event Activities"
-                  >
-                    <AppIcon ic="calendar-text" />
-                  </Link>
-
-                  &nbsp;|&nbsp;&nbsp;
-
-                  <Link
-                    href="#"
-                    className="text-info"
-                    title="Event Delegates"
-                  >
-                    <AppIcon ic="account-group-outline" size="large" />
-                  </Link>
-
-                  &nbsp;|&nbsp;&nbsp;
-
-                  <Link
-                    href="#"
-                    className="text-info"
-                    title="Event Live Attendance Report"
-                  >
-                    <AppIcon ic="chart-bar" size="large" />
-                  </Link>
-                </>
-              )}
-               
-
-
-              {userType === "site_admin" && ( 
-                <>
-                  &nbsp;|&nbsp;&nbsp;
-                  <Link
-                    href={"/events/edit/" + encodeURLParam(rowData.event_id)}
-                    className="text-primary"
-                  >
-                    <AppIcon ic="pencil" size="large" />
-                  </Link>
-
-                  &nbsp;|&nbsp;&nbsp;
-
-                  <a
-                    href="#"
-                    className="text-danger"
-                    onClick={(e) => onDeleteEventClicked(e, rowData.event_id)}
-                  >
-                    <AppIcon ic="delete" size="large" />
-                  </a>
-                </>
-              )}
+                <button
+                  onClick={() => openAssignModal(rowData.event_id, eventAdminList, 0, "Assign Event Admins")}
+                  className="text-warning bg-transparent border-0"
+                  title="Assign Admin"
+                >
+                  <AppIcon ic="calendar-text" />
+                </button>
+                &nbsp;|&nbsp;
+                <button
+                  onClick={() => openAssignModal(rowData.event_id, eventUserList, 1, "Assign Event Users")}
+                  className="text-primary bg-transparent border-0"
+                  title="Assign Users"
+                >
+                  <AppIcon ic="account-group-outline" />
+                </button>
+                &nbsp;|&nbsp;
+                <Link
+                  href={"/events/edit/" + encodeURLParam(rowData.event_id)}
+                  className="text-primary"
+                >
+                  <AppIcon ic="pencil" />
+                </Link>
+                &nbsp;|&nbsp;
+                <a
+                  href="#"
+                  className="text-danger"
+                  onClick={(e) => onDeleteEventClicked(e, rowData.event_id)}
+                >
+                  <AppIcon ic="delete" />
+                </a>
               </>
             )}
           />
