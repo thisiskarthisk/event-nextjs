@@ -247,7 +247,7 @@ export default function EventsListPage() {
                   &nbsp;|&nbsp;&nbsp;
 
                   <Link
-                    href="#"
+                    href={"/events/" + encodeURLParam(rowData.event_id) + "/event-activities"}
                     className="text-success"
                     title="Event Activities"
                   >
@@ -257,7 +257,7 @@ export default function EventsListPage() {
                   &nbsp;|&nbsp;&nbsp;
 
                   <Link
-                    href="#"
+                    href={"/events/" + encodeURLParam(rowData.event_id) + "/event_delegates"}
                     className="text-info"
                     title="Event Delegates"
                   >

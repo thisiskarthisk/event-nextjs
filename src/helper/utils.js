@@ -16,15 +16,6 @@ function fromBase64Url(base64url) {
 
 export function encodeURLParam(data) {
   try {
-    /* const iv = crypto.randomBytes(12);
-
-    const cipher = crypto.createCipheriv(URL_ENC_ALGORITHM, secretKey, iv);
-
-    const encrypted = Buffer.concat([ cipher.update(data, 'utf8'), cipher.final() ]);
-
-    const tag = cipher.getAuthTag();
-
-    return toBase64Url(Buffer.concat([ iv, tag, encrypted ])); */
     return btoa(data).replace(/=*$/, '');
   } catch (error) {
     console.error('[encodeURLParam] Error:', error);
@@ -33,26 +24,40 @@ export function encodeURLParam(data) {
   }
 }
 
+// export function decodeURLParam(encData) {
+//   try {
+//     return atob(encData);
+//   } catch (error) {
+//     console.error('[decodeURLParam] Error:', error);
+
+//     return null;
+//   }
+// }
+
 export function decodeURLParam(encData) {
+
+  if (!encData) return null;
+
   try {
-    /* encData = fromBase64Url(encData);
 
-    const iv = encData.subarray(0, 12);
-    const tag = encData.subarray(12, 28);
-    const encrypted = encData.subarray(28);
+    // only allow base64 chars
+    if (!/^[A-Za-z0-9_-]+$/.test(encData)) {
+      return encData;
+    }
 
-    const decipher = crypto.createDecipheriv(URL_ENC_ALGORITHM, secretKey, iv);
+    const pad = encData.length % 4;
+    const padded =
+      pad === 0
+        ? encData
+        : encData + "=".repeat(4 - pad);
 
-    decipher.setAuthTag(tag);
+    return atob(padded);
 
-    const decrypted = Buffer.concat([ decipher.update(encrypted), decipher.final() ]);
+  } catch (err) {
 
-    return decrypted.toString('utf8'); */
-    return atob(encData);
-  } catch (error) {
-    console.error('[decodeURLParam] Error:', error);
+    console.error("[decodeURLParam] fallback:", encData);
 
-    return null;
+    return encData;
   }
 }
 

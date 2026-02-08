@@ -36,6 +36,13 @@ export default function AppSidebar() {
                 </Link>
               </li>
             {/* )} */}
+
+              <li className="nav-item">
+                <Link href="/admin/settings/general" className={"nav-link " + (pathName == '/admin/settings' ? 'active' : '')} onClick={e => toggleSidebar()}>
+                  <AppIcon ic="cog" className="nav-icon" />
+                  <p>{t('Settings')}</p>
+                </Link>
+              </li>
           </ul>
         </nav>
       </div>

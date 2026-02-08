@@ -1,0 +1,332 @@
+'use client';
+
+import { useEffect, useState, use } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import TextField from "@/components/form/TextField";
+import SelectPicker from "@/components/form/SelectPicker";
+import AppIcon from "@/components/icon";
+
+import { HttpClient } from "@/helper/http";
+import { decodeURLParam } from "@/helper/utils";
+import { useAppLayoutContext } from "@/components/appLayout";
+import {MEAL_TYPES, MEALS_PER_EVENT} from "@/constants";
+
+
+export default function EventDelegateAddOrEdit({ params }) {
+
+  const { event_id, id } = use(params);
+
+  const decodedEventId = decodeURLParam(event_id);
+  const decodedDelegateId = id ? decodeURLParam(id) : null;
+
+  const isEdit = Boolean(decodedDelegateId);
+
+  const router = useRouter();
+
+  const { toast, toggleProgressBar, setPageTitle } =
+    useAppLayoutContext();
+
+  // ---------------------
+  // MAIN FORM STATE
+  // ---------------------
+  const [formData, setFormData] = useState({
+    name: "",
+    callname: "",
+    phone_number: "",
+    email: "",
+    club_name: "",
+    designation: "",
+    meal_type: "",
+    meals_per_event: "",
+  });
+
+  // ---------------------
+  // CUSTOM FIELD STATE
+  // ---------------------
+  const [customFields, setCustomFields] = useState([
+    { label: "", value: "" },
+  ]);
+
+  const onFieldChange = (val, field) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: val,
+    }));
+  };
+
+  // ---------------------
+  // CUSTOM FIELD HANDLERS
+  // ---------------------
+  const addCustomField = () => {
+    setCustomFields(prev => [
+      ...prev,
+      { label: "", value: "" },
+    ]);
+  };
+
+  const removeCustomField = (index) => {
+    setCustomFields(prev =>
+      prev.filter((_, i) => i !== index)
+    );
+  };
+
+  const updateCustomField = (index, key, val) => {
+    const updated = [...customFields];
+    updated[index][key] = val;
+    setCustomFields(updated);
+  };
+
+  // ---------------------
+  // LOAD EDIT DATA
+  // ---------------------
+  const loadExistingDelegate = async () => {
+
+    toggleProgressBar(true);
+
+    try {
+      const res = await HttpClient({
+        url: `/events/${decodedEventId}/event_delegates/get`,
+        method: "GET",
+        params: { id: decodedDelegateId },
+      });
+
+      if (!res?.success) return;
+
+      setFormData(res.data.delegate);
+
+      setCustomFields(
+        res.data.custom_fields?.length
+          ? res.data.custom_fields
+          : [{ label: "", value: "" }]
+      );
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      toggleProgressBar(false);
+    }
+  };
+
+  // ---------------------
+  // INIT
+  // ---------------------
+  useEffect(() => {
+
+    toggleProgressBar(false);
+
+    setPageTitle(isEdit ? "Edit Delegate" : "Add Delegate");
+
+    if (isEdit) loadExistingDelegate();
+
+  }, []);
+
+  // ---------------------
+  // SUBMIT
+  // ---------------------
+  const onSubmit = async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      ...formData,
+      event_id: decodedEventId,
+      custom_fields: customFields.filter(
+        r => r.label || r.value
+      ),
+    };
+
+    if (isEdit) {
+      payload.id = decodedDelegateId;
+    }
+
+    try {
+
+      const res = await HttpClient({
+        url: `/events/${decodedEventId}/event_delegates/save`,
+        method: "POST",
+        data: payload, // JSON
+      });
+
+      toast(
+        res.success ? "success" : "error",
+        res.message || "Save failed"
+      );
+
+      if (res.success) {
+        router.push(`/events/${event_id}/event_delegates`);
+      }
+
+    } catch (err) {
+      console.error(err);
+      toast("error", "Save failed.");
+    }
+  };
+
+  // ---------------------
+  // RENDER
+  // ---------------------
+  return (
+    <form onSubmit={onSubmit}>
+
+      {/* MAIN CARD */}
+      <div className="card">
+        <div className="card-body">
+
+          <div className="row">
+            <div className="col-lg-4">
+              <TextField
+                label="Name"
+                value={formData.name}
+                onChange={v => onFieldChange(v, "name")}
+                isRequired
+              />
+            </div>
+
+            <div className="col-lg-4">
+              <TextField
+                label="Call Name"
+                value={formData.callname}
+                onChange={v => onFieldChange(v, "callname")}
+              />
+            </div>
+
+            <div className="col-lg-4">
+              <TextField
+                label="Phone Number"
+                value={formData.phone_number}
+                onChange={v => onFieldChange(v, "phone_number")}
+              />
+            </div>
+          </div>
+
+          <div className="row mt-3">
+
+            <div className="col-lg-4">
+              <TextField
+                label="Email"
+                value={formData.email}
+                onChange={v => onFieldChange(v, "email")}
+              />
+            </div>
+
+            <div className="col-lg-4">
+              <TextField
+                label="Club Name"
+                value={formData.club_name}
+                onChange={v => onFieldChange(v, "club_name")}
+              />
+            </div>
+
+            <div className="col-lg-4">
+              <TextField
+                label="Designation"
+                value={formData.designation}
+                onChange={v => onFieldChange(v, "designation")}
+              />
+            </div>
+
+          </div>
+
+          <div className="row mt-3">
+
+            <div className="col-lg-4">
+              <SelectPicker
+                label="Meal Type"
+                value={formData.meal_type}
+                onChange={v => onFieldChange(v, "meal_type")}
+                options={MEAL_TYPES}
+              />
+            </div>
+
+            <div className="col-lg-4">
+              <SelectPicker
+                label="Meals Per Event"
+                value={formData.meals_per_event}
+                onChange={v => onFieldChange(v, "meals_per_event")}
+                options={MEALS_PER_EVENT}
+              />
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      {/* CUSTOM FIELD CARD */}
+      <div className="card mt-4">
+        <div className="card-body">
+
+          <div className="d-flex justify-content-between mb-3">
+            <h5>Custom Fields</h5>
+
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary"
+              onClick={addCustomField}
+            >
+              <AppIcon ic="plus" /> Add
+            </button>
+          </div>
+
+          {customFields.map((row, index) => (
+            <div className="row mb-3" key={index}>
+
+              <div className="col-lg-5">
+                <TextField
+                  label="Label"
+                  value={row.label}
+                  onChange={v =>
+                    updateCustomField(index, "label", v)
+                  }
+                />
+              </div>
+
+              <div className="col-lg-5">
+                <TextField
+                  label="Value"
+                  value={row.value}
+                  onChange={v =>
+                    updateCustomField(index, "value", v)
+                  }
+                />
+              </div>
+
+              <div className="col-lg-2 d-flex align-items-end">
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => removeCustomField(index)}
+                >
+                  <AppIcon ic="delete" />
+                </button>
+              </div>
+
+            </div>
+          ))}
+
+        </div>
+      </div>
+
+      {/* ACTIONS */}
+      <div className="row mt-4">
+        <div className="col-12 d-flex justify-content-between">
+
+          <Link
+            href={`/events/${event_id}/delegates`}
+            className="btn btn-secondary"
+          >
+            Cancel
+          </Link>
+
+          <button className="btn btn-primary" type="submit">
+            <AppIcon ic="check" />
+            {isEdit ? " Save" : " Add"} Delegate
+          </button>
+
+        </div>
+      </div>
+
+    </form>
+  );
+}
