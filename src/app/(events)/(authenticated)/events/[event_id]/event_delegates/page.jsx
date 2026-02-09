@@ -77,6 +77,7 @@ export default function EventActivitiesPage() {
             columns={columns}
             paginationType="client"
             actionColumnFn={(rowData) => (
+              console.log("Row Data in Action Column:", rowData),
               <>
                 <Link href={`/events/${event_id}/event_delegates/edit/${rowData.delegate_id}`} className="text-primary">
                   <AppIcon ic="pencil" />

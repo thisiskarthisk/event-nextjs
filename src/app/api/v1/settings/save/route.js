@@ -4,58 +4,69 @@ import Validation from "@/helper/validation";
 import { sql } from "drizzle-orm";
 
 export async function POST(req) {
+
   try {
+
     const data = await req.json();
 
     /**
-     * data example expected:
+     * Expected:
      * {
      *   setting_group: "general",
      *   settings: [
-     *     { field_name: "employee_id", value: "EMP-" },
-     *     { field_name: "rca_id", value: "RCA-" },
-     *     { field_name: "capa_id", value: "CAPA-" }
+     *     { field_name: "regn_no", value: "edv,5" },
+     *     { field_name: "whatsapp_phone_id", value: "107621335632571" },
+     *     { field_name: "whatsapp_template", value: "lfrcr_rotary" },
+     *     { field_name: "whatsapp_token", value: "EAA..." }
      *   ]
      * }
      */
 
     const rules = {
       setting_group: "required",
-      settings: "required|array"
+      settings: "required|array",
     };
 
     const errors = Validation(data, rules);
-    if (errors && Object.keys(errors).length > 0) {
-      return JsonResponse.error("Please correct the errors.", 422, errors);
+
+    if (errors) {
+      return JsonResponse.error(
+        "Validation failed",
+        422,
+        errors
+      );
     }
 
-    const group = data.setting_group;
-    const settings = data.settings;
+    const { setting_group, settings } = data;
 
-    // SAVE EACH SETTING
     for (const item of settings) {
+
       const { field_name, value } = item;
 
-      if (value === undefined || value === null) continue;
+      if (!field_name) continue;
 
       const existing = await DB_Fetch(sql`
-        SELECT id FROM ${sql.identifier(Tables.TBL_SETTINGS)}
+        SELECT id
+        FROM ${sql.identifier(Tables.TBL_SETTINGS)}
         WHERE field_name = ${field_name}
-        AND setting_group = ${group}
+          AND setting_group = ${setting_group}
         LIMIT 1
       `);
 
-      if (existing.length > 0) {
+      if (existing.length) {
+
         await DB_Fetch(sql`
           UPDATE ${sql.identifier(Tables.TBL_SETTINGS)}
           SET value = ${value}, updated_at = NOW()
           WHERE id = ${existing[0].id}
         `);
+
       } else {
+
         await DB_Insert(sql`
           INSERT INTO ${sql.identifier(Tables.TBL_SETTINGS)}
           (field_name, value, setting_group)
-          VALUES (${field_name}, ${value}, ${group})
+          VALUES (${field_name}, ${value}, ${setting_group})
         `);
       }
     }
@@ -65,8 +76,12 @@ export async function POST(req) {
       "Settings saved successfully."
     );
 
-  } catch (error) {
-    console.error("[api/settings/save] Error:", error);
-    return JsonResponse.error("Error saving settings.");
+  } catch (err) {
+
+    console.error("[settings/save]", err);
+
+    return JsonResponse.error(
+      "Error saving settings."
+    );
   }
 }

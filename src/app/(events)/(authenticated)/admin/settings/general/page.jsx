@@ -1,319 +1,289 @@
 'use client';
 
-// Mock imports for demonstration
+import { useEffect, useState } from "react";
+
 import { useAppLayoutContext } from "@/components/appLayout";
 import TextField from "@/components/form/TextField";
 import AppIcon from "@/components/icon";
-import { useI18n } from "@/components/i18nProvider";
-
-import { useEffect, useState } from "react";
 import { HttpClient } from "@/helper/http";
-import Link from "next/link";
 
 export default function GeneralSettings() {
-  // Mock context hooks
-  const { setPageTitle, toggleProgressBar , toast, setLHSAppBarMenuItems } = useAppLayoutContext();
-  const { t } = useI18n(); 
+
+  const {
+    setPageTitle,
+    toggleProgressBar,
+    toast,
+    setLHSAppBarMenuItems,
+  } = useAppLayoutContext();
 
   const [isEditing, setEditing] = useState(false);
 
-  // --- Combined field state for API (employee_id, rca_id, capa_id) ---
-  const [form, setForm] = useState({
-    employee_id: "", // Stored as "PREFIX,DIGITS"
-    rca_id: "",
-    capa_id: "",
+  // =============================
+  // FORM STATE
+  // =============================
+  const [prefix, setPrefix] = useState("");
+  const [digits, setDigits] = useState(4);
+
+  const [whatsapp, setWhatsapp] = useState({
+    phone_id: "",
+    template: "",
+    token: "",
   });
 
-  // --- Local state for parsed/editable fields (for display) ---
-  const [employeePrefix, setEmployeePrefix] = useState('');
-  const [employeeDigits, setEmployeeDigits] = useState('');
-  const [rcaPrefix, setRcaPrefix] = useState('');
-  const [rcaDigits, setRcaDigits] = useState('');
-  const [capaPrefix, setCapaPrefix] = useState('');
-  const [capaDigits, setCapaDigits] = useState('');
-
-
+  // =============================
+  // INIT
+  // =============================
   useEffect(() => {
-    setPageTitle(t("General Settings"));
-    toggleProgressBar(false);
+    setPageTitle("General Settings");
     loadSettings();
   }, []);
 
   useEffect(() => {
+
     if (!isEditing) {
       setLHSAppBarMenuItems([
         {
           icon: "pencil",
-          className: "text-primary",
           tooltip: "Edit",
-          text: "Edit",
-          onClick: () => setEditing(true)
-        }
+          onClick: () => setEditing(true),
+        },
       ]);
     } else {
       setLHSAppBarMenuItems([]);
     }
 
-    return () => {
-      setLHSAppBarMenuItems([]);
-    }
+    return () => setLHSAppBarMenuItems([]);
+
   }, [isEditing]);
 
-  /** HELPER: Parses "PREFIX,DIGITS" string into [prefix, digits] */
-  const parseCombinedId = (combinedValue) => {
-    if (!combinedValue) return ['', 0];
-    const parts = String(combinedValue).split(',');
-    // Ensure digits is a number, defaulting to 0
-    const digits = parseInt(parts[1], 10);
-    return [parts[0] || '', isNaN(digits) ? 0 : digits];
-  }
+  // =============================
+  // LOAD SETTINGS
+  // =============================
+  const loadSettings = async () => {
 
-  async function loadSettings() {
-    try {
-      const res = await HttpClient({
-        url: '/settings/get',
-        method: "GET",
-        params: { group: "general" },
-      }); // Assumes HttpClient returns a Promise that resolves to the response object
-
-      if (res.success) {
-        const settings = res.data;
-
-        // Set the combined state for API interaction
-        setForm({
-          employee_id: settings.employee_id || "",
-          rca_id: settings.rca_id || "",
-          capa_id: settings.capa_id || ""
-        });
-
-        // Parse combined values into local state for display
-        const [empP, empD] = parseCombinedId(settings.employee_id);
-        setEmployeePrefix(empP);
-        setEmployeeDigits(empD);
-
-        const [rcaP, rcaD] = parseCombinedId(settings.rca_id);
-        setRcaPrefix(rcaP);
-        setRcaDigits(rcaD);
-
-        const [capaP, capaD] = parseCombinedId(settings.capa_id);
-        setCapaPrefix(capaP);
-        setCapaDigits(capaD);
-      }
-    } catch (e) {
-      console.error("Load settings failed:", e);
-      toast(error ? "error" : "warning", e.message || "Error loading settings");
-    } finally {
-      // loading
-      toggleProgressBar(false);
-    }
-  }
-
-  const GeneralSettingsSave = async (e) => {
-    e.preventDefault();
     toggleProgressBar(true);
 
-    // Combination Logic: Combine prefix/digits into the main ID field values
-    const finalForm = {
-      employee_id: `${employeePrefix},${employeeDigits}`,
-      rca_id: `${rcaPrefix},${rcaDigits}`,
-      capa_id: `${capaPrefix},${capaDigits}`,
-    };
-    
-    // Converts finalForm object to backend's required array structure
-    const settingsArray = Object.keys(finalForm).map(key => ({
-      field_name: key,
-      value: finalForm[key]
-    }));
-    
-    const payload = {
-      setting_group: "general",
-      settings: settingsArray
-    };
-
-    // Use await with your custom HttpClient
     try {
-      HttpClient({
-        url: '/settings/save',
-        method: "POST",
-        data: { ...payload },
-      }).then(res => {
-        toggleProgressBar(false);
-        if (res.success) {
-          setEditing(false);
-          loadSettings(); 
-          toast('success', 'Settings saved successfully.');
-        } else {
-          toast('error', res.message || 'Error saving settings');
-        }
-      }).catch(err => {
-        toggleProgressBar(false);
-        const errors = err.response.errors;
-        if (errors) {
-          toast('error', errors);
-        }
-      });
-    } catch (error) {
-      toggleProgressBar(false);
 
-      toast('error', 'Error occurred when trying to save the User data.');
+      const res = await HttpClient({
+        url: "/settings/get",
+        method: "GET",
+        params: { group: "general" },
+      });
+
+      if (res.success) {
+
+        // ---- regn no ----
+        if (res.data.regn_no) {
+          const [p, d] = res.data.regn_no.split(",");
+          setPrefix(p || "");
+          setDigits(Number(d) || 0);
+        }
+
+        // ---- whatsapp ----
+        setWhatsapp({
+          phone_id: res.data.whatsapp_phone_id || "",
+          template: res.data.whatsapp_template || "",
+          token: res.data.whatsapp_token || "",
+        });
+      }
+
+    } catch {
+      toast("error", "Failed to load settings");
+    } finally {
+      toggleProgressBar(false);
     }
   };
 
+  // =============================
+  // SAVE
+  // =============================
+  const onSave = async (e) => {
+
+    e.preventDefault();
+
+    toggleProgressBar(true);
+
+    const settings = [
+      {
+        field_name: "regn_no",
+        value: `${prefix},${digits}`,
+      },
+      {
+        field_name: "whatsapp_phone_id",
+        value: whatsapp.phone_id,
+      },
+      {
+        field_name: "whatsapp_template",
+        value: whatsapp.template,
+      },
+      {
+        field_name: "whatsapp_token",
+        value: whatsapp.token,
+      },
+    ];
+
+    try {
+
+      const res = await HttpClient({
+        url: "/settings/save",
+        method: "POST",
+        data: {
+          setting_group: "general",
+          settings,
+        },
+      });
+
+      if (res.success) {
+        toast("success", res.message);
+        setEditing(false);
+        loadSettings();
+      } else {
+        toast("error", res.message);
+      }
+
+    } catch {
+      toast("error", "Save failed");
+    } finally {
+      toggleProgressBar(false);
+    }
+  };
+
+  // =============================
+  // PREVIEW
+  // =============================
+  const previewId = () => {
+
+    if (!prefix || !digits) return "";
+
+    return prefix + String(1).padStart(digits, "0");
+  };
+
+  // =============================
+  // RENDER
+  // =============================
   return (
-    <>
-    <h5>ID Formats</h5>
+    <form onSubmit={onSave}>
 
-      <div className="row mt-2">
-        {/* --- Employee ID Card --- */}
-        <div className="col-lg-4">
-          <div className="card">
-            <div className="card-body">
-              <div className="row">
-                <div className="col-6">
-                  <h6>Employee ID</h6>
-                </div>
-              </div>
+      {/* ================= ID FORMAT ================= */}
+      <div className="card mb-4">
+        <div className="card-body">
 
-              <div className="row mt-1">
-                <div className="col-6">
-                  <TextField
-                    label="Prefix"
-                    placeholder="EMP-"
-                    value={employeePrefix}
-                    disabled={!isEditing}
-                    onChange={(v) => setEmployeePrefix(v)} />
-                </div>
+          <h5>ID Format</h5>
 
-                <div className="col-6">
-                  <TextField
-                    type="number"
-                    label="No of Digits"
-                    placeholder="4"
-                    value={employeeDigits}
-                    disabled={!isEditing}
-                    onChange={(v) => setEmployeeDigits(parseInt(v, 10) || 0)} />
-                </div>
-              </div>
+          <div className="row">
 
-              {
-                employeePrefix &&
-                <div className="row mt-1">
-                  <div className="col-12">
-                    The ID will be: <span className="badge rounded-pill bg-primary">{ employeePrefix }{ '1'.padStart(employeeDigits || 0, '0') }</span>
-                  </div>
-                </div>
-              }
+            <div className="col-lg-6">
+              <TextField
+                label="Prefix"
+                value={prefix}
+                disabled={!isEditing}
+                onChange={v => setPrefix(v)}
+              />
             </div>
+
+            <div className="col-lg-6">
+              <TextField
+                type="number"
+                label="No of Digits"
+                value={digits}
+                disabled={!isEditing}
+                onChange={v =>
+                  setDigits(Number(v) || 0)
+                }
+              />
+            </div>
+
           </div>
-        </div>
 
-
-        {/* --- RCA ID Card --- */}
-        <div className="col-lg-4">
-          <div className="card">
-            <div className="card-body">
-              <div className="row">
-                <div className="col-6">
-                  <h6>RCA ID</h6>
-                </div>
-              </div>
-
-              <div className="row mt-1">
-                <div className="col-6">
-                  <TextField
-                    label="Prefix"
-                    placeholder="RCA-"
-                    value={rcaPrefix}
-                    disabled={!isEditing}
-                    onChange={(v) => setRcaPrefix(v)} />
-                </div>
-
-                <div className="col-6">
-                  <TextField
-                    type="number"
-                    label="No of Digits"
-                    placeholder="4"
-                    value={rcaDigits}
-                    disabled={!isEditing}
-                    onChange={(v) => setRcaDigits(parseInt(v, 10) || 0)} />
-                </div>
-              </div>
-
-              {
-                rcaPrefix &&
-                <div className="row mt-1">
-                  <div className="col-12">
-                    The ID will be: <span className="badge rounded-pill bg-primary">{ rcaPrefix }{ '1'.padStart(rcaDigits || 0, '0') }</span>
-                  </div>
-                </div>
-              }
+          {prefix && digits > 0 && (
+            <div className="mt-2">
+              The ID will be:{" "}
+              <span className="badge bg-primary">
+                {previewId()}
+              </span>
             </div>
-          </div>
+          )}
+
         </div>
+      </div>
 
+      {/* ================= WHATSAPP ================= */}
+      <div className="card mb-3">
+        <div className="card-body">
 
-        {/* --- CAPA ID Card --- */}
-        <div className="col-lg-4">
-          <div className="card">
-            <div className="card-body">
-              <div className="row">
-                <div className="col-6">
-                  <h6>CAPA ID</h6>
-                </div>
-              </div>
+          <h5>WhatsApp Configuration</h5>
 
-              <div className="row mt-1">
-                <div className="col-6">
-                  <TextField
-                    label="Prefix"
-                    placeholder="CAPA-"
-                    value={capaPrefix}
-                    disabled={!isEditing}
-                    onChange={(v) => setCapaPrefix(v)} />
-                </div>
+          <div className="row">
 
-                <div className="col-6">
-                  <TextField
-                    type="number"
-                    label="No of Digits"
-                    placeholder="4"
-                    value={capaDigits}
-                    disabled={!isEditing}
-                    onChange={(v) => setCapaDigits(parseInt(v, 10) || 0)} />
-                </div>
-              </div>
-
-              {
-                capaPrefix &&
-                <div className="row mt-1">
-                  <div className="col-12">
-                    The ID will be: <span className="badge rounded-pill bg-primary">{ capaPrefix }{ '1'.padStart(capaDigits || 0, '0') }</span>
-                  </div>
-                </div>
-              }
+            <div className="col-lg-6">
+              <TextField
+                label="Phone Number ID"
+                value={whatsapp.phone_id}
+                disabled={!isEditing}
+                onChange={v =>
+                  setWhatsapp(p => ({
+                    ...p,
+                    phone_id: v,
+                  }))
+                }
+              />
             </div>
+
+            <div className="col-lg-6">
+              <TextField
+                label="Template Name"
+                value={whatsapp.template}
+                disabled={!isEditing}
+                onChange={v =>
+                  setWhatsapp(p => ({
+                    ...p,
+                    template: v,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="col-lg-12 mt-2">
+              <TextField
+                label="Access Token"
+                value={whatsapp.token}
+                disabled={!isEditing}
+                onChange={v =>
+                  setWhatsapp(p => ({
+                    ...p,
+                    token: v,
+                  }))
+                }
+              />
+            </div>
+
           </div>
         </div>
       </div>
-      
-      <div className="row mt-3">
-        {isEditing && (
-          <div className="col-12 flex-space-between">
-            <Link href="#" 
-              onClick={() => {
-                setEditing(false);
-                loadSettings();
-              }} 
-              className="btn btn-secondary">
-              Cancel
-            </Link>
 
-            <button className="btn btn-primary" type="submit" onClick={GeneralSettingsSave}>
-              <AppIcon ic="check" /> Save
-            </button>
-          </div>
-        )}
-      </div>
-    </>
+      {/* ================= ACTIONS ================= */}
+      {isEditing && (
+        <div className="d-flex justify-content-between">
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              setEditing(false);
+              loadSettings();
+            }}
+          >
+            Cancel
+          </button>
+
+          <button className="btn btn-primary" type="submit">
+            <AppIcon ic="check" /> Save
+          </button>
+
+        </div>
+      )}
+
+    </form>
   );
 }

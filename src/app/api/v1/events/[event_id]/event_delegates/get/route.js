@@ -34,10 +34,18 @@ export async function GET(req) {
 
   try {
 
-    const id =
-      req.nextUrl.searchParams.get("id");
+      const id = req.nextUrl.searchParams.get("id");   // <-- Correct
+          console.log("Delegate ID to Fetch:", id);
+  const userId = Number(id);
+
+
+    // const id = req.nextUrl.searchParams.get("id");
+    
+        console.log("Delegate ID to Fetch:", userId);
+
 
     const delegateId = Number(id);
+    console.log("Parsed Delegate ID:", delegateId);
 
     if (!id || isNaN(delegateId)) {
       return JsonResponse.error(
