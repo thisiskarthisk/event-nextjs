@@ -1,185 +1,110 @@
-import { DB_Fetch, Tables } from "@/db";
+import { DB_Fetch, DB_Insert, Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
+import { decodeURLParam } from "@/helper/utils";
+import { sql } from "drizzle-orm";
 
-export async function POST(req) {
+export async function POST(req, { params }) {
   try {
-    const body = await req.json();
+    // ------------------------
+    // EVENT ID FROM ROUTE
+    // ------------------------
+    const decoded = decodeURLParam(params.event_id);
+    const eventId = Number(decoded);
 
-    const {
-      id,
-      event_id, // 👈 parent event id
-      activity_name,
-      description,
-      start_datetime,
-      end_datetime,
-      activity_category,
-      meal_type,
-      multiple_allowed,
-    } = body;
-
-    if (
-      !event_id ||
-      !activity_name ||
-      !start_datetime ||
-      !end_datetime ||
-      !activity_category
-    ) {
-      return JsonResponse.error(
-        "Missing required fields."
-      );
+    if (!eventId || isNaN(eventId)) {
+      return JsonResponse.error("Invalid Event ID");
     }
 
-    // 👇 only allow meal_type if category = food
+    // ------------------------
+    // BODY
+    // ------------------------
+    const body = await req.json();
+
+    const delegateId = body.id ? Number(body.id) : null;
+    const isUpdate = !!delegateId;
+
+    const data = {
+      fkevent_id: eventId,
+      activity_name: body.activity_name || null,
+      description: body.description || null,
+      start_datetime: body.start_datetime || null,
+      end_datetime: body.end_datetime || null,
+      activity_category: body.activity_category || null,
+      meal_type: body.meal_type || null,
+      multiple_allowed: body.multiple_allowed ? true : false,
+    };
+
+    // ------------------------
+    // MEAL TYPE RULE
+    // ------------------------
     const finalMealType =
-      activity_category === "food"
-        ? meal_type || null
+      data.activity_category === "food"
+        ? data.meal_type || null
         : null;
 
-    // -----------------------
+    // ------------------------
     // UPDATE
-    // -----------------------
-    if (id) {
-      await DB_Fetch(`
-        UPDATE ${Tables.TBL_EVENT_ACTIVITIES}
+    // ------------------------
+    if (isUpdate) {
+      await DB_Fetch(sql`
+        UPDATE ${sql.identifier(Tables.TBL_EVENT_ACTIVITIES)}
         SET
-          fkevent_id = ${event_id},
-          activity_name = '${activity_name}',
-          description = '${description || ""}',
-          start_datetime = '${start_datetime}',
-          end_datetime = '${end_datetime}',
-          activity_category = '${activity_category}',
-          meal_type = ${
-            finalMealType
-              ? `'${finalMealType}'`
-              : "NULL"
-          },
-          multiple_allowed = ${multiple_allowed}
-        WHERE event_activity_id = ${id}
+          fkevent_id = ${data.fkevent_id},
+          activity_name = ${data.activity_name},
+          description = ${data.description},
+          start_datetime = ${data.start_datetime},
+          end_datetime = ${data.end_datetime},
+          activity_category = ${data.activity_category},
+          meal_type = ${finalMealType},
+          multiple_allowed = ${data.multiple_allowed},
+          updated_at = NOW()
+        WHERE event_activity_id = ${delegateId}
       `);
 
       return JsonResponse.success(
-        { id },
+        { id: delegateId },
         "Activity updated successfully."
       );
     }
 
-    // -----------------------
+    // ------------------------
     // INSERT
-    // -----------------------
-    const result = await DB_Fetch(`
-      INSERT INTO ${Tables.TBL_EVENT_ACTIVITIES}
-      (
-        fkevent_id,
-        activity_name,
-        description,
-        start_datetime,
-        end_datetime,
-        activity_category,
-        meal_type,
-        multiple_allowed
-      )
-      VALUES
-      (
-        ${event_id},
-        '${activity_name}',
-        '${description || ""}',
-        '${start_datetime}',
-        '${end_datetime}',
-        '${activity_category}',
-        ${
-          finalMealType
-            ? `'${finalMealType}'`
-            : "NULL"
-        },
-        ${multiple_allowed}
-      )
-      RETURNING event_activity_id
-    `);
+    // ------------------------
+    const inserted = await DB_Insert(
+      sql`
+        INSERT INTO ${sql.identifier(Tables.TBL_EVENT_ACTIVITIES)}
+        (
+          fkevent_id,
+          activity_name,
+          description,
+          start_datetime,
+          end_datetime,
+          activity_category,
+          meal_type,
+          multiple_allowed
+        )
+        VALUES (
+          ${eventId},
+          ${data.activity_name},
+          ${data.description},
+          ${data.start_datetime},
+          ${data.end_datetime},
+          ${data.activity_category},
+          ${finalMealType},
+          ${data.multiple_allowed}
+        )
+      `,
+      "event_activity_id"
+    );
 
     return JsonResponse.success(
-      { id: result[0].event_activity_id },
+      { id: inserted },
       "Activity created successfully."
     );
 
   } catch (err) {
-    console.error(
-      "EVENT ACTIVITY SAVE ERROR >>>",
-      err
-    );
+    console.error("EVENT ACTIVITY SAVE ERROR >>>", err);
 
-    return JsonResponse.error(
-      "Error saving Event Activity."
-    );
+    return JsonResponse.error("Error saving Event Activity.");
   }
 }
-
-
-
-// import { DB_Fetch, Tables } from "@/db";
-// import { JsonResponse } from "@/helper/api";
-
-// export async function POST(req) {
-//   try {
-//     const body = await req.json();
-//     const {
-//       id, event_id, activity_name, description, start_datetime,
-//       end_datetime, activity_category, meal_type, multiple_allowed
-//     } = body;
-
-//     if (!event_id || !activity_name || !start_datetime || !end_datetime || !activity_category) {
-//       return JsonResponse.error("Missing required fields.");
-//     }
-
-//     const finalMealType = activity_category === "food" ? meal_type || null : null;
-
-//     if (id) {
-//       // UPDATE (use params if DB_Fetch supports)
-//       await DB_Fetch(`
-//         UPDATE ${Tables.TBL_EVENT_ACTIVITIES}
-//         SET fkevent_id = ${event_id},
-//             activity_name = '${activity_name}',
-//             description = '${description || ""}',
-//             start_datetime = '${start_datetime}',
-//             end_datetime = '${end_datetime}',
-//             activity_category = '${activity_category}',
-//             meal_type = ${finalMealType ? `'${finalMealType}'` : "NULL"},
-//             multiple_allowed = ${multiple_allowed}
-//         WHERE event_activity_id = ${id}
-//       `);
-//       return JsonResponse.success({ id }, "Activity updated successfully.");
-//     }
-
-//     // INSERT
-//     const result = await DB_Fetch(`
-//       INSERT INTO ${Tables.TBL_EVENT_ACTIVITIES}
-//       (fkevent_id, activity_name, description, start_datetime, end_datetime,
-//        activity_category, meal_type, multiple_allowed)
-//       VALUES (${event_id}, '${activity_name}', '${description || ""}',
-//               '${start_datetime}', '${end_datetime}', '${activity_category}',
-//               ${finalMealType ? `'${finalMealType}'` : "NULL"}, ${multiple_allowed})
-//       RETURNING event_activity_id
-//     `);
-
-//     return JsonResponse.success({ id: result[0].event_activity_id }, "Activity created successfully.");
-//   } catch (err) {
-//     console.error("EVENT ACTIVITY SAVE ERROR >>>", err);
-//     return JsonResponse.error("Error saving Event Activity.");
-//   }
-// }
-
-// export async function GET(req) {
-//   const id = req.nextUrl.searchParams.get("id");
-//   const activityId = Number(id);
-
-//   if (!id || isNaN(activityId)) {
-//     return JsonResponse.error("Activity ID is required.");
-//   }
-
-//   const rows = await DB_Fetch(`
-//     SELECT * FROM ${Tables.TBL_EVENT_ACTIVITIES}
-//     WHERE active = TRUE AND event_activity_id = ${activityId}
-//     LIMIT 1
-//   `);
-
-//   return JsonResponse.success(rows[0] || {});
-// }

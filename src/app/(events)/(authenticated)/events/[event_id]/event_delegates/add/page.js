@@ -9,7 +9,6 @@ import SelectPicker from "@/components/form/SelectPicker";
 import AppIcon from "@/components/icon";
 
 import { HttpClient } from "@/helper/http";
-import { decodeURLParam } from "@/helper/utils";
 import { useAppLayoutContext } from "@/components/appLayout";
 import {MEAL_TYPES, MEALS_PER_EVENT} from "@/constants";
 
@@ -18,10 +17,7 @@ export default function EventDelegateAddOrEdit({ params }) {
 
   const { event_id, id } = use(params);
 
-  const decodedEventId = decodeURLParam(event_id);
-  const decodedDelegateId = id ? decodeURLParam(id) : null;
-
-  const isEdit = Boolean(decodedDelegateId);
+  const isEdit = Boolean(id);
 
   const [regnIdWarning, setRegnIdWarning] = useState("");
 
@@ -34,7 +30,7 @@ export default function EventDelegateAddOrEdit({ params }) {
   // MAIN FORM STATE
   // ---------------------
   const [formData, setFormData] = useState({
-    // regn_no: "",
+    regn_no: "",
     name: "",
     callname: "",
     phone_number: "",
@@ -82,39 +78,6 @@ export default function EventDelegateAddOrEdit({ params }) {
   };
 
   // ---------------------
-  // LOAD EDIT DATA
-  // ---------------------
-  const loadExistingDelegate = async () => {
-
-    toggleProgressBar(true);
-
-    try {
-      const res = await HttpClient({
-        url: `/events/${decodedEventId}/event_delegates/get`,
-        method: "GET",
-        params: { id: decodedDelegateId },
-      });
-
-      console.log("Existing Delegate Data:", res);
-
-      if (!res?.success) return;
-
-      setFormData(res.data.delegate);
-
-      setCustomFields(
-        res.data.custom_fields?.length
-          ? res.data.custom_fields
-          : [{ label: "", value: "" }]
-      );
-
-    } catch (err) {
-      console.error(err);
-    } finally {
-      toggleProgressBar(false);
-    }
-  };
-
-  // ---------------------
   // INIT
   // ---------------------
   useEffect(() => {
@@ -128,51 +91,76 @@ export default function EventDelegateAddOrEdit({ params }) {
 
   }, []);
 
+
+  // ---------------------
+  // LOAD EDIT DATA
+  // ---------------------
+  const loadExistingDelegate = async () => {
+
+    toggleProgressBar(true);
+
+    try {
+      const res = await HttpClient({
+        url: `/events/${event_id}/event_delegates/get`,
+        method: "GET",
+        params: { id },
+      });
+
+      setFormData(res.data.delegate);
+      console.log("Existing Delegate Data: ", res.data.delegate);
+      setCustomFields(res.data.custom_fields);
+
+    } catch (err) {
+      toast("error", "Failed to load delegate data.");
+    } finally {
+      toggleProgressBar(false);
+    }
+  };
+
+  console.log("formData: ", formData);
+
   // ---------------------
   // SUBMIT
   // ---------------------
   const onSubmit = async (e) => {
+
     e.preventDefault();
 
-    const payload = {
-      ...formData,
-      event_id: decodedEventId,
-      custom_fields: customFields.filter(
-        r => r.label || r.value
-      ),
-    };
-
-    if (isEdit) {
-      payload.id = decodedDelegateId;
-    }
+    toggleProgressBar(true);
 
     try {
 
+      const payload = {
+        ...formData,
+        id,
+        custom_fields: customFields,
+      };
+
       const res = await HttpClient({
-        url: `/events/${decodedEventId}/event_delegates/save`,
+        url: `/events/${event_id}/event_delegates/save`,
         method: "POST",
-        data: payload, // JSON
+        data: payload,
       });
 
-      toast(
-        res.success ? "success" : "error",
-        res.message || "Save failed"
-      );
+      toast("success", res.message);
 
-      if (res.success) {
-        router.push(`/events/${event_id}/event_delegates`);
-      }
+      router.push(`/events/${event_id}/event_delegates`);
 
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast("error", "Save failed.");
+    } finally {
+      toggleProgressBar(false);
     }
   };
 
+
+  // ---------------------
+  // REGN ID CHECK
+  // ---------------------
   const checkRegnSetting = async () => {
     try {
         const res = await HttpClient({
-            url: `/events/${decodedEventId}/event_delegates/regn-id-status`,
+            url: `/events/${event_id}/event_delegates/regn-id-status`,
             method: "GET"
         });
 
@@ -187,8 +175,10 @@ export default function EventDelegateAddOrEdit({ params }) {
     }
   }
 
-  console.log("regnIdWarning: ", regnIdWarning);
-  console.log("formData: ", formData);
+  // console.log("regnIdWarning: ", regnIdWarning);
+  // console.log("formData: ", formData);
+
+
   // ---------------------
   // RENDER
   // ---------------------
@@ -204,12 +194,10 @@ export default function EventDelegateAddOrEdit({ params }) {
       {/* MAIN CARD */}
       <div className="card">
         <div className="card-body">
-
           <div className="row">
-
             {/* regn no */}
-            {!isEdit && (
-              <div className="col-lg-4">
+            {isEdit && (
+              <div className="col-lg-12">
                 <TextField
                   label="Regn No"
                   // className="form-control"
@@ -220,8 +208,10 @@ export default function EventDelegateAddOrEdit({ params }) {
                 />
               </div>
             )}
+          </div>
 
 
+          <div className="row mt-3">
             <div className="col-lg-4">
               <TextField
                 label="Name"
@@ -290,6 +280,7 @@ export default function EventDelegateAddOrEdit({ params }) {
             <div className="col-lg-4">
               <SelectPicker
                 label="Meals Per Event"
+                name="meals_per_event"
                 value={formData.meals_per_event}
                 onChange={v => onFieldChange(v, "meals_per_event")}
                 options={MEALS_PER_EVENT}
@@ -361,7 +352,7 @@ export default function EventDelegateAddOrEdit({ params }) {
         <div className="col-12 d-flex justify-content-between">
 
           <Link
-            href={`/events/${event_id}/delegates`}
+            href={`/events/${event_id}/event_delegates`}
             className="btn btn-secondary"
           >
             Cancel

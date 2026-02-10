@@ -16,15 +16,15 @@ import { ACTIVITY_CATEGORIES, MEAL_TYPES } from "@/constants";
 
 export default function EventActivityAddOrEditForm({ params }) {
 
-  // ✅ CORRECT PARAMS
   const { event_id, id } = use(params); // const { event_id, id } = params;
 
-  const decodedEventId = decodeURLParam(event_id);
-  const decodedActivityId = id
-    ? decodeURLParam(id)
-    : null;
+  // const decodedEventId = decodeURLParam(event_id);
+  // const decodedActivityId = id
+  //   ? decodeURLParam(id)
+  //   : null;
 
-  const isEdit = Boolean(decodedActivityId);
+  // const isEdit = Boolean(decodedActivityId);
+  const isEdit = Boolean(id);
 
   const router = useRouter();
 
@@ -72,9 +72,9 @@ export default function EventActivityAddOrEditForm({ params }) {
 
     try {
       const res = await HttpClient({
-        url: `/events/${decodedEventId}/event_activities/get`,
+        url: `/events/${event_id}/event_activities/get`,
         method: "GET",
-        params: { id: decodedActivityId },
+        params: { id },
       });
 
       if (!res?.success || !res.data) {
@@ -111,7 +111,7 @@ export default function EventActivityAddOrEditForm({ params }) {
 
     toggleBreadcrumbs({
       Events: "/events",
-      Activities: `/events/${event_id}/event-activities`,
+      Activities: `/events/${event_id}/event_activities`,
       [isEdit ? "Edit Activity" : "Add Activity"]: null,
     });
 
@@ -128,16 +128,16 @@ export default function EventActivityAddOrEditForm({ params }) {
 
     const payload = {
       ...formData,
-      event_id: decodedEventId,
+      id,
     };
 
     if (isEdit) {
-      payload.id = decodedActivityId;
+      payload.id = id;
     }
 
     try {
       const res = await HttpClient({
-        url: `/events/${decodedEventId}/event_activities/save`,
+        url: `/events/${event_id}/event_activities/save`,
         method: "POST",
         data: payload,
       });
@@ -149,7 +149,7 @@ export default function EventActivityAddOrEditForm({ params }) {
 
       if (res.success) {
         router.push(
-          `/events/${event_id}/event-activities`
+          `/events/${event_id}/event_activities`
         );
       }
 

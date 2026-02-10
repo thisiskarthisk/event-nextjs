@@ -24,42 +24,42 @@ export function encodeURLParam(data) {
   }
 }
 
-// export function decodeURLParam(encData) {
-//   try {
-//     return atob(encData);
-//   } catch (error) {
-//     console.error('[decodeURLParam] Error:', error);
-
-//     return null;
-//   }
-// }
-
 export function decodeURLParam(encData) {
-
-  if (!encData) return null;
-
   try {
+    return atob(encData);
+  } catch (error) {
+    console.error('[decodeURLParam] Error:', error);
 
-    // only allow base64 chars
-    if (!/^[A-Za-z0-9_-]+$/.test(encData)) {
-      return encData;
-    }
-
-    const pad = encData.length % 4;
-    const padded =
-      pad === 0
-        ? encData
-        : encData + "=".repeat(4 - pad);
-
-    return atob(padded);
-
-  } catch (err) {
-
-    console.error("[decodeURLParam] fallback:", encData);
-
-    return encData;
+    return null;
   }
 }
+
+// export function decodeURLParam(encData) {
+
+//   if (!encData) return null;
+
+//   try {
+
+//     // only allow base64 chars
+//     if (!/^[A-Za-z0-9_-]+$/.test(encData)) {
+//       return encData;
+//     }
+
+//     const pad = encData.length % 4;
+//     const padded =
+//       pad === 0
+//         ? encData
+//         : encData + "=".repeat(4 - pad);
+
+//     return atob(padded);
+
+//   } catch (err) {
+
+//     console.error("[decodeURLParam] fallback:", encData);
+
+//     return encData;
+//   }
+// }
 
 export function random(n) {
   return Math.floor( Math.random() * n );
