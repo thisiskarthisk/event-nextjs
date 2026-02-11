@@ -1,114 +1,3 @@
-// 'use client';
-
-// import { useParams } from "next/navigation";
-// import { useEffect, useRef } from "react";
-// import Link from "next/link";
-
-// import { useAppLayoutContext } from "@/components/appLayout";
-// import DataTable from "@/components/DataTable";
-// import AppIcon from "@/components/icon";
-// import { HttpClient } from "@/helper/http";
-
-// export default function EventDelegatesPage() {
-
-//   const { event_id } = useParams();
-
-//   const { setPageTitle, toggleProgressBar, confirm, toast, closeModal ,modal } =
-//     useAppLayoutContext();
-
-//   const tableRef = useRef(null);
-
-//   useEffect(() => {
-//     setPageTitle("Event Delegates");
-//     toggleProgressBar(false);
-//   }, []);
-
-//   const columns = [
-//     { column: "regn_no", label: "Regn No" },
-//     { column: "name", label: "Name" },
-//     { column: "callname", label: "Call Name" },
-//     { column: "phone_number", label: "Phone Number" },
-//     { column: "email", label: "Email" },
-//     { column: "club_name", label: "Club Name" },
-//   ];
-
-//   const onDeleteDelegateClicked = (e, id) => {
-//     e.preventDefault();
-//     if (document.activeElement) document.activeElement.blur();
-//     confirm({
-//       title: "Delete Delegate",
-//       message: "Are you sure you want to Delete the Delegate?",
-//       positiveBtnOnClick: () => {
-//         toggleProgressBar(true);
-//         HttpClient({
-//           url: `/events/${event_id}/event_delegates/delete`,
-//           method: "POST",
-//           data: { id },
-//         }).then(res => {
-//           toast('success', res.message || 'The Delegate record has been deleted successfully.');
-//           toggleProgressBar(false);
-//           closeModal();
-//           tableRef.current?.refreshTable();
-//         }).catch(err => {
-//           closeModal();
-//           toggleProgressBar(false);
-//           let message = 'Error occurred when trying to delete the Delegate.';
-//           if (err.response?.data?.message) message = err.response.data.message;
-//           toast('error', message);
-//         });
-//       },
-//     });
-//   };
-
-//   return (
-//     <>
-//       <div className="row mb-3">
-//         <div className="col-12 text-right">
-//           {/* import */}
-//           <Link href={`/events/${event_id}/event_delegates/import`} className="btn btn-secondary mr-2">
-//             <AppIcon ic="file-upload" />&nbsp;Upload Delegates
-//           </Link>
-//           &nbsp;&nbsp;
-
-//           {/* add new */}
-//           <Link href={`/events/${event_id}/event_delegates/add`} className="btn btn-primary">
-//             <AppIcon ic="plus" />&nbsp;Add Delegate
-//           </Link>
-//         </div>
-//       </div>
-//       <div className="row">
-//         <div className="col-12">
-//           <div className="card">
-//             <div className="card-body">
-//               <DataTable
-//                 ref={tableRef}
-//                 apiPath={`/events/${event_id}/event_delegates/list`}
-//                 dataKeyFromResponse="event_delegates"
-//                 columns={columns}
-//                 paginationType="client"
-//                 actionColumnFn={(rowData) => (
-//                   <>
-//                     <Link href={`/events/${event_id}/event_delegates/edit/${rowData.delegate_id}`} className="text-primary">
-//                       <AppIcon ic="pencil" />
-//                     </Link>
-//                     &nbsp;|&nbsp;
-//                     <a href="#" className="text-danger" onClick={(e) => onDeleteDelegateClicked(e, rowData.delegate_id)}>
-//                       <AppIcon ic="delete" />
-//                     </a>
-//                   </>
-//                 )}
-//               />
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </>
-//   );
-// }
-
-
-
-
 'use client';
 
 import { useAppLayoutContext } from "@/components/appLayout";
@@ -423,6 +312,22 @@ export default function EventDelegatesPage() {
     <>
       <div className="row mb-3">
         <div className="col-12 text-right">
+          {/* All Delegates QR */}
+          <Link
+            href={`/api/v1/events/${event_id}/event_delegates/qr/bulk`}
+            className="btn btn-success mr-2"
+          >
+            <AppIcon ic="qrcode" /> Download All Delegates QR
+          </Link>
+          &nbsp;&nbsp;
+          {/* Selected Delegates QR */}
+          <Link
+            href={`/api/v1/events/${event_id}/event_delegates/qr/selected`}
+            className="btn btn-warning mr-2"
+          >
+            <AppIcon ic="qrcode" /> Download Selected Delegates QR
+          </Link>
+            &nbsp;&nbsp;
           <Link
             href={`/events/${event_id}/event_delegates/add`}
             className="btn btn-primary"
@@ -460,6 +365,16 @@ export default function EventDelegatesPage() {
                 >
                   <AppIcon ic="delete" />
                 </a>
+
+                {/* Delegate Roe base individual member QR */}
+                &nbsp;|&nbsp;
+
+                <Link
+                  href={`/api/v1/events/${event_id}/event_delegates/qr/${row.delegate_id}/single`}
+                  className="text-success"
+                >
+                  <AppIcon ic="qrcode" />
+                </Link>
               </>
             )}
           />

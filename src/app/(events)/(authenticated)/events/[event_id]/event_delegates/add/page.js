@@ -358,7 +358,7 @@ export default function EventDelegateAddOrEdit({ params }) {
             Cancel
           </Link>
 
-          <button className="btn btn-primary" type="submit">
+          <button className="btn btn-primary" type="submit" disabled={!isEdit && regnIdWarning}>
             <AppIcon ic="check" />
             {isEdit ? " Save" : " Add"} Delegate
           </button>

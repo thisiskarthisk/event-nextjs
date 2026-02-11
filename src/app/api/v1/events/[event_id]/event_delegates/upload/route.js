@@ -35,13 +35,19 @@ function getVal(row, key) {
 
 /* ---------------- ROUTE ---------------- */
 
-export async function POST(req, { params }) {
+// export async function POST(req, { params }) {
+export async function POST(req, context) {
   try {
 
     // ----------------------------------
     // EVENT ID
     // ----------------------------------
-    const decoded = decodeURLParam(params.event_id);
+    // const decoded = decodeURLParam(params.event_id);
+    // const eventId = Number(decoded);
+
+    const { event_id } = await context.params;    
+
+    const decoded = decodeURLParam(event_id);
     const eventId = Number(decoded);
 
     if (!eventId) {
@@ -60,6 +66,7 @@ export async function POST(req, { params }) {
     `);
 
     const settingValue = setting?.[0]?.value;
+    // console.log("Regn No Setting:", settingValue);
 
     if (!settingValue) {
       return JsonResponse.error(
@@ -71,7 +78,7 @@ export async function POST(req, { params }) {
     const digits = Number(digitsStr);
 
     if (!prefix || !digits) {
-      return JsonResponse.error("Invalid Regn No configuration.");
+      return JsonResponse.error("Invalid Regn No Setting. Regn No is not configured. Please set it in Settings page.");
     }
 
     // ----------------------------------
