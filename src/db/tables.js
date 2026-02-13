@@ -6,6 +6,7 @@ export default {
   TBL_EVENT_DELEGATES: 'event_delegates',
   TBL_CUSTOM_FIELD_DELEGATES: 'custom_field_delegates',
   TBL_SETTINGS: 'settings',
+  TBL_EVENT_USERS: 'user_events',
  
   PublicFields: {
     'users': [

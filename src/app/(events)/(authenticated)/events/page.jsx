@@ -196,7 +196,7 @@ export default function EventsListPage() {
   const siteAdminListUrl = "/events/list";
   const eventAdminListUrl = "/event-admin/list";
   const urlPath = (userType === "site_admin") ? siteAdminListUrl : eventAdminListUrl;
-  console.log("URL Path for Event Admin List:", urlPath);
+  // console.log("URL Path for Event Admin List:", urlPath);
 
   return (
     <>

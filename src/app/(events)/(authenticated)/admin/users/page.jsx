@@ -8,6 +8,8 @@ import { HttpClient } from "@/helper/http";
 import { encodeURLParam } from "@/helper/utils";
 import Link from "next/link";
 import { use, useEffect , useState , useRef} from "react";
+import { useSession } from "next-auth/react";
+
 
 export default function UsersListPage() {
   const columns = [
@@ -21,6 +23,9 @@ export default function UsersListPage() {
 
   const { setPageTitle, toggleProgressBar, confirm, toast ,closeModal } = useAppLayoutContext();
   const tableRef = useRef(null);
+  const { data: session } = useSession();
+  const userType = session?.user?.user_type;
+  // console.log('userType:', userType);
 
   useEffect(() => {
     setPageTitle('Users');
@@ -84,7 +89,7 @@ export default function UsersListPage() {
               <DataTable
                   ref={tableRef}
                   apiPath="/users/list"
-                  dataKeyFromResponse="users"
+                  dataKeyFromResponse={userType === "event_admin" ? "event_users" : "users"}
                   columns={columns}
                   paginationType="client"
                   actionColumnFn={(rowData) => {

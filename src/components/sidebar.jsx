@@ -5,10 +5,15 @@ import { useI18n } from "./i18nProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { toggleSidebar } from "@/helper/utils";
+import { useSession } from "next-auth/react";
 
 export default function AppSidebar() {
   const pathName = usePathname();
   const { t } = useI18n();
+
+  const { data: session } = useSession();
+  // console.log(session.user.user_type);
+  const userType = session.user.user_type;
 
   return (
     <aside className="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
@@ -22,27 +27,29 @@ export default function AppSidebar() {
         <nav className="mt-2">
           <ul className="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="navigation" aria-label="Main navigation" data-accordion="false" id="navigation">
             <li className="nav-item">
-              <Link href="/events" className={"nav-link " + (pathName == '/' ? 'active' : '')} onClick={e => toggleSidebar()}>
+              <Link href="/" className={"nav-link " + (pathName == '/' ? 'active' : '')} onClick={e => toggleSidebar()}>
                 <AppIcon ic="calendar-multiple" className="nav-icon" />
                 <p>{t('events')}</p>
               </Link>
             </li>
 
-            {/* {session.user.user_type === "admin" && ( */}
+            {(userType === "event_admin" || userType === "site_admin") && (
               <li className="nav-item">
                 <Link href="/admin/users" className={"nav-link " + (pathName == '/admin/users' ? 'active' : '')} onClick={e => toggleSidebar()}>
                   <AppIcon ic="account-group" className="nav-icon" />
                   <p>{t('Manage Users')}</p>
                 </Link>
               </li>
-            {/* )} */}
-
+            )}
+           
+            {userType === "event_admin" && (
               <li className="nav-item">
                 <Link href="/admin/settings/general" className={"nav-link " + (pathName == '/admin/settings' ? 'active' : '')} onClick={e => toggleSidebar()}>
                   <AppIcon ic="cog" className="nav-icon" />
                   <p>{t('Settings')}</p>
                 </Link>
               </li>
+            )}
           </ul>
         </nav>
       </div>
