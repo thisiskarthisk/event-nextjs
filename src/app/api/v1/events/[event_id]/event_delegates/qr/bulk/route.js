@@ -38,6 +38,7 @@ export async function GET(req, context) {
         email
       FROM ${sql.identifier(Tables.TBL_EVENT_DELEGATES)}
       WHERE fkevent_id = ${eventId}
+        AND active = TRUE
       ORDER BY delegate_id ASC
     `);
 
