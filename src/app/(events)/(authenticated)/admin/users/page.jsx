@@ -25,7 +25,6 @@ export default function UsersListPage() {
   const tableRef = useRef(null);
   const { data: session } = useSession();
   const userType = session?.user?.user_type;
-  // console.log('userType:', userType);
 
   useEffect(() => {
     setPageTitle('Users');

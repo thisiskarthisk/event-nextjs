@@ -166,7 +166,10 @@ export async function GET(req) {
   for (let event of events) {
 
     const activities = await DB_Fetch(`
-      SELECT * FROM event_activities
+      SELECT *,
+      TO_CHAR(start_datetime, 'DD-MM-YYYY -- HH12:MI') AS start_date,
+      TO_CHAR(end_datetime, 'DD-MM-YYYY -- HH12:MI') AS end_date
+      FROM event_activities
       WHERE fkevent_id = ${event.event_id}
       AND active = TRUE
     `);

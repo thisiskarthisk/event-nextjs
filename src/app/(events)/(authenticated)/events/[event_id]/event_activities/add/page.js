@@ -13,6 +13,7 @@ import AppIcon from "@/components/icon";
 import { HttpClient } from "@/helper/http";
 import { decodeURLParam } from "@/helper/utils";
 import { ACTIVITY_CATEGORIES, MEAL_TYPES } from "@/constants";
+import Checkbox from "@/components/form/Checkbox";
 
 export default function EventActivityAddOrEditForm({ params }) {
 
@@ -231,13 +232,22 @@ export default function EventActivityAddOrEditForm({ params }) {
             )}
           </div>
 
+          <div className="row mt-3">
+            <div className="col-lg-4">
+              <Checkbox
+                label="Multiple Allowed"
+                checked={formData.multiple_allowed}
+                onChange={(v) => onFieldValueChanged(v, "multiple_allowed")}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="row mt-3">
         <div className="col-12 d-flex justify-content-between">
           <Link
-            href={`/events/${event_id}/event-activities`}
+            href={`/events/${event_id}/event_activities`}
             className="btn btn-secondary"
           >
             Cancel

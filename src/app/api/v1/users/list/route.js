@@ -5,7 +5,13 @@ export async function GET() {
 
   const result = await DB_Fetch(`
     SELECT
-      ${Tables.PublicFields[Tables.TBL_USERS].join(', ')}
+      ${Tables.PublicFields[Tables.TBL_USERS].join(', ')},
+      CASE
+        WHEN user_type = 'site_admin' THEN 'Site Admin'
+        WHEN user_type = 'event_admin' THEN 'Event Admin'
+        WHEN user_type = 'event_user' THEN 'Event User'
+        ELSE user_type
+      END AS user_type
     FROM
       ${Tables.TBL_USERS}
     WHERE active = TRUE
@@ -14,7 +20,13 @@ export async function GET() {
 
   const result2 = await DB_Fetch(`
     SELECT
-      ${Tables.PublicFields[Tables.TBL_USERS].join(', ')}
+      ${Tables.PublicFields[Tables.TBL_USERS].join(', ')},
+      CASE
+        WHEN user_type = 'site_admin' THEN 'Site Admin'
+        WHEN user_type = 'event_admin' THEN 'Event Admin'
+        WHEN user_type = 'event_user' THEN 'Event User'
+        ELSE user_type
+      END AS user_type
     FROM
       ${Tables.TBL_USERS}
     WHERE user_type = 'event_user' and active = TRUE
