@@ -1,209 +1,3 @@
-// 'use client';
-
-// import { useAppLayoutContext } from "@/components/appLayout";
-// import { useEffect, useState } from "react";
-// import { HttpClient } from "@/helper/http";
-// import { useRouter } from "next/navigation";
-// import Link from "next/link";
-// import AppIcon from "@/components/icon";
-
-// export default function EventUserPage() {
-//   const { setPageTitle, toggleProgressBar } = useAppLayoutContext();
-//   const router = useRouter();
-
-//   const [events, setEvents] = useState([]);
-//   const [selectedEvent, setSelectedEvent] = useState(null);
-
-//   useEffect(() => {
-//     setPageTitle("Event User");
-//     fetchEvents();
-//   }, []);
-
-//   const fetchEvents = async () => {
-//     toggleProgressBar(true);
-//     const res = await HttpClient({
-//       url: "/event_user/event_list",
-//       method: "GET",
-//     });
-
-//     if (res?.success) setEvents(res.data.events);
-//     toggleProgressBar(false);
-//   };
-
-//   return (
-//     <>
-//       {selectedEvent && (
-//         <div className="row mb-3">
-//           <div className="col-12">
-//             <div className="card">
-//               <div className="card-body">
-//                 <div className="row">
-//                   <div className="col-6">
-//                     <h4 className="fw-bold">Event: {selectedEvent.event_name}</h4>
-//                   </div>
-//                   <div className="col-6 text-end">
-//                     <Link href="#" className="btn btn-secondary" onClick={() => setSelectedEvent(null)}>
-//                       <AppIcon ic="arrow-left" />&nbsp;Back
-//                     </Link>
-//                   </div>
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-
-//       <div className="row">
-//         <div className="col-12">
-//           <div className="card">
-//             <div className="card-body">
-//               {!selectedEvent && (
-//                 <div className="row g-4">
-//                   {events.map(event => (
-//                     <div key={event.event_id} className="col-md-4 col-sm-6">
-//                       <div
-//                         className="card h-100 border-0 shadow-sm"
-//                         style={{
-//                           borderRadius: "15px",
-//                           transition: "all 0.3s ease",
-//                           overflow: "hidden",
-//                           cursor: "pointer",
-//                           boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-//                         }}
-//                       >
-//                         {/* Event Logo */}
-//                         {event.event_logo ? (
-//                           <img
-//                             src={event.event_logo}
-//                             alt={event.event_name}
-//                             style={{
-//                               height: "180px",
-//                               objectFit: "cover",
-//                               width: "100%",
-//                             }}
-//                           />
-//                         ) : (
-//                           <div
-//                             style={{
-//                               height: "180px",
-//                               background: "#f8f9fa",
-//                               display: "flex",
-//                               alignItems: "center",
-//                               justifyContent: "center",
-//                               fontSize: "14px",
-//                               color: "#999",
-//                             }}
-//                           >
-//                             No Logo Available
-//                           </div>
-//                         )}
-
-//                         <div className="card-body d-flex flex-column">
-//                           <h5 className="fw-semibold mb-3">
-//                             {event.event_name}
-//                           </h5>
-
-//                           {/* Attachment */}
-//                           {event.attachment && (
-//                             <a
-//                               href={event.attachment}
-//                               target="_blank"
-//                               rel="noopener noreferrer"
-//                               className="btn btn-outline-secondary btn-sm mb-2"
-//                             >
-//                               View Attachment
-//                             </a>
-//                           )}
-
-//                           <button
-//                             className="btn btn-primary btn-sm mt-auto"
-//                             onClick={() => setSelectedEvent(event)}
-//                           >
-//                             Select Event
-//                           </button>
-//                         </div>
-//                       </div>
-//                     </div>
-//                   ))}
-//                 </div>
-//               )}
-
-//               {selectedEvent && (
-//                 <div className="row g-4">
-//                   {/* If No Activities */}
-//                   {(!selectedEvent.activities ||
-//                     selectedEvent.activities.length === 0) && (
-//                     <div className="col-12 d-flex justify-content-center mt-4">
-//                       <div
-//                         className="text-center p-4 shadow-sm"
-//                         style={{
-//                           borderRadius: "15px",
-//                           background: "#f8f9fa",
-//                           maxWidth: "400px",
-//                           width: "100%",
-//                         }}
-//                       >
-//                         <div style={{ fontSize: "40px" }}><AppIcon ic="information" /></div>
-//                         <h6 className="mt-3 fw-semibold">
-//                           No Activities Available
-//                         </h6>
-//                         <p className="text-muted mb-0" style={{ fontSize: "14px" }}>
-//                           This event currently has no activities assigned.
-//                         </p>
-//                       </div>
-//                     </div>
-//                   )}
-
-//                   {/* If Activities Exist */}
-//                   {selectedEvent.activities &&
-//                     selectedEvent.activities.length > 0 &&
-//                     selectedEvent.activities.map(activity => (
-//                       console.log(activity),
-//                       <div key={activity.event_activity_id} className="col-md-4 col-sm-6">
-//                         <div className="card h-100 shadow-sm border-0"
-//                           style={{
-//                             borderRadius: "18px",
-//                             padding: "20px",
-//                             transition: "all 0.3s ease",
-//                           }}>
-                            
-//                           {/* Activity Name */}
-//                           <h6 className="fw-semibold mb-3">
-//                             {activity.activity_name}
-//                           </h6>
-
-//                           {/* Start Date */}
-//                           <p className="mb-1 text-muted" style={{ fontSize: "14px" }}>
-//                             <strong>Start Date:</strong>{" "}
-//                             {activity.start_date}
-//                           </p>
-
-//                           {/* End Date */}
-//                           <p className="mb-3 text-muted" style={{ fontSize: "14px" }}>
-//                             <strong>End Date:</strong>{" "}
-//                             {activity.end_date}
-//                           </p>
-
-//                           {/* Button */}
-//                           <button className="btn btn-success btn-sm mt-auto"
-//                             onClick={() => router.push(`/event_user/delegates/${selectedEvent.event_id}/${activity.event_activity_id}`)}>
-//                             Select Activity
-//                           </button>
-//                         </div>
-//                       </div>
-//                     ))}
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </>
-//   );
-// }
-
-
-
 'use client';
 
 import { useAppLayoutContext } from "@/components/appLayout";
@@ -235,6 +29,8 @@ export default function EventUserPage() {
     toggleProgressBar(false);
   };
 
+  // console.log(events);
+
   return (
     <>
       <div className="row mb-3">
@@ -255,64 +51,122 @@ export default function EventUserPage() {
         <div className="col-12">
           <div className="card border-0 shadow-sm">
             <div className="card-body">
-              
-              {/* Important: Add row here */}
               <div className="row g-4">
-                {events.map(event => (
-                  <div key={event.event_id} className="col-md-4 col-sm-6">
-                    <div
-                      className="card h-100 border-0 shadow-sm"
-                      style={{
-                        borderRadius: "18px",
-                        overflow: "hidden",
-                        transition: "all 0.3s ease",
-                      }}
-                    >
-                      {/* Event Logo */}
-                      {event.event_logo ? (
-                        <img
-                          src={event.event_logo}
-                          alt={event.event_name}
-                          style={{
-                            height: "200px",
-                            objectFit: "cover",
-                            width: "100%",
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            height: "200px",
-                            background: "#f8f9fa",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "#999",
-                          }}
-                        >
-                          No Logo Available
+                {events.map((event) => (
+                  <div key={event.event_id} className="col-lg-4 col-md-6 col-sm-12">
+                    <div className="miled-card-horizontal"  onClick={() => router.push(`/event_user/activity/${event.event_id}`)} style={{ cursor: "pointer" }} role="button" tabIndex="0">
+                      <div className="card-body d-flex align-items-center p-3">
+                        
+                        {/* Left Side: Round Logo */}
+                        <div className="logo-section me-3">
+                          <div className="round-logo-wrapper">
+                            {event.event_logo ? (
+                              <img src={event.event_logo} alt="logo" />
+                            ) : (
+                              <i className="bi bi-image text-muted fs-4"></i>
+                            )}
+                          </div>
                         </div>
-                      )}
 
-                      <div className="card-body d-flex flex-column">
-                        <h5 className="fw-semibold mb-3">
-                          {event.event_name}
-                        </h5>
+                        {/* Right Side: Info & Action */}
+                        <div className="info-section flex-grow-1 overflow-hidden">
+                          <h6 className="event-name mb-1 text-truncate" title={event.event_name}>
+                            {event.event_name}
+                          </h6>
+                          
+                          <div className="date-text mb-2">
+                            <i className="bi bi-calendar3 me-1"></i>
+                            <span>{event.start_date} — {event.end_date}</span>
+                          </div>
 
-                        <button
-                          className="btn btn-primary btn-sm mt-auto"
-                          onClick={() =>
-                            router.push(`/event_user/activity/${event.event_id}`)
-                          }
-                        >
-                          Select Event
-                        </button>
+                          {/* <div className="d-flex justify-content-end">
+                            <button 
+                              className="btn-select-miled"
+                              onClick={() => router.push(`/event_user/activity/${event.event_id}`)}
+                            >
+                              Select Event
+                            </button>
+                          </div> */}
+                        </div>
+
                       </div>
                     </div>
+
+                    <style jsx>{`
+                      .miled-card-horizontal {
+                        background: #ffffff;
+                        border-radius: 22px;
+                        border: 1px solid rgba(0,0,0,0.05);
+                        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Soft Shadow */
+                        transition: all 0.3s ease-in-out;
+                        position: relative;
+                      }
+
+                      .miled-card-horizontal:hover {
+                        transform: translateY(-5px);
+                        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1); /* Deeper Shadow on Hover */
+                        border-color: rgba(0,0,0,0.1);
+                      }
+
+                      .round-logo-wrapper {
+                        width: 70px;
+                        height: 70px;
+                        border-radius: 50%;
+                        background: #fdfdfd;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        overflow: hidden;
+                        border: 3px solid #fff;
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+                        flex-shrink: 0;
+                      }
+
+                      .round-logo-wrapper img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: contain;
+                        padding: 10px;
+                      }
+
+                      .event-name {
+                        font-weight: 700;
+                        color: #1a1a1a;
+                        font-size: 1.05rem;
+                        letter-spacing: -0.3px;
+                      }
+
+                      .date-text {
+                        font-size: 11px;
+                        color: #888;
+                        font-weight: 500;
+                      }
+
+                      .btn-select-miled {
+                        background: #222; /* Miled Dark Gray */
+                        color: #fff;
+                        border: none;
+                        padding: 6px 18px;
+                        border-radius: 12px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        transition: all 0.2s ease;
+                      }
+
+                      .btn-select-miled:hover {
+                        background: #000;
+                        transform: scale(1.05);
+                      }
+
+                      .text-truncate {
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                      }
+                    `}</style>
                   </div>
                 ))}
               </div>
-
             </div>
           </div>
         </div>

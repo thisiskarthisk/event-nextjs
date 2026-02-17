@@ -33,15 +33,26 @@ return (
         <div className="col-12">
           <div className="card">
             <div className="card-body">
-              <div className="row">
-                <div className="col-6">
-                  <Link href="#" className="btn btn-secondary" onClick={() => router.back()}>
-                    <AppIcon ic="arrow-left" />&nbsp;Back
+              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                {/* Left Side - Back */}
+                <Link href={`/event_user/activity/${event_id}`} className="btn btn-secondary">
+                  <AppIcon ic="arrow-left" /> Back
+                </Link>
+
+                {/* Right Side - Export & Scan */}
+                <div className="d-flex gap-2">
+                  <Link
+                    href={`/event_user/delegates/${event_id}/${activity_id}/export`}
+                    className="btn btn-info"
+                  >
+                    <AppIcon ic="download" /> Export
                   </Link>
-                </div>
-                <div className="col-6 text-end">
-                  <Link href={`/event_user/scan?event_id=${event_id}&activity_id=${activity_id}`} className="btn btn-warning">
-                    <AppIcon ic="qrcode" />&nbsp;Scan
+
+                  <Link
+                    href={`/event_user/scan?event_id=${event_id}&activity_id=${activity_id}`}
+                    className="btn btn-warning"
+                  >
+                    <AppIcon ic="qrcode" /> Scan
                   </Link>
                 </div>
               </div>
@@ -53,25 +64,30 @@ return (
         <div className="col-12">
           <div className="card">
             <div className="card-body">
-              <DataTable
-                ref={tableRef}
-                apiPath={`/event_user/delegate_list?event_id=${event_id}&activity_id=${activity_id}`}
-                dataKeyFromResponse="delegates"
-                columns={columns}
-                paginationType="client"
-                actionColumnLabel="Status"
-                actionColumnFn={(row) => (
-                  <span
-                  style={{
-                      padding: "4px 10px",
-                      borderRadius: "12px",
-                      color: "#fff",
-                      backgroundColor: row.registered ? "#28a745" : "#dc3545",
-                  }}>
-                    {row.registered ? "Registered" : "Not Registered"}
-                  </span>
-                )} 
-              />
+              <div className="table-responsive">
+                <DataTable
+                  ref={tableRef}
+                  apiPath={`/event_user/delegate_list?event_id=${event_id}&activity_id=${activity_id}`}
+                  dataKeyFromResponse="delegates"
+                  columns={columns}
+                  paginationType="client"
+                  actionColumnLabel="Status"
+                  actionColumnFn={(row) => (
+                    <span
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "12px",
+                        fontSize: "12px",
+                        whiteSpace: "nowrap",
+                        color: "#fff",
+                        backgroundColor: row.registered ? "#28a745" : "#dc3545",
+                      }}
+                    >
+                      {row.registered ? "Registered" : "Not Registered"}
+                    </span>
+                  )}
+                />
+              </div>
             </div>
           </div>
         </div>
