@@ -12,16 +12,21 @@ import path from "path";
 export async function POST(req, context) {
   try {
     const { event_id } = await context.params;
+    const { ids } = await req.json(); // Array of IDs from frontend
+
     const eventId = Number(decodeURLParam(event_id));
 
-    // 1. Fetch All Active Delegates
+    if (!ids || !ids.length) {
+      return NextResponse.json({ success: false, message: "No delegates selected" });
+    }
+
+    // 1. Fetch Selected Delegates
     const delegates = await DB_Fetch(sql`
       SELECT delegate_id, regn_no, name, email
       FROM ${sql.identifier(Tables.TBL_EVENT_DELEGATES)}
-      WHERE fkevent_id = ${eventId} AND active = TRUE
+      WHERE fkevent_id = ${eventId}
+        AND delegate_id IN (${sql.join(ids, sql`, `)})
     `);
-
-    if (!delegates.length) return NextResponse.json({ success: false, message: "No delegates found" });
 
     // 2. Folder Setup
     const publicDir = path.join(process.cwd(), "public", "qr", String(eventId));
@@ -38,13 +43,11 @@ export async function POST(req, context) {
       auth: { user: settings.SMTP_USER, pass: settings.SMTP_PASS },
     });
 
-    // 4. Bulk Process
-    let count = 0;
+    // 4. Loop, Generate QR, and Send
     for (const d of delegates) {
       if (!d.email) continue;
       const filePath = path.join(publicDir, `${d.delegate_id}.png`);
       await QRCode.toFile(filePath, `REGNO:${d.regn_no || d.delegate_id}`);
-
       await transporter.sendMail({
         from: `"Proflujo Event Team" <${settings.SMTP_USER}>`,
         to: d.email,
@@ -73,10 +76,9 @@ export async function POST(req, context) {
           },
         ],
       });
-      count++;
     }
 
-    return NextResponse.json({ success: true, message: `Bulk emails sent: ${count}` });
+    return NextResponse.json({ success: true, message: `Emails sent to ${delegates.length} selected delegates.` });
   } catch (err) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
   }

@@ -4,12 +4,12 @@ import { useAppLayoutContext } from "@/components/appLayout";
 import DataTable from "@/components/DataTable";
 import AppIcon from "@/components/icon";
 import { HttpClient } from "@/helper/http";
-import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import Checkbox from "@/components/form/Checkbox";
+import Link from "next/link";
 
 export default function EventDelegatesPage() {
-
   const { event_id } = useParams();
   const tableRef = useRef(null);
 
@@ -21,102 +21,121 @@ export default function EventDelegatesPage() {
     closeModal,
   } = useAppLayoutContext();
 
+
+  // State to track selected checkboxes
+  const [selectedIds, setSelectedIds] = useState([]);
+
   useEffect(() => {
     setPageTitle("Event Delegates");
     toggleProgressBar(false);
   }, []);
 
-  /* ================= SEND QR EMAIL ================= */
+  /* ================= SELECTION LOGIC ================= */
 
-  async function sendDelegateQR(delegateId) {
-    try {
-
-      toggleProgressBar(true);
-
-      const res = await HttpClient({
-        url: `/events/${event_id}/event_delegates/send-email/${delegateId}/single`,
-        method: "POST",
-      });
-
-      toggleProgressBar(false);
-
-      if (!res.success) {
-        toast("error", res.message);
-        return;
-      }
-
-      toast("success", res.message);
-
-    } catch (err) {
-      toggleProgressBar(false);
-      toast("error", "Email sending failed");
-    }
+  function toggleSelect(id) {
+    setSelectedIds(prev =>
+      prev.includes(id)
+        ? prev.filter(i => i !== id)
+        : [...prev, id]
+    );
   }
 
-  /* ================= BULK QR SEND EMAIL ================= */
+  /* ================= DOWNLOAD QR (ZIP) ================= */
+  function handleDownload() {
+    const isSelected = selectedIds.length > 0;
+    
+    // Show a small loading state if needed, though window.open is usually instant
+    toggleProgressBar(true);
 
-  async function sendBulkDelegateQR() {
-    try {
-
-      toggleProgressBar(true);
-
-      const res = await HttpClient({
-        url: `/events/${event_id}/event_delegates/send-email/bulk`,
-        method: "POST",
-      });
-
-      toggleProgressBar(false);
-
-      if (!res.success) {
-        toast("error", res.message);
-        return;
-      }
-
-      toast("success", res.message);  
-
-    } catch (err) {
-      toggleProgressBar(false);
-      toast("error", "Email sending failed");
+    let downloadUrl;
+    if (isSelected) {
+      const ids = selectedIds.join(",");
+      downloadUrl = `/api/v1/events/${event_id}/event_delegates/qr/select?ids=${ids}`;
+    } else {
+      downloadUrl = `/api/v1/events/${event_id}/event_delegates/qr/bulk`;
     }
+
+    // Trigger download
+    window.open(downloadUrl, "_blank");
+    
+    // Close progress bar after a short delay
+    setTimeout(() => toggleProgressBar(false), 1000);
   }
 
-  
+  /* ================= SEND EMAIL ================= */
+  const handleSendEmail = (e) => {
+    if (e) e.preventDefault();
+    if (document.activeElement) document.activeElement.blur();
 
-  /* ================= DELETE ================= */
-
-  function onDeleteDelegateClicked(e, id) {
-    e.preventDefault();
+    const isSelected = selectedIds.length > 0;
+    const count = isSelected ? selectedIds.length : "ALL";
 
     confirm({
-      title: "Delete Delegate",
-      message: "Are you sure?",
-      positiveBtnOnClick: async () => {
-        try {
-          toggleProgressBar(true);
+      title: "Send QR Emails",
+      message: `Are you sure you want to send QR emails to ${count} delegate(s)?`,
+      positiveBtnOnClick: () => {
+        toggleProgressBar(true);
+        
+        const url = isSelected 
+          ? `/events/${event_id}/event_delegates/send-email/select` 
+          : `/events/${event_id}/event_delegates/send-email/bulk`;
 
-          await HttpClient({
-            url: `/events/${event_id}/event_delegates/delete`,
-            method: "POST",
-            data: { id },
-          });
-
+        HttpClient({
+          url,
+          method: "POST",
+          data: isSelected ? { ids: selectedIds } : {},
+        }).then(res => {
           toggleProgressBar(false);
-          toast("success", "Deleted");
           closeModal();
-          tableRef.current?.refreshTable();
-
-        } catch {
+          if (res.success) {
+            toast('success', res.message || 'Emails sent successfully.');
+            setSelectedIds([]); // Clear selection
+          } else {
+            toast('error', res.message || 'Failed to send emails.');
+          }
+        }).catch(err => {
           toggleProgressBar(false);
-          toast("error", "Delete failed");
-        }
+          closeModal();
+          toast('error', err.response?.data?.message || 'Error occurred when trying to send emails.');
+        });
       },
     });
-  }
+  };
 
+  /* ================= DELETE ================= */
+  const onDeleteDelegateClicked = (e, id) => {
+    e.preventDefault();
+    if (document.activeElement) document.activeElement.blur();
+    confirm({
+      title: "Delete Delegate",
+      message: "Are you sure you want to Delete the Delegate?",
+      positiveBtnOnClick: () => {
+        toggleProgressBar(true);
+        HttpClient({
+          url: `/events/${event_id}/event_delegates/delete`,
+          method: "POST",
+          data: { id },
+        }).then(res => {
+          toast('success', res.message || 'The Delegate record has been deleted successfully.');
+          toggleProgressBar(false);
+          closeModal();
+          tableRef.current?.refreshTable();
+        }).catch(err => {
+          closeModal();
+          toggleProgressBar(false);
+          let message = 'Error occurred when trying to delete the Delegate.';
+          if (err.response?.data?.message) message = err.response.data.message;
+          toast('error', message);
+        });
+      },
+    });
+  };
+  
+
+  /* ================= COLUMNS ================= */
   const columns = [
     { column: "regn_no", label: "Regn No" },
     { column: "name", label: "Name" },
-    { column: "callname", label: "Call Name" },
     { column: "phone_number", label: "Phone" },
     { column: "email", label: "Email" },
     { column: "club_name", label: "Club" },
@@ -124,34 +143,34 @@ export default function EventDelegatesPage() {
 
   return (
     <>
-      {/* Top Buttons */}
-      <div className="d-flex justify-content-end gap-2 mb-3 flex-wrap">
-        <Link href="#" className="btn btn-danger"  onClick={sendBulkDelegateQR}>
-          <AppIcon ic="gmail" /> Send All QR Email
-        </Link>
-        {/* Whatsapp Send Bulk */}
-        <Link href="#" className="btn btn-success" onClick={sendBulkDelegateQR}>
-          <AppIcon ic="whatsapp" /> Send All QR Whatsapp
-        </Link>
-
-        <Link
-          href={`/api/v1/events/${event_id}/event_delegates/qr/bulk`}
-          className="btn btn-warning"
+      {/* ACTION BUTTONS HEADER */}
+      <div className="d-flex justify-content-end gap-2 mb-3">
+        
+        {/* DOWNLOAD BUTTON */}
+        <button 
+          className="btn btn-warning d-flex align-items-center gap-2" 
+          onClick={handleDownload}
         >
-          <AppIcon ic="qrcode" /> Download All QR
-        </Link>
+          <AppIcon ic="qrcode" /> 
+          {selectedIds.length > 0 ? `Download (${selectedIds.length}) QR` : "Download All QR"}
+        </button>
 
-        <Link
-          href={`/events/${event_id}/event_delegates/add`}
-          className="btn btn-primary"
+        {/* EMAIL BUTTON */}
+        <button 
+          className="btn btn-danger d-flex align-items-center gap-2" 
+          onClick={handleSendEmail}
         >
+          <AppIcon ic="gmail" /> 
+          {selectedIds.length > 0 ? `Email (${selectedIds.length}) QR` : "Email All QR"}
+        </button>
+
+        <Link href={`/events/${event_id}/event_delegates/add`} className="btn btn-primary">
           <AppIcon ic="plus" /> Add Delegate
         </Link>
       </div>
 
-      <div className="card shadow-sm">
-        <div className="card-body">
-
+      <div className="card shadow-sm border-0">
+        <div className="card-body p-0">
           <DataTable
             ref={tableRef}
             apiPath={`/events/${event_id}/event_delegates/list`}
@@ -159,480 +178,25 @@ export default function EventDelegatesPage() {
             columns={columns}
             paginationType="client"
             actionColumnFn={(row) => (
-              <>
-                {/* Edit */}
-                <Link
-                  href={`/events/${event_id}/event_delegates/edit/${row.delegate_id}`}
-                  className="text-primary"
-                >
+              <div className="d-flex justify-content-center">
+                <Checkbox
+                  checked={selectedIds.includes(row.delegate_id)}
+                  onChange={() => toggleSelect(row.delegate_id)}
+                />
+                &nbsp;|&nbsp;
+                <Link href={`/events/${event_id}/event_delegates/edit/${row.delegate_id}`} className="text-primary">
                   <AppIcon ic="pencil" size="large" />
                 </Link>
-
                 &nbsp;|&nbsp;
-
-                {/* Delete */}
-                <a
-                  href="#"
-                  className="text-danger"
-                  onClick={(e) =>
-                    onDeleteDelegateClicked(e, row.delegate_id)
-                  }
-                >
+                <Link href="#" className="text-danger" onClick={(e) => onDeleteDelegateClicked(e, row.delegate_id)}>
                   <AppIcon ic="delete" size="large" />
-                </a>
+                </Link>
 
-                &nbsp;|&nbsp;
-
-                {/* Download QR */}
-                <a
-                  // href={`/api/v1/events/${event_id}/event_delegates/qr/${row.delegate_id}`}
-                  href={`/api/v1/events/${event_id}/event_delegates/qr/${row.delegate_id}/single`}
-                  className="text-success"
-                  target="_blank"
-                >
-                  <AppIcon ic="qrcode" size="large" />
-                </a>
-
-                &nbsp;|&nbsp;
-
-                {/* Send Email */}
-                <a
-                  href="#"
-                  className="text-danger"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    sendDelegateQR(row.delegate_id);
-                  }}
-                >
-                  <AppIcon ic="gmail" size="large" />
-                </a>
-
-                {/* Whatsapp */}
-                 &nbsp;|&nbsp;
-                <a
-                  href="#"
-                  className="text-success"
-                  onClick={async (e) => {
-                    e.preventDefault();
-
-                    toggleProgressBar(true);
-
-                    const res = await HttpClient({
-                      url: `/events/${event_id}/event_delegates/send-whatsapp/${row.delegate_id}/single`,
-                      method: "POST",
-                    });
-
-                    console.log(res);
-
-                    toggleProgressBar(false);
-
-                    if (!res.success) {
-                      toast("error", res.message);
-                      return;
-                    }
-
-                    toast("success", res.message);
-                  }}
-                >
-                  <AppIcon ic="whatsapp" size="large" />
-                </a>
-
-              </>
+              </div>
             )}
           />
-
         </div>
       </div>
     </>
   );
 }
-
-
-
-// 'use client';
-
-// import { useAppLayoutContext } from "@/components/appLayout";
-// import DataTable from "@/components/DataTable";
-// import AppIcon from "@/components/icon";
-// import { HttpClient } from "@/helper/http";
-// import Link from "next/link";
-// import { useEffect, useRef  ,useState } from "react";
-// import { useParams } from "next/navigation";
-// import Checkbox from "@/components/form/Checkbox";
-
-// export default function EventDelegatesPage() {
-
-//   const { event_id } = useParams();
-//   const tableRef = useRef(null);
-//   const [selectedIds, setSelectedIds] = useState([]);
-//   const [selectAll, setSelectAll] = useState(false);
-
-//   function toggleSelect(id) {
-//     setSelectedIds(prev =>
-//       prev.includes(id)
-//         ? prev.filter(i => i !== id)
-//         : [...prev, id]
-//     );
-//   }
-
-//   function toggleSelectAll(rows) {
-//     if (selectAll) {
-//       setSelectedIds([]);
-//       setSelectAll(false);
-//     } else {
-//       const allIds = rows.map(r => r.delegate_id);
-//       setSelectedIds(allIds);
-//       setSelectAll(true);
-//     }
-//   }
-
-
-//   const {
-//     setPageTitle,
-//     toggleProgressBar,
-//     toast,
-//     confirm,
-//     closeModal,
-//   } = useAppLayoutContext();
-
-//   useEffect(() => {
-//     setPageTitle("Event Delegates");
-//     toggleProgressBar(false);
-//   }, []);
-
-//   /* ================= SEND QR EMAIL ================= */
-
-//   async function sendDelegateQR(delegateId) {
-//     try {
-
-//       toggleProgressBar(true);
-
-//       const res = await HttpClient({
-//         url: `/events/${event_id}/event_delegates/send-email/${delegateId}/single`,
-//         method: "POST",
-//       });
-
-//       toggleProgressBar(false);
-
-//       if (!res.success) {
-//         toast("error", res.message);
-//         return;
-//       }
-
-//       toast("success", res.message);
-
-//     } catch (err) {
-//       toggleProgressBar(false);
-//       toast("error", "Email sending failed");
-//     }
-//   }
-
-//   /* ================= BULK QR SEND EMAIL ================= */
-
-//   async function sendBulkDelegateQR() {
-//     try {
-
-//       toggleProgressBar(true);
-
-//       const res = await HttpClient({
-//         url: `/events/${event_id}/event_delegates/send-email/bulk`,
-//         method: "POST",
-//       });
-
-//       toggleProgressBar(false);
-
-//       if (!res.success) {
-//         toast("error", res.message);
-//         return;
-//       }
-
-//       toast("success", res.message);  
-
-//     } catch (err) {
-//       toggleProgressBar(false);
-//       toast("error", "Email sending failed");
-//     }
-//   }
-
-  
-
-//   /* ================= DELETE ================= */
-
-//   function onDeleteDelegateClicked(e, id) {
-//     e.preventDefault();
-
-//     confirm({
-//       title: "Delete Delegate",
-//       message: "Are you sure?",
-//       positiveBtnOnClick: async () => {
-//         try {
-//           toggleProgressBar(true);
-
-//           await HttpClient({
-//             url: `/events/${event_id}/event_delegates/delete`,
-//             method: "POST",
-//             data: { id },
-//           });
-
-//           toggleProgressBar(false);
-//           toast("success", "Deleted");
-//           closeModal();
-//           tableRef.current?.refreshTable();
-
-//         } catch {
-//           toggleProgressBar(false);
-//           toast("error", "Delete failed");
-//         }
-//       },
-//     });
-//   }
-
-//   const columns = [
-//     { column: "regn_no", label: "Regn No" },
-//     { column: "name", label: "Name" },
-//     { column: "callname", label: "Call Name" },
-//     { column: "phone_number", label: "Phone" },
-//     { column: "email", label: "Email" },
-//     { column: "club_name", label: "Club" },
-
-//   ];
-
-
-//   return (
-//     <>
-//       {/* Top Buttons */}
-//       <div className="d-flex justify-content-end gap-2 mb-3 flex-wrap">
-//         <Link href="#" className="btn btn-danger"  onClick={sendBulkDelegateQR}>
-//           <AppIcon ic="gmail" /> Send All QR Email
-//         </Link>
-//         {/* Whatsapp Send Bulk */}
-//         <Link href="#" className="btn btn-success" onClick={sendBulkDelegateQR}>
-//           <AppIcon ic="whatsapp" /> Send All QR Whatsapp
-//         </Link>
-
-//         <Link
-//           href={`/api/v1/events/${event_id}/event_delegates/qr/bulk`}
-//           className="btn btn-warning"
-//         >
-//           <AppIcon ic="qrcode" /> Download All QR
-//         </Link>
-
-//         <Link
-//           href={`/events/${event_id}/event_delegates/add`}
-//           className="btn btn-primary"
-//         >
-//           <AppIcon ic="plus" /> Add Delegate
-//         </Link>
-//       </div>
-
-//       <div className="card shadow-sm">
-//         <div className="card-body">
-//           <DataTable
-//             ref={tableRef}
-//             apiPath={`/events/${event_id}/event_delegates/list`}
-//             dataKeyFromResponse="event_delegates"
-//             columns={columns}
-//             paginationType="client"
-//             actionColumnFn={(row) => (
-//               <div className="d-flex justify-content-center align-items-center gap-3">
-//                 <Link
-//                   href={`/events/${event_id}/event_delegates/edit/${row.delegate_id}`}
-//                   className="text-primary"
-//                 >
-//                   <AppIcon ic="pencil" size="large" />
-//                 </Link>
-
-//                 &nbsp;|&nbsp;
-
-//                 <a
-//                   href="#"
-//                   className="text-danger"
-//                   onClick={(e) =>
-//                     onDeleteDelegateClicked(e, row.delegate_id)
-//                   }
-//                 >
-//                   <AppIcon ic="delete" size="large" />
-//                 </a>
-
-//                 &nbsp;|&nbsp;
-
-//                 <div className="d-flex align-items-center">
-//                   <Checkbox
-//                     checked={selectedIds.includes(row.delegate_id)}
-//                     onChange={() => toggleSelect(row.delegate_id)}
-//                   />
-//                 </div>
-//               </div>
-//             )}
-//           />
-
-//         </div>
-//       </div>
-//     </>
-//   );
-// }
-
-
-
-// 'use client';
-
-// import { useAppLayoutContext } from "@/components/appLayout";
-// import DataTable from "@/components/DataTable";
-// import AppIcon from "@/components/icon";
-// import { HttpClient } from "@/helper/http";
-// import { useEffect, useRef, useState } from "react";
-// import { useParams } from "next/navigation";
-// import Checkbox from "@/components/form/Checkbox";
-
-// export default function EventDelegatesPage() {
-
-//   const { event_id } = useParams();
-//   const tableRef = useRef(null);
-
-//   const {
-//     setPageTitle,
-//     toggleProgressBar,
-//     toast,
-//   } = useAppLayoutContext();
-
-//   const [selectedIds, setSelectedIds] = useState([]);
-
-//   useEffect(() => {
-//     setPageTitle("Event Delegates");
-//     toggleProgressBar(false);
-//   }, []);
-
-//   /* ================= SELECT ================= */
-
-//   function toggleSelect(id) {
-//     setSelectedIds(prev =>
-//       prev.includes(id)
-//         ? prev.filter(i => i !== id)
-//         : [...prev, id]
-//     );
-//   }
-
-//   /* ================= DOWNLOAD ================= */
-
-//   function handleDownload() {
-
-//     // If selected rows exist → download selected
-//     if (selectedIds.length > 0) {
-
-//       const ids = selectedIds.join(",");
-
-//       window.open(
-//         `/api/v1/events/${event_id}/event_delegates/qr/select?ids=${ids}`,
-//         "_blank"
-//       );
-
-//       return;
-//     }
-
-//     // Otherwise → download all
-//     window.open(
-//       `/api/v1/events/${event_id}/event_delegates/qr/bulk`,
-//       "_blank"
-//     );
-//   }
-
-//   /* ================= SEND EMAIL ================= */
-
-//   async function handleSendEmail() {
-
-//     try {
-
-//       toggleProgressBar(true);
-
-//       let url;
-//       let data = {};
-
-//       if (selectedIds.length > 0) {
-//         // Send selected
-//         url = `/events/${event_id}/event_delegates/send-email/select`;
-//         data = { ids: selectedIds };
-//       } else {
-//         // Send all
-//         url = `/events/${event_id}/event_delegates/send-email/bulk`;
-//       }
-
-//       const res = await HttpClient({
-//         url,
-//         method: "POST",
-//         data,
-//       });
-
-//       toggleProgressBar(false);
-
-//       if (!res.success) {
-//         toast("error", res.message);
-//         return;
-//       }
-
-//       toast("success", res.message);
-//       setSelectedIds([]);
-
-//     } catch {
-//       toggleProgressBar(false);
-//       toast("error", "Email sending failed");
-//     }
-//   }
-
-//   /* ================= COLUMNS ================= */
-
-//   const columns = [
-//     { column: "regn_no", label: "Regn No" },
-//     { column: "name", label: "Name" },
-//     { column: "callname", label: "Call Name" },
-//     { column: "phone_number", label: "Phone" },
-//     { column: "email", label: "Email" },
-//     { column: "club_name", label: "Club" },
-//   ];
-
-//   return (
-//     <>
-//       {/* ACTION BUTTONS */}
-//       <div className="d-flex justify-content-end gap-2 mb-3">
-
-//         <button
-//           className="btn btn-warning"
-//           onClick={handleDownload}
-//         >
-//           <AppIcon ic="qrcode" /> Download QR
-//         </button>
-
-//         <button
-//           className="btn btn-danger"
-//           onClick={handleSendEmail}
-//         >
-//           <AppIcon ic="gmail" /> Send QR Email
-//         </button>
-
-//       </div>
-
-//       <div className="card shadow-sm">
-//         <div className="card-body">
-
-//           <DataTable
-//             ref={tableRef}
-//             apiPath={`/events/${event_id}/event_delegates/list`}
-//             dataKeyFromResponse="event_delegates"
-//             columns={columns}
-//             paginationType="client"
-
-//             /* Only checkbox in Action column */
-//             actionColumnFn={(row) => (
-//               <div className="d-flex justify-content-center">
-//                 <Checkbox
-//                   checked={selectedIds.includes(row.delegate_id)}
-//                   onChange={() => toggleSelect(row.delegate_id)}
-//                 />
-//               </div>
-//             )}
-//           />
-
-//         </div>
-//       </div>
-//     </>
-//   );
-// }
