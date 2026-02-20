@@ -12,8 +12,8 @@ export default function AppSidebar() {
   const { t } = useI18n();
 
   const { data: session } = useSession();
-  // console.log(session.user.user_type);
   const userType = session.user.user_type;
+  const eventId = session.user.event_id;
 
   return (
     <aside className="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
@@ -44,7 +44,8 @@ export default function AppSidebar() {
            
             {userType === "event_admin" && (
               <li className="nav-item">
-                <Link href="/admin/settings/general" className={"nav-link " + (pathName == '/admin/settings' ? 'active' : '')} onClick={e => toggleSidebar()}>
+                {/* <Link href="/admin/settings/general" className={"nav-link " + (pathName == '/admin/settings' ? 'active' : '')} onClick={e => toggleSidebar()}> */}
+                <Link href={`/events/${eventId}/settings/general`} className={"nav-link " + (pathName == '/admin/settings' ? 'active' : '')} onClick={e => toggleSidebar()}>
                   <AppIcon ic="cog" className="nav-icon" />
                   <p>{t('Settings')}</p>
                 </Link>

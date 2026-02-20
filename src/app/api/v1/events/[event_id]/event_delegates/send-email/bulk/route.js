@@ -28,14 +28,30 @@ export async function POST(req, context) {
     if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
     // 3. SMTP Settings
-    const rowSettings = await DB_Fetch(sql`SELECT field_name, value FROM ${sql.identifier(Tables.TBL_SETTINGS)} WHERE setting_group = 'general'`);
-    const settings = Object.fromEntries(rowSettings.map(r => [r.field_name, r.value]));
+    const rowSettings = await DB_Fetch(sql`SELECT field_name, value FROM ${sql.identifier(Tables.TBL_SETTINGS)} WHERE fkevent_id = ${eventId} AND setting_group = 'general'`);
+    const dbSettings = Object.fromEntries(rowSettings.map(r => [r.field_name, r.value]));
+
+    const SMTP_HOST = dbSettings.SMTP_HOST || process.env.SMTP_HOST;
+    const SMTP_PORT = dbSettings.SMTP_PORT || process.env.SMTP_PORT;
+    const SMTP_USER = dbSettings.SMTP_USER || process.env.SMTP_USER;
+    const SMTP_PASS = dbSettings.SMTP_PASS || process.env.SMTP_PASS;
+
+
+    if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email configuration missing. Please configure SMTP settings."
+        },
+        { status: 400 }
+      );
+    }
 
     const transporter = nodemailer.createTransport({
-      host: settings.SMTP_HOST,
-      port: Number(settings.SMTP_PORT),
-      secure: Number(settings.SMTP_PORT) === 465,
-      auth: { user: settings.SMTP_USER, pass: settings.SMTP_PASS },
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT),
+      secure:  Number(SMTP_PORT) === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
     });
 
     // 4. Bulk Process
@@ -46,7 +62,7 @@ export async function POST(req, context) {
       await QRCode.toFile(filePath, `REGNO:${d.regn_no || d.delegate_id}`);
 
       await transporter.sendMail({
-        from: `"Proflujo Event Team" <${settings.SMTP_USER}>`,
+        from: `"Proflujo Event Team" <${SMTP_PASS}>`,
         to: d.email,
         subject: "Your Event Entry QR Code",
         html: `

@@ -6,9 +6,12 @@ import { useAppLayoutContext } from "@/components/appLayout";
 import TextField from "@/components/form/TextField";
 import AppIcon from "@/components/icon";
 import { HttpClient } from "@/helper/http";
+import { useParams } from "next/navigation";
 
 export default function GeneralSettings() {
 
+  const { event_id } = useParams(); // Extracts event_id from the URL path
+  // console.log("event_id", event_id);
   const {
     setPageTitle,
     toggleProgressBar,
@@ -42,9 +45,11 @@ export default function GeneralSettings() {
   // INIT
   // =============================
   useEffect(() => {
-    setPageTitle("General Settings");
-    loadSettings();
-  }, []);
+    if (event_id) {
+      setPageTitle("General Settings");
+      loadSettings();
+    }
+  }, [event_id]);
 
   useEffect(() => {
 
@@ -68,6 +73,7 @@ export default function GeneralSettings() {
   // LOAD SETTINGS
   // =============================
   const loadSettings = async () => {
+    if (!event_id) return;
 
     toggleProgressBar(true);
 
@@ -76,7 +82,7 @@ export default function GeneralSettings() {
       const res = await HttpClient({
         url: "/settings/get",
         method: "GET",
-        params: { group: "general" },
+        params: { group: "general", event_id: event_id },
       });
 
       if (res.success) {
@@ -162,6 +168,7 @@ export default function GeneralSettings() {
         url: "/settings/save",
         method: "POST",
         data: {
+          event_id: event_id,
           setting_group: "general",
           settings,
         },

@@ -9,24 +9,13 @@ export async function POST(req) {
 
     const data = await req.json();
 
-    /**
-     * Expected:
-     * {
-     *   setting_group: "general",
-     *   settings: [
-     *     { field_name: "regn_no", value: "edv,5" },
-     *     { field_name: "whatsapp_phone_id", value: "107621335632571" },
-     *     { field_name: "whatsapp_template", value: "lfrcr_rotary" },
-     *     { field_name: "whatsapp_token", value: "EAA..." },
-     *     { field_name: "gmail_smtp_host", value: "smtp.gmail.com" },
-     *     { field_name: "gmail_smtp_port", value: "587" },
-     *     { field_name: "gmail_smtp_user", value: "karthi@gmail.com" },
-     *     { field_name: "gmail_smtp_pass", value: "1254785jsgaej" }
-     *   ]
-     * }
-     */
+    const id = data.event_id;
+    const event_id = Number(id);
+    const setting_group = data.setting_group;
+    const settings = data.settings;
 
     const rules = {
+      event_id: "required",
       setting_group: "required",
       settings: "required|array",
     };
@@ -41,23 +30,38 @@ export async function POST(req) {
       );
     }
 
-    const { setting_group, settings } = data;
-
     for (const item of settings) {
 
       const { field_name, value } = item;
 
       if (!field_name) continue;
 
+      const trimmedValue = value?.toString().trim();
+
+
       const existing = await DB_Fetch(sql`
         SELECT id
         FROM ${sql.identifier(Tables.TBL_SETTINGS)}
         WHERE field_name = ${field_name}
           AND setting_group = ${setting_group}
+          AND fkevent_id = ${event_id}
         LIMIT 1
       `);
 
-      if (existing.length) {
+      if (!trimmedValue) {
+
+        if (existing.length) {
+          await DB_Fetch(sql`
+            DELETE FROM ${sql.identifier(Tables.TBL_SETTINGS)}
+            WHERE id = ${existing[0].id}
+          `);
+        }
+
+        continue;
+      }
+
+
+      if (existing.length > 0) {
 
         await DB_Fetch(sql`
           UPDATE ${sql.identifier(Tables.TBL_SETTINGS)}
@@ -69,8 +73,8 @@ export async function POST(req) {
 
         await DB_Insert(sql`
           INSERT INTO ${sql.identifier(Tables.TBL_SETTINGS)}
-          (field_name, value, setting_group)
-          VALUES (${field_name}, ${value}, ${setting_group})
+          (fkevent_id, field_name, value, setting_group)
+          VALUES (${event_id}, ${field_name}, ${value}, ${setting_group})
         `);
       }
     }

@@ -34,6 +34,18 @@ const handler = NextAuth({
 
           if (!isValid) throw new Error('Invalid credentials!');
 
+
+          // Fetch event_id from user_events table
+          const userEvent = await DB_Fetch(sql`
+            SELECT fkevent_id
+            FROM ${sql.identifier(Tables.TBL_USER_EVENTS)}
+            WHERE fkuser_id = ${user.id}
+            LIMIT 1
+          `); //new Add property
+
+          const event_id = userEvent.length ? userEvent[0].fkevent_id : null; //new Add property
+
+
           let formattedUser = {};
 
           for (const i in Tables.PublicFields[Tables.TBL_USERS]) {
@@ -42,10 +54,10 @@ const handler = NextAuth({
             formattedUser[col] = user[col];
           }
 
-          // console.log('\n\nuser:', formattedUser, '\n\n');
 
           return {
-            ...formattedUser
+            ...formattedUser,
+            event_id // new Add property
           };
         } catch(error) {
           console.error('[NextAuth -> authorize()] Error occurred:', error);
@@ -67,29 +79,28 @@ const handler = NextAuth({
   },
   callbacks: {
     jwt: async ({ token, user, account }) => {
-      // console.log('NextAuth -> callbacks -> jwt()', token, user, account);
-
       if (user) {
         token = {
           ...user,
-          ...token
+          ...token,
+          event_id: user.event_id // new Add property
         };
       }
 
       return token;
     },
     session: async ({ session, token, user }) => {
-      // console.log('NextAuth -> callbacks -> session()', session, token, user);
-
       if (token) {
         session.user = {
           ...token,
           ...session.user,
+          event_id: token.event_id // new Add property
         };
       } else if (user) {
         session.user = {
           ...user,
           ...session.user,
+          event_id: user.event_id // new Add property
         };
       }
 
