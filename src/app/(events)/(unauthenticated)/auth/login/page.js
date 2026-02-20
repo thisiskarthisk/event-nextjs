@@ -60,41 +60,91 @@ export default function LoginPage() {
     toggleProgressBar(false);
   }, []);
 
-  return (
-    <>
-      <div className="login-box">
+//   return (
+//     <>
+//       <div className="login-box">
+//         <div className="login-logo">
+//           <a href="">
+//             <img src="/assets/img/logo1.png" alt="App Logo"  height={"auto"} width={"60%"} className="mb-1" />
+//           </a>
+//         </div>
+//         <form action="" method="POST" onSubmit={onLoginFormSubmitted}>
+//           <TextField
+//             type="email"
+//             name="email"
+//             placeholder="Email"
+//             autoFocus
+//             onChange={e => onFieldChanged(e, 'email')}
+//             prefixIcon="email" />
+
+//           <TextField
+//             className="mt-3"
+//             name="password"
+//             type="password"
+//             placeholder="Password"
+//             autoFocus
+//             onChange={e => onFieldChanged(e, 'password')}
+//             prefixIcon="lock" />
+
+//            <div className="row mt-4">
+//             <div className="col-12">
+//               <button type="submit" className="btn btn-primary w-100">
+//                 Login
+//               </button>
+//             </div>
+//           </div>
+//         </form>
+//       </div>
+//     </>
+//   );
+// }
+
+return (
+    <div className="login-page-wrapper">
+      {/* Decorative Background Elements */}
+      <div className="bg-shape shape-1"></div>
+      <div className="bg-shape shape-2"></div>
+
+      <div className="login-box-container">
         <div className="login-logo">
           <a href="">
-            <img src="/assets/img/logo1.png" alt="App Logo"  height={"auto"} width={"60%"} className="mb-1" />
+            <img src="/assets/img/logo1.png" alt="App Logo" height={"auto"} width={"60%"} className="mb-2" />
           </a>
         </div>
-        <form action="" method="POST" onSubmit={onLoginFormSubmitted}>
-          <TextField
-            type="email"
-            name="email"
-            placeholder="Email"
-            autoFocus
-            onChange={e => onFieldChanged(e, 'email')}
-            prefixIcon="email" />
-
-          <TextField
-            className="mt-3"
-            name="password"
-            type="password"
-            placeholder="Password"
-            autoFocus
-            onChange={e => onFieldChanged(e, 'password')}
-            prefixIcon="lock" />
-
-           <div className="row mt-4">
-            <div className="col-12">
-              <button type="submit" className="btn btn-primary w-100">
-                Login
-              </button>
-            </div>
+        
+        <div className="login-card-glass">
+          <div className="login-header">
+            <h3>Welcome Back</h3>
+            <p>Please enter your details to sign in</p>
           </div>
-        </form>
+
+          <form onSubmit={onLoginFormSubmitted}>
+            <TextField
+              type="email"
+              name="email"
+              placeholder="Email"
+              autoFocus
+              onChange={e => onFieldChanged(e, 'email')}
+              prefixIcon="email" />
+
+            <TextField
+              className="mt-3"
+              name="password"
+              type="password"
+              placeholder="Password"
+              onChange={e => onFieldChanged(e, 'password')}
+              prefixIcon="lock" />
+
+            <div className="row mt-4">
+              <div className="col-12">
+                <button type="submit" className="btn-login-premium">
+                  Sign In
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

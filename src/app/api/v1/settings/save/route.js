@@ -17,7 +17,11 @@ export async function POST(req) {
      *     { field_name: "regn_no", value: "edv,5" },
      *     { field_name: "whatsapp_phone_id", value: "107621335632571" },
      *     { field_name: "whatsapp_template", value: "lfrcr_rotary" },
-     *     { field_name: "whatsapp_token", value: "EAA..." }
+     *     { field_name: "whatsapp_token", value: "EAA..." },
+     *     { field_name: "gmail_smtp_host", value: "smtp.gmail.com" },
+     *     { field_name: "gmail_smtp_port", value: "587" },
+     *     { field_name: "gmail_smtp_user", value: "karthi@gmail.com" },
+     *     { field_name: "gmail_smtp_pass", value: "1254785jsgaej" }
      *   ]
      * }
      */

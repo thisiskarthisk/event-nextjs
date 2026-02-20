@@ -30,6 +30,14 @@ export default function GeneralSettings() {
     token: "",
   });
 
+  const [smtp, setSmtp] = useState({
+    host: "",
+    port: "",
+    user: "",
+    pass: "",
+  });
+
+
   // =============================
   // INIT
   // =============================
@@ -86,6 +94,15 @@ export default function GeneralSettings() {
           template: res.data.whatsapp_template || "",
           token: res.data.whatsapp_token || "",
         });
+
+        // ---- smtp ----
+        setSmtp({
+          host: res.data.SMTP_HOST || "",
+          port: res.data.SMTP_PORT || "",
+          user: res.data.SMTP_USER || "",
+          pass: res.data.SMTP_PASS || "",
+        });
+
       }
 
     } catch {
@@ -120,6 +137,22 @@ export default function GeneralSettings() {
       {
         field_name: "whatsapp_token",
         value: whatsapp.token,
+      },
+      {
+        field_name: "SMTP_HOST",
+        value: smtp.host,
+      },
+      {
+        field_name: "SMTP_PORT",
+        value: smtp.port,
+      },
+      {
+        field_name: "SMTP_USER",
+        value: smtp.user,
+      },
+      {
+        field_name: "SMTP_PASS",
+        value: smtp.pass,
       },
     ];
 
@@ -261,6 +294,65 @@ export default function GeneralSettings() {
           </div>
         </div>
       </div>
+      
+
+      {/* =================EMAIL SMTP ================= */}
+      <div className="card mb-3">
+        <div className="card-body">
+          <h5>Gmail SMTP Configuration</h5>
+
+          <div className="row">
+
+            <div className="col-lg-6">
+              <TextField
+                label="SMTP Host"
+                value={smtp.host}
+                disabled={!isEditing}
+                onChange={v =>
+                  setSmtp(p => ({ ...p, host: v }))
+                }
+              />
+            </div>
+
+            <div className="col-lg-6">
+              <TextField
+                label="SMTP Port"
+                type="number"
+                value={smtp.port}
+                disabled={!isEditing}
+                onChange={v =>
+                  setSmtp(p => ({ ...p, port: v }))
+                }
+              />
+            </div>
+
+            <div className="col-lg-6 mt-2">
+              <TextField
+                label="SMTP User"
+                value={smtp.user}
+                disabled={!isEditing}
+                onChange={v =>
+                  setSmtp(p => ({ ...p, user: v }))
+                }
+              />
+            </div>
+
+            <div className="col-lg-6 mt-2">
+              <TextField
+                label="SMTP Password"
+                type="password"
+                value={smtp.pass}
+                disabled={!isEditing}
+                onChange={v =>
+                  setSmtp(p => ({ ...p, pass: v }))
+                }
+              />
+            </div>
+
+          </div>
+        </div>
+      </div>
+
 
       {/* ================= ACTIONS ================= */}
       {isEditing && (

@@ -327,7 +327,11 @@ export default function DataTable({ref, apiPath, dataKeyFromResponse, columns = 
                           }
                           onClick={e => onTHClicked(e, col.column)}>
                           {
-                            col.label.replace('<br>', '\n')
+                            // col.label.replace('<br>', '\n')
+                            typeof col.label === "string"
+                            ? col.label.replace('<br>', '\n')
+                            : col.label
+
                           }
                         </th>
                       );

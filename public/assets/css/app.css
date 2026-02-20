@@ -30,13 +30,16 @@
 .loader {
   width: calc(1.5 * var(--loader-width));
   height: var(--loader-width);
-  position: relative;
+  background: url('/assets/img/loading.svg') no-repeat center;
+  background-size: contain;
+  background-position: center;
+  /* position: relative;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: center; */
 }
 
-.loader::before {
+/* .loader::before {
   content: '';  
   left: 0;
   top: 0;
@@ -84,7 +87,7 @@
   background-repeat: no-repeat;
   box-sizing: border-box;
   animation: rotationBack 3s linear infinite reverse;
-}
+} */
 
 @keyframes rotationBack {
   0% {
@@ -295,4 +298,90 @@ dd {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+
+
+/* Container to fill the screen */
+.login-page-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  /* Trendy Mesh Gradient Background */
+  background: radial-gradient(at 0% 0%, #f4f4f2 0%, transparent 50%),
+              radial-gradient(at 100% 0%, #e2e2df 0%, transparent 50%),
+              radial-gradient(at 100% 100%, #b5a397 0%, transparent 50%),
+              radial-gradient(at 0% 100%, #f8f9fa 0%, transparent 50%);
+  background-color: #ffffff;
+}
+
+/* Floating Decorative Shapes */
+.bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  z-index: 1;
+  opacity: 0.5;
+}
+.shape-1 { width: 300px; height: 300px; background: #b5a397; top: -100px; left: -100px; }
+.shape-2 { width: 250px; height: 250px; background: #222; bottom: -50px; right: -50px; }
+
+.login-box-container {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+}
+
+/* Glassmorphism Card */
+.login-card-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 30px;
+  padding: 40px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+}
+
+.login-header h3 {
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -1px;
+}
+
+.login-header p {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+/* Premium Button Styling */
+.btn-login-premium {
+  width: 100%;
+  padding: 14px;
+  background: #222;
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn-login-premium:hover {
+  background: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Clean up logo centering */
+.login-logo {
+  text-align: center;
+  margin-bottom: 20px;
 }

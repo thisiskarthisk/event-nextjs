@@ -273,6 +273,16 @@ export default function EventsListPage() {
                   >
                     <AppIcon ic="chart-bar" size="large" />
                   </Link>
+                  &nbsp;|&nbsp;&nbsp;
+                  
+                  {/* Registart form */}
+                  <Link
+                    href="#"
+                    className="text-info"
+                    title="Event Registration Form"
+                  >
+                    <AppIcon ic="registered-trademark" size="large" />
+                  </Link>
                 </>
               )}
                
