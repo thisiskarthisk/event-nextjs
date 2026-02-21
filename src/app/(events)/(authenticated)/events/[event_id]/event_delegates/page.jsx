@@ -9,6 +9,7 @@ import { useParams } from "next/navigation";
 import Checkbox from "@/components/form/Checkbox";
 import Link from "next/link";
 import TextField from "@/components/form/TextField";
+import { useAuthPageLayoutContext } from "@/components/auth/authPageWrapper";
 
 
 
@@ -122,6 +123,7 @@ function UploadDelegates({ onChange, errorMessage }) {
 export default function EventDelegatesPage() {
   const { event_id } = useParams();
   const tableRef = useRef(null);
+  const {toggleBreadcrumbs} = useAuthPageLayoutContext();
 
   const {
     setPageTitle,
@@ -140,7 +142,7 @@ export default function EventDelegatesPage() {
   useEffect(() => {
     setPageTitle("Event Delegates");
     toggleProgressBar(false);
-
+    toggleBreadcrumbs({ Events: "/", [`Delegates List`] : null });
     setRHSAppBarMenuItems([
       {
         icon: "upload",
@@ -395,32 +397,36 @@ export default function EventDelegatesPage() {
         </Link>
       </div>
 
-      <div className="card shadow-sm border-0">
-        <div className="card-body p-0">
-          <DataTable
-            ref={tableRef}
-            apiPath={`/events/${event_id}/event_delegates/list`}
-            dataKeyFromResponse="event_delegates"
-            columns={columns}
-            paginationType="client"
-            actionColumnFn={(row) => (
-              <div className="d-flex justify-content-center">
-                <Checkbox
-                  checked={selectedIds.includes(row.delegate_id)}
-                  onChange={() => toggleSelect(row.delegate_id)}
-                />
-                &nbsp;|&nbsp;
-                <Link href={`/events/${event_id}/event_delegates/edit/${row.delegate_id}`} className="text-primary">
-                  <AppIcon ic="pencil" size="large" />
-                </Link>
-                &nbsp;|&nbsp;
-                <Link href="#" className="text-danger" onClick={(e) => onDeleteDelegateClicked(e, row.delegate_id)}>
-                  <AppIcon ic="delete" size="large" />
-                </Link>
+      <div className="row">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-body">
+                <DataTable
+                  ref={tableRef}
+                  apiPath={`/events/${event_id}/event_delegates/list`}
+                  dataKeyFromResponse="event_delegates"
+                  columns={columns}
+                  paginationType="client"
+                  actionColumnFn={(row) => (
+                    <div className="d-flex justify-content-center">
+                      <Checkbox
+                        checked={selectedIds.includes(row.delegate_id)}
+                        onChange={() => toggleSelect(row.delegate_id)}
+                      />
+                      &nbsp;|&nbsp;
+                      <Link href={`/events/${event_id}/event_delegates/edit/${row.delegate_id}`} className="text-primary">
+                        <AppIcon ic="pencil" size="large" />
+                      </Link>
+                      &nbsp;|&nbsp;
+                      <Link href="#" className="text-danger" onClick={(e) => onDeleteDelegateClicked(e, row.delegate_id)}>
+                        <AppIcon ic="delete" size="large" />
+                      </Link>
 
-              </div>
-            )}
-          />
+                    </div>
+                  )}
+                />
+            </div>
+          </div>
         </div>
       </div>
     </>

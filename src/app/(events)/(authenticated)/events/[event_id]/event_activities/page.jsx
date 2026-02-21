@@ -7,6 +7,7 @@ import { HttpClient } from "@/helper/http";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
+import { useAuthPageLayoutContext } from "@/components/auth/authPageWrapper";
 
 export default function EventActivitiesPage() {
   const columns = [
@@ -22,10 +23,13 @@ export default function EventActivitiesPage() {
   const eventId = Number(event_id); // Safe conversion, no decoding needed
   const { setPageTitle, toggleProgressBar, confirm, toast, closeModal } = useAppLayoutContext();
   const tableRef = useRef(null);
+  const { toggleBreadcrumbs } = useAuthPageLayoutContext(); 
 
   useEffect(() => {
     setPageTitle('Event Activities');
     toggleProgressBar(false);
+    toggleBreadcrumbs({ Events: "/", [`Activities list`] : null });
+
   }, []);
 
   const onDeleteActivityClicked = (e, id) => {
