@@ -8,7 +8,117 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Checkbox from "@/components/form/Checkbox";
 import Link from "next/link";
+import TextField from "@/components/form/TextField";
 
+
+
+/* ================= CSV UPLOAD UI HELPERS ================= */
+function escapeHtml(str) {
+  if (typeof str !== "string") return str;
+  return str.replace(/[&<>"']/g, m => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[m]));
+}
+
+
+
+/* =========format upload errors into grouped HTML for display ============ */
+function formatUploadErrors(data) {
+  if (!data || !data.errors) return "";
+
+  const { missingFields = [], csvDuplicates = [], dbDuplicates = [] } = data.errors;
+
+  let html = "";
+
+  const groupByRow = (arr) => {
+    const map = {};
+    arr.forEach(e => {
+      map[e.row] ??= [];
+      map[e.row].push(e);
+    });
+    return map;
+  };
+
+  const groupedMissing = groupByRow(missingFields);
+  const groupedCsv = groupByRow(csvDuplicates);
+  const groupedDb = groupByRow(dbDuplicates);
+
+  if (Object.keys(groupedMissing).length) {
+    html += `<h6>Missing required fields:</h6>`;
+    Object.entries(groupedMissing).forEach(([row, items]) => {
+      html += `<dt>Row ${row}</dt>`;
+      items.forEach(i =>
+        html += `<dd>${i.missing.join(", ")}</dd>`
+      );
+    });
+  }
+
+  if (Object.keys(groupedCsv).length) {
+    html += `<h6>Duplicate in CSV:</h6>`;
+    Object.entries(groupedCsv).forEach(([row, items]) => {
+      html += `<dt>Row ${row}</dt>`;
+      items.forEach(i =>
+        html += `<dd>${i.field} : ${i.value}</dd>`
+      );
+    });
+  }
+
+  if (Object.keys(groupedDb).length) {
+    html += `<h6>Already in database:</h6>`;
+    Object.entries(groupedDb).forEach(([row, items]) => {
+      html += `<dt>Row ${row}</dt>`;
+      items.forEach(i =>
+        html += `<dd>${i.field} : ${i.value}</dd>`
+      );
+    });
+  }
+
+  return html;
+}
+
+
+/* ================= Upload Modal Component ================= */
+function UploadDelegates({ onChange, errorMessage }) {
+  return (
+    <div className="row mt-3 text-left">
+      <div className="col-12">
+        <div className="mb-2">
+          <label className="form-label">Template : </label>
+          <a
+              href="/templates/event_delegates_template.csv"
+              className="btn btn-link p-0 me-2"
+              download
+            >
+              <AppIcon ic="download"/> Click here to download
+            </a>
+        </div>
+
+        <TextField
+          type="file"
+          accept=".csv"
+          onChange={e => onChange(e.target.files)}
+        />
+
+        {errorMessage && (
+          <div
+            className="alert alert-danger mt-3"
+            style={{ whiteSpace: "pre-wrap" }}
+          >
+            <strong>Upload Errors:</strong>
+            <dl dangerouslySetInnerHTML={{ __html: errorMessage }} />
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+/* ================= MAIN COMPONENT ================= */
 export default function EventDelegatesPage() {
   const { event_id } = useParams();
   const tableRef = useRef(null);
@@ -19,6 +129,8 @@ export default function EventDelegatesPage() {
     toast,
     confirm,
     closeModal,
+    modal,
+    setRHSAppBarMenuItems
   } = useAppLayoutContext();
 
 
@@ -28,10 +140,120 @@ export default function EventDelegatesPage() {
   useEffect(() => {
     setPageTitle("Event Delegates");
     toggleProgressBar(false);
+
+    setRHSAppBarMenuItems([
+      {
+        icon: "upload",
+        tooltip: "Upload Delegates",
+        className: "text-primary",
+        onClick: showUploadDialog,
+      },
+    ]);
+
+    return () => setRHSAppBarMenuItems([]);
   }, []);
 
-  /* ================= SELECTION LOGIC ================= */
 
+
+  /* ================= UPLOAD DELEGATES ================= */
+  const showUploadDialog = () => {
+
+    let selectedFile = null;
+    let errorMessage = "";
+
+    const openDialog = () => {
+      modal({
+        title: "Upload Delegates CSV",
+        body: (
+          <UploadDelegates
+            errorMessage={errorMessage}
+            onChange={files => {
+              const file = files?.[0];
+
+              if (!file) return;
+
+              if (!file.name.endsWith(".csv")) {
+                toast("error", "Please select CSV file");
+                return;
+              }
+
+              selectedFile = file;
+            }}
+          />
+        ),
+
+        okBtn: {
+          label: "Upload",
+          onClick: async () => {
+
+            if (!selectedFile) {
+              toast("error", "Select CSV first");
+              return;
+            }
+
+            const fd = new FormData();
+            fd.append("file", selectedFile);
+
+            try {
+
+              toggleProgressBar(true);
+
+              const res = await HttpClient({
+                url: `/events/${event_id}/event_delegates/upload`,
+                method: "POST",
+                data: fd,
+                headers: {
+                  "Content-Type": "multipart/form-data",
+                },
+              });
+
+              toggleProgressBar(false);
+
+              const validation =
+                res?.errors || res?.data || null;
+
+              if (validation?.type === "validation_errors") {
+                errorMessage = formatUploadErrors(validation);
+                openDialog();
+                toast("error", "Fix CSV errors.");
+                return;
+              }
+
+              if (!res.success) {
+                errorMessage = escapeHtml(res.message);
+                openDialog();
+                toast("error", res.message);
+                return;
+              }
+
+              toast("success", res.message);
+
+              closeModal();
+
+              tableRef.current?.refreshTable();
+
+            } catch (err) {
+
+              toggleProgressBar(false);
+
+              toast(
+                "error",
+                err?.response?.data?.message ||
+                  "Upload failed."
+              );
+            }
+          },
+        },
+
+        cancelBtn: { label: "Close" },
+      });
+    };
+
+    openDialog();
+  };
+
+
+  /* ================= SELECTION LOGIC ================= */
   function toggleSelect(id) {
     setSelectedIds(prev =>
       prev.includes(id)
@@ -39,6 +261,8 @@ export default function EventDelegatesPage() {
         : [...prev, id]
     );
   }
+
+
 
   /* ================= DOWNLOAD QR (ZIP) ================= */
   function handleDownload() {
@@ -61,6 +285,8 @@ export default function EventDelegatesPage() {
     // Close progress bar after a short delay
     setTimeout(() => toggleProgressBar(false), 1000);
   }
+
+
 
   /* ================= SEND EMAIL ================= */
   const handleSendEmail = (e) => {

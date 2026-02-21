@@ -6,23 +6,21 @@ import { sql } from "drizzle-orm";
 export async function POST(req, context) {
   try {
 
-    // ✅ decode route param
-    const { event_id } = await context.params;
-
-    const decoded = decodeURLParam(event_id);
-    const eventId = Number(decoded);
+    // =====================================================
+    // EVENT ID
+    // =====================================================
+    const { event_id } = context.params;
+    const eventId = Number(decodeURLParam(event_id));
 
     if (!eventId || isNaN(eventId)) {
       return JsonResponse.error("Invalid Event ID");
     }
 
     const body = await req.json();
-
     const id = body.id;
     const isUpdate = !!id;
 
     const data = {
-      fkevent_id: eventId,
       name: body.name,
       callname: body.callname || null,
       phone_number: body.phone_number || null,
@@ -35,9 +33,9 @@ export async function POST(req, context) {
 
     const customFields = body.custom_fields || [];
 
-    // =======================
+    // =====================================================
     // UPDATE
-    // =======================
+    // =====================================================
     if (isUpdate) {
 
       const delegateId = Number(id);
@@ -55,6 +53,7 @@ export async function POST(req, context) {
           meals_per_event = ${data.meals_per_event},
           updated_at = NOW()
         WHERE delegate_id = ${delegateId}
+          AND fkevent_id = ${eventId}
       `);
 
       await DB_Fetch(sql`
@@ -63,17 +62,11 @@ export async function POST(req, context) {
       `);
 
       for (const row of customFields) {
-
         if (!row.label && !row.value) continue;
 
         await DB_Fetch(sql`
           INSERT INTO ${sql.identifier(Tables.TBL_CUSTOM_FIELD_DELEGATES)}
-          (
-            fkevent_id,
-            fkdelegates_id,
-            label,
-            value
-          )
+          (fkevent_id, fkdelegates_id, label, value)
           VALUES (
             ${eventId},
             ${delegateId},
@@ -89,36 +82,25 @@ export async function POST(req, context) {
       );
     }
 
-    // =======================
-    // INSERT
-    // =======================
+    // =====================================================
+    // INSERT (EVENT + PREFIX BASED REGN NUMBERING)
+    // =====================================================
 
-    let regn_id = 1;
-
-    const last = await DB_Fetch(sql`
-      SELECT delegate_id
-      FROM ${sql.identifier(Tables.TBL_EVENT_DELEGATES)}
-      ORDER BY delegate_id DESC
-      LIMIT 1
-    `);
-
-    regn_id =
-      last.length > 0
-        ? Number(last[0].delegate_id) + 1
-        : 1;
-
-    // 🔥 fetch REGN setting
+    // 🔹 1. Get REGN setting for this event
     const Setting = await DB_Fetch(sql`
       SELECT value
       FROM ${sql.identifier(Tables.TBL_SETTINGS)}
-      WHERE setting_group = 'general'
+      WHERE fkevent_id = ${eventId}
+        AND setting_group = 'general'
         AND field_name = 'regn_no'
       LIMIT 1
     `);
 
     const settingValue = Setting?.[0]?.value || "";
+    const [prefixRaw, digitsRaw] = settingValue.split(",");
 
-    const [prefix, digits] = settingValue.split(",");
+    const prefix = prefixRaw?.trim().toUpperCase();
+    const digits = Number(digitsRaw);
 
     if (!prefix || !digits) {
       return JsonResponse.error(
@@ -126,11 +108,29 @@ export async function POST(req, context) {
       );
     }
 
-    const paddedId =
-      String(regn_id).padStart(Number(digits), "0");
+    // 🔹 2. Get max number ONLY for same event AND same prefix
+    const lastNumberRow = await DB_Fetch(sql`
+      SELECT
+        COALESCE(
+          MAX(
+            CAST(
+              REGEXP_REPLACE(regn_no, '\\D', '', 'g')
+              AS INTEGER
+            )
+          ),
+          0
+        ) AS max_number
+      FROM ${sql.identifier(Tables.TBL_EVENT_DELEGATES)}
+      WHERE fkevent_id = ${eventId}
+        AND regn_no ILIKE ${prefix + '%'}
+    `);
 
+    const regn_id = Number(lastNumberRow[0].max_number) + 1;
+
+    const paddedId = String(regn_id).padStart(digits, "0");
     const REGN_no = `${prefix}${paddedId}`;
 
+    // 🔹 3. Insert Delegate
     const insertedId = await DB_Insert(
       sql`
         INSERT INTO ${sql.identifier(Tables.TBL_EVENT_DELEGATES)}
@@ -162,18 +162,13 @@ export async function POST(req, context) {
       "delegate_id"
     );
 
+    // 🔹 4. Insert Custom Fields
     for (const row of customFields) {
-
       if (!row.label && !row.value) continue;
 
       await DB_Fetch(sql`
         INSERT INTO ${sql.identifier(Tables.TBL_CUSTOM_FIELD_DELEGATES)}
-        (
-          fkevent_id,
-          fkdelegates_id,
-          label,
-          value
-        )
+        (fkevent_id, fkdelegates_id, label, value)
         VALUES (
           ${eventId},
           ${insertedId},
@@ -189,9 +184,7 @@ export async function POST(req, context) {
     );
 
   } catch (err) {
-
     console.error("DELEGATE SAVE ERROR:", err);
-
     return JsonResponse.error(
       "Error occurred while saving Delegate data."
     );

@@ -25,7 +25,7 @@ export default function GeneralSettings() {
   // FORM STATE
   // =============================
   const [prefix, setPrefix] = useState("");
-  const [digits, setDigits] = useState(4);
+  const [digits, setDigits] = useState(0);
 
   const [whatsapp, setWhatsapp] = useState({
     phone_id: "",
