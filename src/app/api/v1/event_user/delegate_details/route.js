@@ -1,4 +1,4 @@
-import { DB_Fetch } from "@/db";
+import { DB_Fetch , Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
 
 export async function POST(req) {
@@ -6,7 +6,7 @@ export async function POST(req) {
 
   const delegate = await DB_Fetch(`
     SELECT *
-    FROM event_delegates
+    FROM ${Tables.TBL_EVENT_DELEGATES}
     WHERE LOWER(TRIM(regn_no)) = LOWER(TRIM('${regn_no}'))
     AND fkevent_id = ${event_id}
     LIMIT 1

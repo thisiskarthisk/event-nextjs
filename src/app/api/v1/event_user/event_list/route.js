@@ -1,4 +1,4 @@
-import { DB_Fetch } from "@/db";
+import { DB_Fetch , Tables } from "@/db";
 import { JsonResponse } from "@/helper/api";
 import { getToken } from "next-auth/jwt";
 
@@ -16,8 +16,8 @@ export async function GET(req) {
     SELECT e.*,
       TO_CHAR(e.event_start_datetime, 'DD-MM-YYYY HH12:MI') AS start_date,
       TO_CHAR(e.event_end_datetime, 'DD-MM-YYYY HH12:MI') AS end_date
-    FROM events e
-    INNER JOIN user_events ue
+    FROM ${Tables.TBL_EVENTS} e
+    INNER JOIN ${Tables.TBL_USER_EVENTS} ue
       ON ue.fkevent_id = e.event_id
     WHERE ue.fkuser_id = ${userId}
     AND e.active = TRUE
@@ -29,7 +29,7 @@ export async function GET(req) {
       SELECT *,
       TO_CHAR(start_datetime, 'DD-MM-YYYY -- HH12:MI') AS start_date,
       TO_CHAR(end_datetime, 'DD-MM-YYYY -- HH12:MI') AS end_date
-      FROM event_activities
+      FROM ${Tables.TBL_EVENT_ACTIVITIES} 
       WHERE fkevent_id = ${event.event_id}
       AND active = TRUE
     `);
@@ -43,8 +43,8 @@ export async function GET(req) {
             WHEN eda.delegate_activity_id IS NOT NULL THEN TRUE
             ELSE FALSE
           END AS registered
-        FROM event_delegates d
-        LEFT JOIN event_delegate_activities eda
+        FROM ${Tables.TBL_EVENT_DELEGATES} d
+        LEFT JOIN ${Tables.TBL_EVENT_DELEGATE_ACTIVITIES} eda
           ON eda.fkdelegates_id = d.delegate_id
           AND eda.fkactivity_id = ${activity.event_activity_id}
           AND eda.fkevent_id = ${event.event_id}
